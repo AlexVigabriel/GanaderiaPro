@@ -3,4 +3,5 @@
   <Project Path="GanaderiaPro.Application/GanaderiaPro.Application.csproj" />
   <Project Path="GanaderiaPro.Domain/GanaderiaPro.Domain.csproj" />
   <Project Path="GanaderiaPro.Infrastructure/GanaderiaPro.Infrastructure.csproj" />
+  <Project Path="GanaderiaPro.Tests/GanaderiaPro.Tests.csproj" />
 </Solution>

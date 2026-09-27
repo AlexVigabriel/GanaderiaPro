@@ -16,4 +16,5 @@ public class Rancho
     public DateTime FechaFinPruebaGratuita { get; set; }
 
     public ICollection<Usuario> Usuarios { get; set; } = new List<Usuario>();
+    public ICollection<Animal> Animales { get; set; } = new List<Animal>();
 }
