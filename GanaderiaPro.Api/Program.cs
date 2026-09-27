@@ -18,6 +18,16 @@ builder.Services.AddOpenApi();
 builder.Services.AddDbContext<GanaderiaProDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
+// Solo para desarrollo local: permite que la app Flutter (que corre en otro
+// puerto) llame a esta API desde el navegador sin que CORS la bloquee.
+const string PoliticaCorsDesarrollo = "DesarrolloFlutter";
+if (builder.Environment.IsDevelopment())
+{
+    builder.Services.AddCors(options =>
+        options.AddPolicy(PoliticaCorsDesarrollo, policy =>
+            policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader()));
+}
+
 builder.Services.AddScoped<IAnimalRepository, AnimalRepository>();
 builder.Services.AddScoped<IAnimalService, AnimalService>();
 
@@ -30,6 +40,7 @@ var app = builder.Build();
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
+    app.UseCors(PoliticaCorsDesarrollo);
 
     using var scope = app.Services.CreateScope();
     var dbContext = scope.ServiceProvider.GetRequiredService<GanaderiaProDbContext>();
