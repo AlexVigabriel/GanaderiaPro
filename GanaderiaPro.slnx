@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="GanaderiaPro.Api/GanaderiaPro.Api.csproj" />
+  <Project Path="GanaderiaPro.Application/GanaderiaPro.Application.csproj" />
+  <Project Path="GanaderiaPro.Domain/GanaderiaPro.Domain.csproj" />
+  <Project Path="GanaderiaPro.Infrastructure/GanaderiaPro.Infrastructure.csproj" />
+</Solution>
