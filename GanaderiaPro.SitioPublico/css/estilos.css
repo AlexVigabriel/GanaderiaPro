@@ -1,0 +1,390 @@
+:root {
+  --verde-primario: #2f6b3a;
+  --verde-oscuro: #234f2a;
+  --verde-claro: #eef5ec;
+  --texto-principal: #1f2a22;
+  --texto-secundario: #4b5a4f;
+  --blanco: #ffffff;
+  --borde: #d9e3da;
+  --sombra: 0 4px 16px rgba(31, 42, 34, 0.08);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+  color: var(--texto-principal);
+  line-height: 1.5;
+  background: var(--blanco);
+}
+
+section {
+  scroll-margin-top: 72px;
+  padding: 64px 24px;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+h1,
+h2,
+h3 {
+  color: var(--verde-oscuro);
+  line-height: 1.2;
+}
+
+h2 {
+  font-size: 2rem;
+  text-align: center;
+  margin-bottom: 40px;
+}
+
+.boton {
+  display: inline-block;
+  padding: 10px 20px;
+  border-radius: 8px;
+  text-decoration: none;
+  font-weight: 600;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.boton:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--sombra);
+}
+
+.boton-primario {
+  background: var(--verde-primario);
+  color: var(--blanco);
+}
+
+.boton-secundario {
+  background: transparent;
+  color: var(--verde-primario);
+  border: 2px solid var(--verde-primario);
+}
+
+.boton-grande {
+  padding: 14px 28px;
+  font-size: 1.05rem;
+}
+
+/* Encabezado */
+
+.encabezado {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: var(--blanco);
+  border-bottom: 1px solid var(--borde);
+}
+
+.nav-contenedor {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 16px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.logo {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--verde-oscuro);
+  text-decoration: none;
+}
+
+.menu {
+  list-style: none;
+  display: flex;
+  gap: 28px;
+  align-items: center;
+}
+
+.menu a {
+  text-decoration: none;
+  color: var(--texto-principal);
+  font-weight: 500;
+}
+
+.menu a:hover {
+  color: var(--verde-primario);
+}
+
+.acciones-header {
+  display: flex;
+  gap: 12px;
+}
+
+.menu-solo-movil {
+  display: none;
+}
+
+.menu-toggle {
+  display: none;
+  flex-direction: column;
+  justify-content: space-between;
+  width: 26px;
+  height: 20px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
+
+.menu-toggle span {
+  display: block;
+  height: 3px;
+  width: 100%;
+  background: var(--verde-oscuro);
+  border-radius: 2px;
+}
+
+/* Hero */
+
+.hero {
+  display: flex;
+  align-items: center;
+  gap: 48px;
+  padding-top: 56px;
+  padding-bottom: 56px;
+}
+
+.hero-contenido {
+  flex: 1;
+}
+
+.hero h1 {
+  font-size: 2.6rem;
+  margin-bottom: 16px;
+}
+
+.hero-subtitulo {
+  font-size: 1.1rem;
+  color: var(--texto-secundario);
+  margin-bottom: 28px;
+  max-width: 520px;
+}
+
+.hero-botones {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.hero-imagen {
+  flex: 1;
+  max-width: 420px;
+}
+
+.hero-imagen svg {
+  width: 100%;
+  height: auto;
+  border-radius: 16px;
+}
+
+/* Características */
+
+.caracteristicas {
+  background: var(--verde-claro);
+  max-width: none;
+}
+
+.caracteristicas > * {
+  max-width: 1100px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.tarjetas {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 24px;
+}
+
+.tarjeta {
+  background: var(--blanco);
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: var(--sombra);
+}
+
+.icono {
+  font-size: 2rem;
+  display: block;
+  margin-bottom: 12px;
+}
+
+.tarjeta h3 {
+  font-size: 1.1rem;
+  margin-bottom: 8px;
+}
+
+.tarjeta p {
+  color: var(--texto-secundario);
+  font-size: 0.95rem;
+}
+
+/* Cómo funciona */
+
+.pasos {
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 32px;
+  text-align: center;
+}
+
+.numero {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--verde-primario);
+  color: var(--blanco);
+  font-weight: 700;
+  margin-bottom: 12px;
+}
+
+.pasos h3 {
+  font-size: 1.1rem;
+  margin-bottom: 8px;
+}
+
+.pasos p {
+  color: var(--texto-secundario);
+  font-size: 0.95rem;
+}
+
+/* Planes */
+
+.tarjetas-planes {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 24px;
+  align-items: stretch;
+}
+
+.tarjeta-plan {
+  border: 1px solid var(--borde);
+  border-radius: 12px;
+  padding: 32px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  text-align: center;
+}
+
+.tarjeta-destacada {
+  border-color: var(--verde-primario);
+  border-width: 2px;
+  box-shadow: var(--sombra);
+}
+
+.etiqueta-destacada {
+  color: var(--verde-primario);
+  font-weight: 700;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.lista-plan {
+  list-style: none;
+  color: var(--texto-secundario);
+  text-align: left;
+}
+
+.lista-plan li {
+  padding: 6px 0;
+  border-bottom: 1px solid var(--borde);
+}
+
+.plan-nota {
+  color: var(--texto-secundario);
+  flex-grow: 1;
+}
+
+.tarjeta-plan .boton {
+  margin-top: auto;
+}
+
+/* Pie */
+
+.pie {
+  text-align: center;
+  padding: 32px 24px;
+  color: var(--texto-secundario);
+  border-top: 1px solid var(--borde);
+}
+
+/* Responsive */
+
+@media (max-width: 860px) {
+  .hero {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .hero-subtitulo {
+    max-width: none;
+  }
+
+  .hero-botones {
+    justify-content: center;
+  }
+}
+
+@media (max-width: 720px) {
+  .menu-toggle {
+    display: flex;
+  }
+
+  .acciones-header {
+    display: none;
+  }
+
+  .menu {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: var(--blanco);
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0;
+    max-height: 0;
+    overflow: hidden;
+    border-bottom: 1px solid var(--borde);
+    transition: max-height 0.2s ease;
+  }
+
+  .menu.menu-abierto {
+    max-height: 400px;
+  }
+
+  .menu li {
+    width: 100%;
+  }
+
+  .menu a {
+    display: block;
+    padding: 14px 24px;
+    width: 100%;
+  }
+
+  .menu-solo-movil {
+    display: block;
+  }
+}

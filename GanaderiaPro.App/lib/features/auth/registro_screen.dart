@@ -18,8 +18,16 @@ class _RegistroScreenState extends State<RegistroScreen> {
   final _contrasenaController = TextEditingController();
   final _confirmarController = TextEditingController();
   final _nombreRanchoController = TextEditingController();
-  String _plan = 'Basico';
+  // HU-05: si se llega acá desde el sitio público con un plan elegido
+  // (ej. "?plan=Intermedio"), se usa como selección inicial.
+  late String _plan = _planDesdeUrl();
   bool _guardando = false;
+
+  static String _planDesdeUrl() {
+    const planesValidos = {'Basico', 'Intermedio', 'Superior'};
+    final planUrl = Uri.base.queryParameters['plan'];
+    return planesValidos.contains(planUrl) ? planUrl! : 'Basico';
+  }
 
   @override
   void dispose() {
