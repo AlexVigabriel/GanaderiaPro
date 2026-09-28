@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/animal.dart';
 import '../../core/api_client.dart';
+import '../../core/route_observer.dart';
 import '../shell/app_shell.dart';
 import 'ficha_animal_screen.dart';
 import 'registrar_animal_screen.dart';
@@ -13,7 +14,7 @@ class ListadoAnimalesScreen extends StatefulWidget {
   State<ListadoAnimalesScreen> createState() => _ListadoAnimalesScreenState();
 }
 
-class _ListadoAnimalesScreenState extends State<ListadoAnimalesScreen> {
+class _ListadoAnimalesScreenState extends State<ListadoAnimalesScreen> with RouteAware {
   final _apiClient = ApiClient();
   final _busquedaController = TextEditingController();
 
@@ -28,9 +29,24 @@ class _ListadoAnimalesScreenState extends State<ListadoAnimalesScreen> {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    routeObserver.subscribe(this, ModalRoute.of(context) as PageRoute);
+  }
+
+  @override
   void dispose() {
+    routeObserver.unsubscribe(this);
     _busquedaController.dispose();
     super.dispose();
+  }
+
+  @override
+  void didPopNext() {
+    // Se llama cada vez que esta pantalla vuelve a quedar visible después de
+    // que se cierra algo apilado encima (registrar, ver ficha, editar,
+    // eliminar) — sin importar cómo se haya salido de esa pantalla.
+    _buscar();
   }
 
   Future<List<Animal>> _cargar() {
@@ -46,11 +62,12 @@ class _ListadoAnimalesScreenState extends State<ListadoAnimalesScreen> {
   }
 
   Future<void> _irARegistrar() async {
+    // El refresco del listado al volver lo maneja didPopNext() — acá solo
+    // nos ocupamos del mensaje de confirmación.
     final creado = await Navigator.of(
       context,
     ).push<bool>(MaterialPageRoute(builder: (_) => const RegistrarAnimalScreen()));
     if (creado == true) {
-      _buscar();
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
@@ -59,20 +76,15 @@ class _ListadoAnimalesScreenState extends State<ListadoAnimalesScreen> {
   }
 
   Future<void> _verFicha(Animal animal) async {
-    // HU-19/HU-20/HU-21 viven en la ficha; si algo cambió (edición o
-    // eliminación) al volver, refrescamos la tabla.
-    final huboCambios = await Navigator.of(
+    await Navigator.of(
       context,
     ).push<bool>(MaterialPageRoute(builder: (_) => FichaAnimalScreen(animalId: animal.id)));
-
-    if (huboCambios == true) {
-      _buscar();
-    }
   }
 
   @override
   Widget build(BuildContext context) {
     return AppShell(
+      seccionActiva: '/ganado',
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(

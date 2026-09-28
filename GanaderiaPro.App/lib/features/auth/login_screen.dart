@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../../core/api_client.dart';
-import 'registro_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -17,6 +16,24 @@ class _LoginScreenState extends State<LoginScreen> {
   final _emailController = TextEditingController();
   final _contrasenaController = TextEditingController();
   bool _ingresando = false;
+  bool _mensajeInicialMostrado = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Si se llega acá después de crear una cuenta (RegistroScreen la pasa
+    // como argumento de la ruta), se muestra una sola vez.
+    if (!_mensajeInicialMostrado) {
+      _mensajeInicialMostrado = true;
+      final mensaje = ModalRoute.of(context)?.settings.arguments as String?;
+      if (mensaje != null) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(mensaje)));
+        });
+      }
+    }
+  }
 
   @override
   void dispose() {
@@ -50,19 +67,6 @@ class _LoginScreenState extends State<LoginScreen> {
       ).showSnackBar(const SnackBar(content: Text('No se pudo conectar con el servidor.')));
     } finally {
       if (mounted) setState(() => _ingresando = false);
-    }
-  }
-
-  Future<void> _irARegistro() async {
-    final creado = await Navigator.of(
-      context,
-    ).push<bool>(MaterialPageRoute(builder: (_) => const RegistroScreen()));
-
-    if (creado == true) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Cuenta creada. Iniciá sesión con tus datos.')),
-      );
     }
   }
 
@@ -102,7 +106,7 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
               const SizedBox(height: 12),
               TextButton(
-                onPressed: _ingresando ? null : _irARegistro,
+                onPressed: _ingresando ? null : () => Navigator.of(context).pushNamed('/registro'),
                 child: const Text('¿No tenés cuenta? Crear cuenta'),
               ),
             ],

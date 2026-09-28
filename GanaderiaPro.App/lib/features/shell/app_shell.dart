@@ -18,14 +18,18 @@ const modulosDisponibles = [
 ];
 
 class AppShell extends StatelessWidget {
-  const AppShell({super.key, required this.body});
+  const AppShell({super.key, required this.body, required this.seccionActiva});
 
   final Widget body;
 
+  // Qué opción del menú se resalta como activa. Se pasa explícitamente
+  // desde cada pantalla en vez de inferirse de la ruta de Navigator: las
+  // pantallas como "Registrar animal" o "Ficha" se abren sin nombre de
+  // ruta propio, así que adivinar por ahí las confundía con "Inicio".
+  final String seccionActiva;
+
   @override
   Widget build(BuildContext context) {
-    final rutaActual = ModalRoute.of(context)?.settings.name ?? '/';
-
     return Scaffold(
       appBar: AppBar(
         // HU-15: nombre del rancho actual. El buscador general y las
@@ -63,12 +67,17 @@ class AppShell extends StatelessWidget {
               ListTile(
                 leading: Icon(modulo.icono),
                 title: Text(modulo.titulo),
-                selected: rutaActual == modulo.ruta,
+                selected: seccionActiva == modulo.ruta,
                 onTap: () {
                   Navigator.of(context).pop();
-                  if (rutaActual != modulo.ruta) {
-                    Navigator.of(context).pushReplacementNamed(modulo.ruta);
-                  }
+                  // Siempre navega, aunque ya "estemos ahí" conceptualmente:
+                  // desde una sub-pantalla (Registrar/Ficha/Editar) tocar
+                  // "Ganado" tiene que llevar al listado de verdad, no
+                  // quedarse sin hacer nada. Limpia la pila de navegación
+                  // para no dejar pantallas viejas acumuladas atrás.
+                  Navigator.of(
+                    context,
+                  ).pushNamedAndRemoveUntil(modulo.ruta, (route) => false);
                 },
               ),
           ],
