@@ -17,11 +17,7 @@ public class AnimalRepository : IAnimalRepository
     public Task<bool> ExisteAreteAsync(Guid ranchoId, string arete) =>
         _dbContext.Animales.AnyAsync(a => a.RanchoId == ranchoId && a.Arete == arete);
 
-    public async Task AgregarAsync(Animal animal)
-    {
-        _dbContext.Animales.Add(animal);
-        await _dbContext.SaveChangesAsync();
-    }
+    public void Agregar(Animal animal) => _dbContext.Animales.Add(animal);
 
     public async Task<IReadOnlyList<Animal>> BuscarAsync(Guid ranchoId, string? busqueda, EstadoAnimal estado, SexoAnimal? sexo, string? raza)
     {

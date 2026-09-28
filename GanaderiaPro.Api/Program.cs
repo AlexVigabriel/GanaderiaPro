@@ -1,10 +1,14 @@
+using System.Text;
 using System.Text.Json.Serialization;
 using GanaderiaPro.Application.Interfaces;
 using GanaderiaPro.Application.Services;
 using GanaderiaPro.Infrastructure;
 using GanaderiaPro.Infrastructure.Persistence;
 using GanaderiaPro.Infrastructure.Repositories;
+using GanaderiaPro.Infrastructure.Security;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -28,11 +32,36 @@ if (builder.Environment.IsDevelopment())
             policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader()));
 }
 
+builder.Services.AddHttpContextAccessor();
+
+builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 builder.Services.AddScoped<IAnimalRepository, AnimalRepository>();
 builder.Services.AddScoped<IAnimalService, AnimalService>();
+builder.Services.AddScoped<IUsuarioRepository, UsuarioRepository>();
+builder.Services.AddScoped<IRanchoRepository, RanchoRepository>();
+builder.Services.AddScoped<IPasswordHasher, PasswordHasher>();
+builder.Services.AddScoped<ITokenGenerator, TokenGenerator>();
+builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<ICurrentUserContext, CurrentUserContext>();
 
-// TODO: reemplazar por el ICurrentUserContext real cuando exista login (JWT) — Choquecallata, HU-07/HU-09.
-builder.Services.AddScoped<ICurrentUserContext, StubCurrentUserContext>();
+var claveJwt = builder.Configuration["Jwt:SigningKey"]
+    ?? throw new InvalidOperationException(
+        "Falta configurar Jwt:SigningKey. Ejecutar: dotnet user-secrets set \"Jwt:SigningKey\" \"<clave larga>\" --project GanaderiaPro.Api");
+
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(claveJwt)),
+            ValidateIssuer = false,
+            ValidateAudience = false,
+            ValidateLifetime = true,
+        };
+    });
+
+builder.Services.AddAuthorization();
 
 var app = builder.Build();
 
@@ -41,14 +70,11 @@ if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
     app.UseCors(PoliticaCorsDesarrollo);
-
-    using var scope = app.Services.CreateScope();
-    var dbContext = scope.ServiceProvider.GetRequiredService<GanaderiaProDbContext>();
-    await DevDataSeeder.SembrarRanchoDePruebaAsync(dbContext);
 }
 
 app.UseHttpsRedirection();
 
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../core/sesion_actual.dart';
+
 class ModuloMenu {
   const ModuloMenu({required this.titulo, required this.icono, required this.ruta});
 
@@ -29,7 +31,7 @@ class AppShell extends StatelessWidget {
         // HU-15: nombre del rancho actual. El buscador general y las
         // notificaciones quedan como placeholder visual (deshabilitados)
         // hasta que existan sus módulos correspondientes.
-        title: const Text('Rancho de prueba (dev)'),
+        title: Text(SesionActual.instancia.nombreRancho ?? 'GanaderíaPro'),
         actions: [
           IconButton(
             onPressed: null,
