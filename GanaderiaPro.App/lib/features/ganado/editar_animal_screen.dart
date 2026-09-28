@@ -65,6 +65,7 @@ class _EditarAnimalScreenState extends State<EditarAnimalScreen> {
   @override
   Widget build(BuildContext context) {
     return AppShell(
+      seccionActiva: '/ganado',
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Form(
