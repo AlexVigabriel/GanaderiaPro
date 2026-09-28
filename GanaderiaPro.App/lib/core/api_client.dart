@@ -81,12 +81,7 @@ class ApiClient {
     final response = await http.post(
       Uri.parse('$baseUrl/api/animales'),
       headers: _headersAutenticados,
-      body: jsonEncode({
-        'arete': arete,
-        'sexo': sexo,
-        'raza': raza,
-        'peso': peso,
-      }),
+      body: jsonEncode(_cuerpoAnimal(arete: arete, sexo: sexo, raza: raza, peso: peso)),
     );
 
     if (response.statusCode == 201) {
@@ -95,6 +90,51 @@ class ApiClient {
 
     throw ApiException(_extraerMensajeError(response.body) ?? 'No se pudo registrar el animal.');
   }
+
+  Future<Animal> obtenerAnimal(String id) async {
+    final response = await http.get(Uri.parse('$baseUrl/api/animales/$id'), headers: _headersAutenticados);
+
+    if (response.statusCode == 200) {
+      return Animal.fromJson(jsonDecode(response.body) as Map<String, dynamic>);
+    }
+
+    throw ApiException(_extraerMensajeError(response.body) ?? 'No se pudo cargar el animal.');
+  }
+
+  Future<Animal> editarAnimal({
+    required String id,
+    required String arete,
+    required String sexo,
+    required String raza,
+    double? peso,
+  }) async {
+    final response = await http.put(
+      Uri.parse('$baseUrl/api/animales/$id'),
+      headers: _headersAutenticados,
+      body: jsonEncode(_cuerpoAnimal(arete: arete, sexo: sexo, raza: raza, peso: peso)),
+    );
+
+    if (response.statusCode == 200) {
+      return Animal.fromJson(jsonDecode(response.body) as Map<String, dynamic>);
+    }
+
+    throw ApiException(_extraerMensajeError(response.body) ?? 'No se pudo editar el animal.');
+  }
+
+  Future<void> eliminarAnimal(String id) async {
+    final response = await http.delete(Uri.parse('$baseUrl/api/animales/$id'), headers: _headersAutenticados);
+
+    if (response.statusCode != 204) {
+      throw ApiException(_extraerMensajeError(response.body) ?? 'No se pudo eliminar el animal.');
+    }
+  }
+
+  Map<String, dynamic> _cuerpoAnimal({
+    required String arete,
+    required String sexo,
+    required String raza,
+    double? peso,
+  }) => {'arete': arete, 'sexo': sexo, 'raza': raza, 'peso': peso};
 
   Future<List<Animal>> buscarAnimales({
     String? busqueda,

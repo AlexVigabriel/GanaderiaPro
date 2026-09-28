@@ -43,4 +43,52 @@ public class AnimalesController : ControllerBase
         var animales = await _animalService.BuscarAsync(busqueda, estado, sexo, raza);
         return Ok(animales);
     }
+
+    [HttpGet("{id:guid}")]
+    public async Task<ActionResult<AnimalResponse>> ObtenerPorId(Guid id)
+    {
+        try
+        {
+            return Ok(await _animalService.ObtenerPorIdAsync(id));
+        }
+        catch (RecursoNoEncontradoException ex)
+        {
+            return NotFound(new { mensaje = ex.Message });
+        }
+    }
+
+    [HttpPut("{id:guid}")]
+    public async Task<ActionResult<AnimalResponse>> Editar(Guid id, RegistrarAnimalRequest request)
+    {
+        try
+        {
+            return Ok(await _animalService.EditarAsync(id, request));
+        }
+        catch (RecursoNoEncontradoException ex)
+        {
+            return NotFound(new { mensaje = ex.Message });
+        }
+        catch (ReglaDeNegocioException ex)
+        {
+            return BadRequest(new { mensaje = ex.Message });
+        }
+    }
+
+    [HttpDelete("{id:guid}")]
+    public async Task<IActionResult> Eliminar(Guid id)
+    {
+        try
+        {
+            await _animalService.EliminarAsync(id);
+            return NoContent();
+        }
+        catch (RecursoNoEncontradoException ex)
+        {
+            return NotFound(new { mensaje = ex.Message });
+        }
+        catch (ReglaDeNegocioException ex)
+        {
+            return BadRequest(new { mensaje = ex.Message });
+        }
+    }
 }
