@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 import 'animal.dart';
+import 'sesion_actual.dart';
 
 class ApiException implements Exception {
   ApiException(this.mensaje);
@@ -18,6 +19,59 @@ class ApiClient {
 
   final String baseUrl;
 
+  Map<String, String> get _headersAutenticados {
+    final token = SesionActual.instancia.token;
+    return {
+      'Content-Type': 'application/json',
+      if (token != null) 'Authorization': 'Bearer $token',
+    };
+  }
+
+  Future<void> registrarCuenta({
+    required String nombre,
+    required String email,
+    required String contrasena,
+    required String confirmarContrasena,
+    required String nombreRancho,
+    required String plan,
+  }) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/api/auth/registrar'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'nombre': nombre,
+        'email': email,
+        'contrasena': contrasena,
+        'confirmarContrasena': confirmarContrasena,
+        'nombreRancho': nombreRancho,
+        'plan': plan,
+      }),
+    );
+
+    if (response.statusCode != 201) {
+      throw ApiException(_extraerMensajeError(response.body) ?? 'No se pudo crear la cuenta.');
+    }
+  }
+
+  Future<void> iniciarSesion({required String email, required String contrasena}) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/api/auth/iniciar-sesion'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'email': email, 'contrasena': contrasena}),
+    );
+
+    if (response.statusCode != 200) {
+      throw ApiException(_extraerMensajeError(response.body) ?? 'No se pudo iniciar sesión.');
+    }
+
+    final data = jsonDecode(response.body) as Map<String, dynamic>;
+    SesionActual.instancia.guardar(
+      token: data['token'] as String,
+      nombreRancho: data['nombreRancho'] as String,
+      nombreUsuario: data['nombreUsuario'] as String,
+    );
+  }
+
   Future<Animal> registrarAnimal({
     required String arete,
     required String sexo,
@@ -26,7 +80,7 @@ class ApiClient {
   }) async {
     final response = await http.post(
       Uri.parse('$baseUrl/api/animales'),
-      headers: {'Content-Type': 'application/json'},
+      headers: _headersAutenticados,
       body: jsonEncode({
         'arete': arete,
         'sexo': sexo,
@@ -58,7 +112,7 @@ class ApiClient {
       '$baseUrl/api/animales',
     ).replace(queryParameters: query.isEmpty ? null : query);
 
-    final response = await http.get(uri);
+    final response = await http.get(uri, headers: _headersAutenticados);
 
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body) as List<dynamic>;

@@ -9,11 +9,13 @@ public class AnimalService : IAnimalService
 {
     private readonly IAnimalRepository _animalRepository;
     private readonly ICurrentUserContext _currentUser;
+    private readonly IUnitOfWork _unitOfWork;
 
-    public AnimalService(IAnimalRepository animalRepository, ICurrentUserContext currentUser)
+    public AnimalService(IAnimalRepository animalRepository, ICurrentUserContext currentUser, IUnitOfWork unitOfWork)
     {
         _animalRepository = animalRepository;
         _currentUser = currentUser;
+        _unitOfWork = unitOfWork;
     }
 
     public async Task<AnimalResponse> RegistrarAsync(RegistrarAnimalRequest request)
@@ -44,7 +46,8 @@ public class AnimalService : IAnimalService
             FechaRegistro = DateTime.UtcNow
         };
 
-        await _animalRepository.AgregarAsync(animal);
+        _animalRepository.Agregar(animal);
+        await _unitOfWork.GuardarCambiosAsync();
 
         return ToResponse(animal);
     }

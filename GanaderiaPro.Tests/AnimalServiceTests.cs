@@ -16,7 +16,8 @@ public class AnimalServiceTests
     {
         var currentUserMock = new Mock<ICurrentUserContext>();
         currentUserMock.Setup(c => c.RanchoId).Returns(RanchoIdDePrueba);
-        return new AnimalService(repoMock.Object, currentUserMock.Object);
+        var unitOfWorkMock = new Mock<IUnitOfWork>();
+        return new AnimalService(repoMock.Object, currentUserMock.Object, unitOfWorkMock.Object);
     }
 
     [Fact]
@@ -31,7 +32,7 @@ public class AnimalServiceTests
 
         await Assert.ThrowsAsync<ReglaDeNegocioException>(() => service.RegistrarAsync(request));
 
-        repoMock.Verify(r => r.AgregarAsync(It.IsAny<Animal>()), Times.Never);
+        repoMock.Verify(r => r.Agregar(It.IsAny<Animal>()), Times.Never);
     }
 
     [Fact]
@@ -42,9 +43,8 @@ public class AnimalServiceTests
         repoMock.Setup(r => r.ExisteAreteAsync(RanchoIdDePrueba, "A002")).ReturnsAsync(false);
 
         Animal? animalGuardado = null;
-        repoMock.Setup(r => r.AgregarAsync(It.IsAny<Animal>()))
-            .Callback<Animal>(a => animalGuardado = a)
-            .Returns(Task.CompletedTask);
+        repoMock.Setup(r => r.Agregar(It.IsAny<Animal>()))
+            .Callback<Animal>(a => animalGuardado = a);
 
         var service = CrearServicio(repoMock);
         var request = new RegistrarAnimalRequest("A002", SexoAnimal.Macho, "Angus", 400);
