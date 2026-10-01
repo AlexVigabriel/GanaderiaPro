@@ -22,6 +22,50 @@ namespace GanaderiaPro.Infrastructure.Persistence.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("GanaderiaPro.Domain.Entities.Animal", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Arete")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("Estado")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<DateTime>("FechaRegistro")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<decimal?>("Peso")
+                        .HasPrecision(7, 2)
+                        .HasColumnType("numeric(7,2)");
+
+                    b.Property<Guid>("RanchoId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Raza")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("Sexo")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RanchoId", "Arete")
+                        .IsUnique();
+
+                    b.ToTable("Animales", (string)null);
+                });
+
             modelBuilder.Entity("GanaderiaPro.Domain.Entities.Rancho", b =>
                 {
                     b.Property<Guid>("Id")
@@ -93,6 +137,17 @@ namespace GanaderiaPro.Infrastructure.Persistence.Migrations
                     b.ToTable("Usuarios", (string)null);
                 });
 
+            modelBuilder.Entity("GanaderiaPro.Domain.Entities.Animal", b =>
+                {
+                    b.HasOne("GanaderiaPro.Domain.Entities.Rancho", "Rancho")
+                        .WithMany("Animales")
+                        .HasForeignKey("RanchoId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Rancho");
+                });
+
             modelBuilder.Entity("GanaderiaPro.Domain.Entities.Usuario", b =>
                 {
                     b.HasOne("GanaderiaPro.Domain.Entities.Rancho", "Rancho")
@@ -106,6 +161,8 @@ namespace GanaderiaPro.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("GanaderiaPro.Domain.Entities.Rancho", b =>
                 {
+                    b.Navigation("Animales");
+
                     b.Navigation("Usuarios");
                 });
 #pragma warning restore 612, 618
