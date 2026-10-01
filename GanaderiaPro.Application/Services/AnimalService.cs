@@ -61,6 +61,66 @@ public class AnimalService : IAnimalService
         return animales.Select(ToResponse).ToList();
     }
 
+    public async Task<AnimalResponse> ObtenerPorIdAsync(Guid id)
+    {
+        var animal = await ObtenerDelRanchoActualAsync(id);
+        return ToResponse(animal);
+    }
+
+    public async Task<AnimalResponse> EditarAsync(Guid id, RegistrarAnimalRequest request)
+    {
+        if (string.IsNullOrWhiteSpace(request.Arete))
+        {
+            throw new ReglaDeNegocioException("El arete es obligatorio.");
+        }
+
+        var animal = await ObtenerDelRanchoActualAsync(id);
+
+        // RN-01: el arete es único dentro del rancho (sin contarse a sí mismo).
+        var existeArete = await _animalRepository.ExisteAreteAsync(animal.RanchoId, request.Arete, excluirId: id);
+        if (existeArete)
+        {
+            throw new ReglaDeNegocioException($"Ya existe un animal con el arete '{request.Arete}' en este rancho.");
+        }
+
+        animal.Arete = request.Arete;
+        animal.Sexo = request.Sexo;
+        animal.Raza = request.Raza;
+        animal.Peso = request.Peso;
+
+        await _unitOfWork.GuardarCambiosAsync();
+
+        return ToResponse(animal);
+    }
+
+    public async Task EliminarAsync(Guid id)
+    {
+        var animal = await ObtenerDelRanchoActualAsync(id);
+
+        // RN-05: eliminación física solo si no tiene eventos asociados
+        // (vacunaciones, tratamientos, pesajes, preñeces, movimientos de
+        // corral). Ninguno de esos módulos existe todavía (Sprint 2), así
+        // que por ahora esto nunca bloquea — queda listo para cuando existan.
+        if (TieneEventosAsociados(animal))
+        {
+            throw new ReglaDeNegocioException(
+                "No se puede eliminar: el animal tiene eventos registrados. Registrá una baja en su lugar.");
+        }
+
+        _animalRepository.Eliminar(animal);
+        await _unitOfWork.GuardarCambiosAsync();
+    }
+
+    private async Task<Animal> ObtenerDelRanchoActualAsync(Guid id)
+    {
+        // RN-16: se busca siempre dentro del rancho del usuario actual, nunca
+        // por Id solo — así un animal de otro rancho se ve como "no existe".
+        return await _animalRepository.ObtenerPorIdAsync(_currentUser.RanchoId, id)
+            ?? throw new RecursoNoEncontradoException("No se encontró el animal.");
+    }
+
+    private static bool TieneEventosAsociados(Animal animal) => false;
+
     private static AnimalResponse ToResponse(Animal animal) =>
         new(animal.Id, animal.Arete, animal.Sexo, animal.Raza, animal.Peso, animal.Estado, animal.FechaRegistro);
 }

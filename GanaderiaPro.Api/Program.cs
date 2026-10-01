@@ -74,6 +74,15 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+// Las respuestas de la API nunca deben quedar en caché del navegador — sin
+// esto, el navegador puede mostrar datos viejos después de editar/eliminar
+// aunque el servidor ya haya guardado el cambio.
+app.Use(async (context, next) =>
+{
+    context.Response.Headers.CacheControl = "no-store, no-cache, must-revalidate";
+    await next();
+});
+
 app.UseAuthentication();
 app.UseAuthorization();
 

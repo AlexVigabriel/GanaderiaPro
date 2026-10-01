@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/animal.dart';
 import '../../core/api_client.dart';
 import '../shell/app_shell.dart';
+import 'ficha_animal_screen.dart';
 import 'registrar_animal_screen.dart';
 
 class ListadoAnimalesScreen extends StatefulWidget {
@@ -54,6 +55,18 @@ class _ListadoAnimalesScreenState extends State<ListadoAnimalesScreen> {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('Animal registrado correctamente')));
+    }
+  }
+
+  Future<void> _verFicha(Animal animal) async {
+    // HU-19/HU-20/HU-21 viven en la ficha; si algo cambió (edición o
+    // eliminación) al volver, refrescamos la tabla.
+    final huboCambios = await Navigator.of(
+      context,
+    ).push<bool>(MaterialPageRoute(builder: (_) => FichaAnimalScreen(animalId: animal.id)));
+
+    if (huboCambios == true) {
+      _buscar();
     }
   }
 
@@ -142,9 +155,8 @@ class _ListadoAnimalesScreenState extends State<ListadoAnimalesScreen> {
                   if (animales.isEmpty) {
                     return const Center(child: Text('No hay animales registrados todavía.'));
                   }
-                  // Tabla base para HU-17 (búsqueda/filtro). Lazcano suma acá
-                  // "última vacuna" y "acciones" (HU-18) y navegación a la
-                  // ficha (HU-19) cuando lleguen a esa parte.
+                  // La columna "última vacuna" del backlog original queda
+                  // pendiente hasta que exista el módulo de Sanidad (Sprint 2).
                   return SingleChildScrollView(
                     scrollDirection: Axis.horizontal,
                     child: DataTable(
@@ -158,6 +170,7 @@ class _ListadoAnimalesScreenState extends State<ListadoAnimalesScreen> {
                       rows: animales
                           .map(
                             (animal) => DataRow(
+                              onSelectChanged: (_) => _verFicha(animal),
                               cells: [
                                 DataCell(Text(animal.arete)),
                                 DataCell(Text(animal.sexo)),

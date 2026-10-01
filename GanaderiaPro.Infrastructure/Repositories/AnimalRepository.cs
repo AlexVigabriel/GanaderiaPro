@@ -14,10 +14,16 @@ public class AnimalRepository : IAnimalRepository
         _dbContext = dbContext;
     }
 
-    public Task<bool> ExisteAreteAsync(Guid ranchoId, string arete) =>
-        _dbContext.Animales.AnyAsync(a => a.RanchoId == ranchoId && a.Arete == arete);
+    public Task<bool> ExisteAreteAsync(Guid ranchoId, string arete, Guid? excluirId = null) =>
+        _dbContext.Animales.AnyAsync(
+            a => a.RanchoId == ranchoId && a.Arete == arete && (excluirId == null || a.Id != excluirId));
+
+    public Task<Animal?> ObtenerPorIdAsync(Guid ranchoId, Guid id) =>
+        _dbContext.Animales.FirstOrDefaultAsync(a => a.RanchoId == ranchoId && a.Id == id);
 
     public void Agregar(Animal animal) => _dbContext.Animales.Add(animal);
+
+    public void Eliminar(Animal animal) => _dbContext.Animales.Remove(animal);
 
     public async Task<IReadOnlyList<Animal>> BuscarAsync(Guid ranchoId, string? busqueda, EstadoAnimal estado, SexoAnimal? sexo, string? raza)
     {
