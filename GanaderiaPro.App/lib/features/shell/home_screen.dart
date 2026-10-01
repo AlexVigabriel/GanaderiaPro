@@ -8,6 +8,7 @@ class HomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const AppShell(
+      seccionActiva: '/',
       body: Padding(
         padding: EdgeInsets.all(16),
         child: Text(

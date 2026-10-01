@@ -19,11 +19,6 @@ class _FichaAnimalScreenState extends State<FichaAnimalScreen> {
   late Future<Animal> _futuroAnimal;
   bool _eliminando = false;
 
-  // Se activa si se editó el animal desde acá. Se usa para avisarle al
-  // listado que tiene que refrescar, sin importar CÓMO se salga de esta
-  // pantalla (botón propio, atrás del navegador, gesto, etc.).
-  bool _seModificoAlgo = false;
-
   @override
   void initState() {
     super.initState();
@@ -40,7 +35,6 @@ class _FichaAnimalScreenState extends State<FichaAnimalScreen> {
     ).push<bool>(MaterialPageRoute(builder: (_) => EditarAnimalScreen(animal: animal)));
 
     if (editado == true) {
-      _seModificoAlgo = true;
       _recargar();
     }
   }
@@ -83,18 +77,8 @@ class _FichaAnimalScreenState extends State<FichaAnimalScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return PopScope<bool>(
-      canPop: false,
-      onPopInvokedWithResult: (didPop, result) {
-        if (didPop) return;
-        Navigator.of(context).pop(_seModificoAlgo);
-      },
-      child: _buildContenido(context),
-    );
-  }
-
-  Widget _buildContenido(BuildContext context) {
     return AppShell(
+      seccionActiva: '/ganado',
       body: FutureBuilder<Animal>(
         future: _futuroAnimal,
         builder: (context, snapshot) {

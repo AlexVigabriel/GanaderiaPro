@@ -55,9 +55,15 @@ class _RegistroScreenState extends State<RegistroScreen> {
       );
 
       if (!mounted) return;
-      // El mensaje de éxito se muestra en la pantalla de Login, después de
-      // volver (mostrarlo acá, justo antes del pop, no llega a verse).
-      Navigator.of(context).pop(true);
+      // Se navega explícitamente a Login en vez de hacer pop(): esta
+      // pantalla puede ser la raíz de la app (si se llega por un link
+      // externo, como desde el sitio público), y ahí no hay nada debajo
+      // para "volver". El mensaje se pasa como argumento porque mostrarlo
+      // acá, justo antes de navegar, no llega a verse.
+      Navigator.of(context).pushReplacementNamed(
+        '/login',
+        arguments: 'Cuenta creada. Iniciá sesión con tus datos.',
+      );
     } on ApiException catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.mensaje)));

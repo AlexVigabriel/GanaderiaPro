@@ -64,6 +64,7 @@ class _RegistrarAnimalScreenState extends State<RegistrarAnimalScreen> {
   @override
   Widget build(BuildContext context) {
     return AppShell(
+      seccionActiva: '/ganado',
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Form(
@@ -80,6 +81,7 @@ class _RegistrarAnimalScreenState extends State<RegistrarAnimalScreen> {
               ),
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
+                key: const ValueKey('sexo-dropdown'),
                 initialValue: _sexo,
                 decoration: const InputDecoration(labelText: 'Sexo *'),
                 items: const [
