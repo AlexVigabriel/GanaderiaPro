@@ -36,6 +36,26 @@ void main() {
     expect(sePuedeVolver(tester), isFalse);
   });
 
+  testWidgets('El ojo muestra y oculta la contrasena', (tester) async {
+    await tester.pumpWidget(const GanaderiaProApp());
+    await tester.pumpAndSettle();
+    bool oculta() => tester.widget<EditableText>(find.byType(EditableText).last).obscureText;
+
+    expect(oculta(), isTrue);
+    await tester.tap(find.byTooltip('Mostrar contraseña'));
+    await tester.pump();
+    expect(oculta(), isFalse);
+    await tester.tap(find.byTooltip('Ocultar contraseña'));
+    await tester.pump();
+    expect(oculta(), isTrue);
+  });
+
+  testWidgets('En el registro cada contrasena tiene su propio ojo', (tester) async {
+    await abrirEn(tester, '/registro');
+
+    expect(find.byTooltip('Mostrar contraseña'), findsNWidgets(2));
+  });
+
   testWidgets('El plan elegido en el sitio publico llega preseleccionado al registro', (tester) async {
     await abrirEn(tester, '/registro?plan=Intermedio');
 
