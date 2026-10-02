@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using GanaderiaPro.Application.DTOs;
 using GanaderiaPro.Application.Exceptions;
 using GanaderiaPro.Application.Interfaces;
@@ -8,7 +9,15 @@ namespace GanaderiaPro.Application.Services;
 public class AnimalService : IAnimalService
 {
     private const decimal PesoMaximoKg = 1500;
+    private const decimal PesoNacimientoMinimoKg = 10;
+    private const decimal PesoNacimientoMaximoKg = 80;
+    private const int AntiguedadMaximaAnios = 25;
     private const int MaximoFilasPorLote = 500;
+
+    // La identificación (arete o caravana) se guarda en mayúsculas y solo
+    // admite letras, números y guiones, para que "ar-001" y "AR-001" sean
+    // el mismo animal (RN-01).
+    private static readonly Regex FormatoIdentificacion = new("^[A-Z0-9-]+$", RegexOptions.Compiled);
 
     // RN-14: "hoy" se calcula en la hora de Bolivia, no en UTC. Entre las
     // 20:00 y la medianoche la fecha UTC ya es la de mañana, y una fecha
@@ -35,13 +44,13 @@ public class AnimalService : IAnimalService
         }
 
         var ranchoId = _currentUser.RanchoId;
-        var arete = request.Arete.Trim();
+        var arete = NormalizarIdentificacion(request.Arete);
 
         // RN-01: el arete es único dentro del rancho, incluso entre animales dados de baja.
         var existeArete = await _animalRepository.ExisteAreteAsync(ranchoId, arete);
         if (existeArete)
         {
-            throw new ReglaDeNegocioException($"Ya existe un animal con el arete '{arete}' en este rancho.");
+            throw new ReglaDeNegocioException($"Ya existe un animal con la identificación '{arete}' en este rancho.");
         }
 
         var animal = CrearAnimal(ranchoId, request);
@@ -73,18 +82,18 @@ public class AnimalService : IAnimalService
         for (var i = 0; i < filas.Count; i++)
         {
             var fila = filas[i];
-            var arete = fila.Arete?.Trim() ?? string.Empty;
+            var arete = NormalizarIdentificacion(fila.Arete);
             var error = ValidarDatos(fila);
 
             // RN-01 también dentro de la misma carga, no solo contra la base.
             if (error is null && !aretesDelLote.Add(arete))
             {
-                error = "El arete está repetido en esta carga.";
+                error = "La identificación está repetida en esta carga.";
             }
 
             if (error is null && await _animalRepository.ExisteAreteAsync(ranchoId, arete))
             {
-                error = $"Ya existe un animal con el arete '{arete}' en este rancho.";
+                error = $"Ya existe un animal con la identificación '{arete}' en este rancho.";
             }
 
             if (error is not null)
@@ -145,13 +154,13 @@ public class AnimalService : IAnimalService
         }
 
         var animal = await ObtenerDelRanchoActualAsync(id);
-        var arete = request.Arete.Trim();
+        var arete = NormalizarIdentificacion(request.Arete);
 
         // RN-01: el arete es único dentro del rancho (sin contarse a sí mismo).
         var existeArete = await _animalRepository.ExisteAreteAsync(animal.RanchoId, arete, excluirId: id);
         if (existeArete)
         {
-            throw new ReglaDeNegocioException($"Ya existe un animal con el arete '{arete}' en este rancho.");
+            throw new ReglaDeNegocioException($"Ya existe un animal con la identificación '{arete}' en este rancho.");
         }
 
         CopiarDatos(request, animal);
@@ -181,14 +190,20 @@ public class AnimalService : IAnimalService
     // Devuelve el primer problema encontrado en los datos, o null si son válidos.
     private static string? ValidarDatos(RegistrarAnimalRequest request)
     {
-        if (string.IsNullOrWhiteSpace(request.Arete))
+        var identificacion = NormalizarIdentificacion(request.Arete);
+        if (identificacion.Length == 0)
         {
-            return "El arete es obligatorio.";
+            return "La identificación es obligatoria.";
         }
 
-        if (request.Arete.Trim().Length > 50)
+        if (identificacion.Length > 50)
         {
-            return "El arete puede tener hasta 50 caracteres.";
+            return "La identificación puede tener hasta 50 caracteres.";
+        }
+
+        if (!FormatoIdentificacion.IsMatch(identificacion))
+        {
+            return "La identificación solo puede tener letras, números y guiones.";
         }
 
         if (string.IsNullOrWhiteSpace(request.Raza))
@@ -196,15 +211,32 @@ public class AnimalService : IAnimalService
             return "La raza es obligatoria.";
         }
 
+        // Obligatoria (puede ser aproximada): con ella se calcula la edad y la categoría.
+        if (request.FechaNacimiento is not { } nacimiento)
+        {
+            return "La fecha de nacimiento es obligatoria.";
+        }
+
         // RN-14: no se registran fechas futuras.
-        if (request.FechaNacimiento is { } nacimiento && nacimiento > Hoy())
+        if (nacimiento > Hoy())
         {
             return "La fecha de nacimiento no puede ser futura.";
         }
 
-        if (!PesoValido(request.Peso) || !PesoValido(request.PesoNacimiento))
+        if (nacimiento < Hoy().AddYears(-AntiguedadMaximaAnios))
         {
-            return $"Los pesos deben ser mayores que 0 y de hasta {PesoMaximoKg} kg.";
+            return $"La fecha de nacimiento no puede tener más de {AntiguedadMaximaAnios} años.";
+        }
+
+        if (request.PesoNacimiento is { } pesoNacimiento &&
+            (pesoNacimiento < PesoNacimientoMinimoKg || pesoNacimiento > PesoNacimientoMaximoKg))
+        {
+            return $"El peso al nacer debe estar entre {PesoNacimientoMinimoKg} y {PesoNacimientoMaximoKg} kg.";
+        }
+
+        if (request.Peso is { } peso && (peso <= 0 || peso > PesoMaximoKg))
+        {
+            return $"El peso actual debe ser mayor que 0 y de hasta {PesoMaximoKg} kg.";
         }
 
         if (request.Nombre?.Trim().Length > 100)
@@ -228,7 +260,8 @@ public class AnimalService : IAnimalService
     private static DateOnly Hoy() =>
         DateOnly.FromDateTime(TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, ZonaHorariaRancho));
 
-    private static bool PesoValido(decimal? peso) => peso is null || (peso > 0 && peso <= PesoMaximoKg);
+    private static string NormalizarIdentificacion(string? identificacion) =>
+        (identificacion ?? string.Empty).Trim().ToUpperInvariant();
 
     private static Animal CrearAnimal(Guid ranchoId, RegistrarAnimalRequest request)
     {
@@ -246,7 +279,7 @@ public class AnimalService : IAnimalService
 
     private static void CopiarDatos(RegistrarAnimalRequest request, Animal animal)
     {
-        animal.Arete = request.Arete.Trim();
+        animal.Arete = NormalizarIdentificacion(request.Arete);
         animal.Sexo = request.Sexo;
         animal.Raza = request.Raza.Trim();
         animal.Peso = request.Peso;

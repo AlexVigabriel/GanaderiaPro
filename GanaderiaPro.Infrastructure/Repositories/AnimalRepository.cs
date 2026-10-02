@@ -15,9 +15,11 @@ public class AnimalRepository : IAnimalRepository
         _dbContext = dbContext;
     }
 
+    // Sin distinguir mayúsculas, por si quedaron identificaciones cargadas en
+    // minúsculas antes de que se normalizaran.
     public Task<bool> ExisteAreteAsync(Guid ranchoId, string arete, Guid? excluirId = null) =>
         _dbContext.Animales.AnyAsync(
-            a => a.RanchoId == ranchoId && a.Arete == arete && (excluirId == null || a.Id != excluirId));
+            a => a.RanchoId == ranchoId && a.Arete.ToUpper() == arete.ToUpper() && (excluirId == null || a.Id != excluirId));
 
     public Task<Animal?> ObtenerPorIdAsync(Guid ranchoId, Guid id) =>
         _dbContext.Animales.FirstOrDefaultAsync(a => a.RanchoId == ranchoId && a.Id == id);

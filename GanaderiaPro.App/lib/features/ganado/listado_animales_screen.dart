@@ -205,7 +205,7 @@ class _ListadoAnimalesScreenState extends State<ListadoAnimalesScreen> with Rout
                   onChanged: _buscarConEspera,
                   decoration: const InputDecoration(
                     isDense: true,
-                    hintText: 'Buscar por arete, nombre o raza…',
+                    hintText: 'Buscar por identificación, nombre o raza…',
                     prefixIcon: Icon(Icons.search),
                   ),
                 ),
@@ -312,7 +312,7 @@ class _ListadoAnimalesScreenState extends State<ListadoAnimalesScreen> with Rout
     );
     Widget encabezado(String texto, int flex) => Expanded(
       flex: flex,
-      child: Text(texto.toUpperCase(), style: estiloEncabezado),
+      child: Text(texto.toUpperCase(), style: estiloEncabezado, maxLines: 1, overflow: TextOverflow.ellipsis),
     );
 
     return Column(
@@ -322,7 +322,7 @@ class _ListadoAnimalesScreenState extends State<ListadoAnimalesScreen> with Rout
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
           child: Row(
             children: [
-              encabezado('Arete', 2),
+              encabezado('Identificación', 3),
               encabezado('Nombre', 3),
               encabezado('Sexo', 2),
               encabezado('Raza', 2),
@@ -340,7 +340,7 @@ class _ListadoAnimalesScreenState extends State<ListadoAnimalesScreen> with Rout
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
               child: Row(
                 children: [
-                  Expanded(flex: 2, child: Text(animal.arete, style: tema.textTheme.titleSmall)),
+                  Expanded(flex: 3, child: Text(animal.arete, style: tema.textTheme.titleSmall)),
                   Expanded(flex: 3, child: Text(animal.nombre ?? '—', overflow: TextOverflow.ellipsis)),
                   Expanded(flex: 2, child: _sexoConIcono(animal.sexo)),
                   Expanded(flex: 2, child: Text(animal.raza, overflow: TextOverflow.ellipsis)),

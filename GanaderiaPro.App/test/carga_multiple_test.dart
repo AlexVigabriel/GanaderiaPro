@@ -27,14 +27,35 @@ void main() {
     expect(find.text('Revisá la carga'), findsOneWidget);
     expect(find.text('Elegí el sexo'), findsOneWidget);
     expect(find.text('La raza es obligatoria'), findsOneWidget);
+    expect(find.text('La fecha de nacimiento es obligatoria'), findsOneWidget);
   });
 
-  testWidgets('Detecta aretes repetidos dentro de la tabla', (tester) async {
+  testWidgets('La identificacion se escribe en mayusculas y sin caracteres no permitidos', (tester) async {
+    await abrir(tester);
+    await tester.enterText(campo(0, 0), 'ar 001.b');
+    await tester.pump();
+
+    expect(tester.widget<TextField>(campo(0, 0)).controller!.text, 'AR001B');
+  });
+
+  testWidgets('El peso al nacer fuera de 10 a 80 kg muestra el error', (tester) async {
+    await abrir(tester);
+    await tester.enterText(campo(0, 0), 'AR-001');
+    await tester.enterText(campo(0, 2), '95');
+    await tester.pump();
+
+    await tester.tap(find.text('Cargar 1 animal'));
+    await tester.pump();
+
+    expect(find.text('Debe estar entre 10 y 80 kg'), findsOneWidget);
+  });
+
+  testWidgets('Detecta identificaciones repetidas dentro de la tabla', (tester) async {
     await abrir(tester);
     await tester.enterText(campo(0, 0), 'AR-001');
     await tester.tap(find.text('Agregar fila'));
     await tester.pump();
-    await tester.enterText(campo(1, 0), 'AR-001');
+    await tester.enterText(campo(1, 0), 'ar-001');
     await tester.pump();
 
     await tester.tap(find.text('Cargar 2 animales'));

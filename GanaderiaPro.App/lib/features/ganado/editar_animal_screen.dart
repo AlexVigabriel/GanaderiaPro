@@ -54,7 +54,7 @@ class _EditarAnimalScreenState extends State<EditarAnimalScreen> {
       await _api.editarAnimal(
         widget.animal.id,
         DatosAnimal(
-          arete: _arete.text.trim(),
+          arete: normalizarIdentificacion(_arete.text),
           sexo: _sexo,
           raza: _raza,
           nombre: _nombre.text.trim().isEmpty ? null : _nombre.text.trim(),
@@ -103,7 +103,7 @@ class _EditarAnimalScreenState extends State<EditarAnimalScreen> {
                   ),
                 ),
                 const SizedBox(height: 8),
-                EncabezadoPantalla(titulo: 'Editar animal', subtitulo: 'Arete ${widget.animal.arete}'),
+                EncabezadoPantalla(titulo: 'Editar animal', subtitulo: 'Identificación ${widget.animal.arete}'),
                 const SizedBox(height: 24),
                 Card(
                   margin: EdgeInsets.zero,
@@ -125,8 +125,13 @@ class _EditarAnimalScreenState extends State<EditarAnimalScreen> {
                             runSpacing: 18,
                             children: [
                               campo(
-                                'Arete *',
-                                TextFormField(controller: _arete, validator: validarArete),
+                                'Identificación *',
+                                TextFormField(
+                                  controller: _arete,
+                                  inputFormatters: formatoIdentificacion,
+                                  decoration: const InputDecoration(hintText: 'Número de arete o caravana'),
+                                  validator: validarArete,
+                                ),
                               ),
                               campo(
                                 'Nombre',
@@ -161,7 +166,7 @@ class _EditarAnimalScreenState extends State<EditarAnimalScreen> {
                                 ),
                               ),
                               campo(
-                                'Fecha de nacimiento',
+                                'Fecha de nacimiento *',
                                 CampoFecha(
                                   valor: _nacimiento,
                                   errorText: _errorNacimiento,
@@ -189,7 +194,7 @@ class _EditarAnimalScreenState extends State<EditarAnimalScreen> {
                                 TextFormField(
                                   controller: _pesoNacimiento,
                                   keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                                  validator: validarPeso,
+                                  validator: validarPesoNacimiento,
                                 ),
                               ),
                               campo(
