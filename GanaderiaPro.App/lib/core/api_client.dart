@@ -72,23 +72,37 @@ class ApiClient {
     );
   }
 
-  Future<Animal> registrarAnimal({
-    required String arete,
-    required String sexo,
-    required String raza,
-    double? peso,
-  }) async {
+  // HU-66: carga múltiple. Las filas rechazadas vuelven con su número
+  // (empezando en 1, en el mismo orden en que se enviaron) y el motivo.
+  Future<ResultadoCarga> registrarLote(List<DatosAnimal> filas) async {
     final response = await http.post(
-      Uri.parse('$baseUrl/api/animales'),
+      Uri.parse('$baseUrl/api/animales/lote'),
       headers: _headersAutenticados,
-      body: jsonEncode(_cuerpoAnimal(arete: arete, sexo: sexo, raza: raza, peso: peso)),
+      body: jsonEncode(filas.map((f) => f.toJson()).toList()),
     );
 
-    if (response.statusCode == 201) {
-      return Animal.fromJson(jsonDecode(response.body) as Map<String, dynamic>);
+    if (response.statusCode != 200) {
+      throw ApiException(_extraerMensajeError(response.body) ?? 'No se pudieron registrar los animales.');
     }
 
-    throw ApiException(_extraerMensajeError(response.body) ?? 'No se pudo registrar el animal.');
+    final data = jsonDecode(response.body) as Map<String, dynamic>;
+    return ResultadoCarga(
+      registrados: (data['registrados'] as List<dynamic>).length,
+      rechazados: (data['rechazados'] as List<dynamic>)
+          .map((r) => r as Map<String, dynamic>)
+          .map((r) => FilaRechazada(fila: r['fila'] as int, motivo: r['motivo'] as String))
+          .toList(),
+    );
+  }
+
+  Future<ResumenAnimales> obtenerResumen() async {
+    final response = await http.get(Uri.parse('$baseUrl/api/animales/resumen'), headers: _headersAutenticados);
+
+    if (response.statusCode == 200) {
+      return ResumenAnimales.fromJson(jsonDecode(response.body) as Map<String, dynamic>);
+    }
+
+    throw ApiException('No se pudo cargar el resumen de animales.');
   }
 
   Future<Animal> obtenerAnimal(String id) async {
@@ -101,17 +115,11 @@ class ApiClient {
     throw ApiException(_extraerMensajeError(response.body) ?? 'No se pudo cargar el animal.');
   }
 
-  Future<Animal> editarAnimal({
-    required String id,
-    required String arete,
-    required String sexo,
-    required String raza,
-    double? peso,
-  }) async {
+  Future<Animal> editarAnimal(String id, DatosAnimal datos) async {
     final response = await http.put(
       Uri.parse('$baseUrl/api/animales/$id'),
       headers: _headersAutenticados,
-      body: jsonEncode(_cuerpoAnimal(arete: arete, sexo: sexo, raza: raza, peso: peso)),
+      body: jsonEncode(datos.toJson()),
     );
 
     if (response.statusCode == 200) {
@@ -128,13 +136,6 @@ class ApiClient {
       throw ApiException(_extraerMensajeError(response.body) ?? 'No se pudo eliminar el animal.');
     }
   }
-
-  Map<String, dynamic> _cuerpoAnimal({
-    required String arete,
-    required String sexo,
-    required String raza,
-    double? peso,
-  }) => {'arete': arete, 'sexo': sexo, 'raza': raza, 'peso': peso};
 
   Future<List<Animal>> buscarAnimales({
     String? busqueda,

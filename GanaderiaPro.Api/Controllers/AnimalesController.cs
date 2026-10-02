@@ -33,6 +33,26 @@ public class AnimalesController : ControllerBase
         }
     }
 
+    // HU-66: carga múltiple. Responde 200 aunque haya filas rechazadas:
+    // el detalle de qué se registró y qué no va en el cuerpo.
+    [HttpPost("lote")]
+    public async Task<ActionResult<RegistrarLoteResponse>> RegistrarLote(List<RegistrarAnimalRequest> filas)
+    {
+        try
+        {
+            return Ok(await _animalService.RegistrarLoteAsync(filas));
+        }
+        catch (ReglaDeNegocioException ex)
+        {
+            return BadRequest(new { mensaje = ex.Message });
+        }
+    }
+
+    // HU-67: conteos para las tarjetas del listado.
+    [HttpGet("resumen")]
+    public async Task<ActionResult<ResumenAnimalesResponse>> ObtenerResumen() =>
+        Ok(await _animalService.ObtenerResumenAsync());
+
     [HttpGet]
     public async Task<ActionResult<IReadOnlyList<AnimalResponse>>> Buscar(
         [FromQuery] string? busqueda,

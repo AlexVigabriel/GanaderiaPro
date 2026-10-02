@@ -7,6 +7,14 @@ namespace GanaderiaPro.Application.Services;
 
 public class AnimalService : IAnimalService
 {
+    private const decimal PesoMaximoKg = 1500;
+    private const int MaximoFilasPorLote = 500;
+
+    // RN-14: "hoy" se calcula en la hora de Bolivia, no en UTC. Entre las
+    // 20:00 y la medianoche la fecha UTC ya es la de mañana, y una fecha
+    // futura pasaba como válida.
+    private static readonly TimeZoneInfo ZonaHorariaRancho = TimeZoneInfo.FindSystemTimeZoneById("America/La_Paz");
+
     private readonly IAnimalRepository _animalRepository;
     private readonly ICurrentUserContext _currentUser;
     private readonly IUnitOfWork _unitOfWork;
@@ -20,36 +28,82 @@ public class AnimalService : IAnimalService
 
     public async Task<AnimalResponse> RegistrarAsync(RegistrarAnimalRequest request)
     {
-        if (string.IsNullOrWhiteSpace(request.Arete))
+        var error = ValidarDatos(request);
+        if (error is not null)
         {
-            throw new ReglaDeNegocioException("El arete es obligatorio.");
+            throw new ReglaDeNegocioException(error);
         }
 
         var ranchoId = _currentUser.RanchoId;
+        var arete = request.Arete.Trim();
 
         // RN-01: el arete es único dentro del rancho, incluso entre animales dados de baja.
-        var existeArete = await _animalRepository.ExisteAreteAsync(ranchoId, request.Arete);
+        var existeArete = await _animalRepository.ExisteAreteAsync(ranchoId, arete);
         if (existeArete)
         {
-            throw new ReglaDeNegocioException($"Ya existe un animal con el arete '{request.Arete}' en este rancho.");
+            throw new ReglaDeNegocioException($"Ya existe un animal con el arete '{arete}' en este rancho.");
         }
 
-        var animal = new Animal
-        {
-            Id = Guid.NewGuid(),
-            RanchoId = ranchoId,
-            Arete = request.Arete,
-            Sexo = request.Sexo,
-            Raza = request.Raza,
-            Peso = request.Peso,
-            Estado = EstadoAnimal.Activo,
-            FechaRegistro = DateTime.UtcNow
-        };
-
+        var animal = CrearAnimal(ranchoId, request);
         _animalRepository.Agregar(animal);
         await _unitOfWork.GuardarCambiosAsync();
 
         return ToResponse(animal);
+    }
+
+    // HU-66: carga múltiple. Las filas válidas se registran juntas y las
+    // inválidas se devuelven con su número de fila y el motivo.
+    public async Task<RegistrarLoteResponse> RegistrarLoteAsync(IReadOnlyList<RegistrarAnimalRequest> filas)
+    {
+        if (filas.Count == 0)
+        {
+            throw new ReglaDeNegocioException("No hay animales para cargar.");
+        }
+
+        if (filas.Count > MaximoFilasPorLote)
+        {
+            throw new ReglaDeNegocioException($"Se pueden cargar hasta {MaximoFilasPorLote} animales por vez.");
+        }
+
+        var ranchoId = _currentUser.RanchoId;
+        var registrados = new List<Animal>();
+        var rechazados = new List<FilaRechazada>();
+        var aretesDelLote = new HashSet<string>(StringComparer.Ordinal);
+
+        for (var i = 0; i < filas.Count; i++)
+        {
+            var fila = filas[i];
+            var arete = fila.Arete?.Trim() ?? string.Empty;
+            var error = ValidarDatos(fila);
+
+            // RN-01 también dentro de la misma carga, no solo contra la base.
+            if (error is null && !aretesDelLote.Add(arete))
+            {
+                error = "El arete está repetido en esta carga.";
+            }
+
+            if (error is null && await _animalRepository.ExisteAreteAsync(ranchoId, arete))
+            {
+                error = $"Ya existe un animal con el arete '{arete}' en este rancho.";
+            }
+
+            if (error is not null)
+            {
+                rechazados.Add(new FilaRechazada(i + 1, arete, error));
+                continue;
+            }
+
+            var animal = CrearAnimal(ranchoId, fila);
+            _animalRepository.Agregar(animal);
+            registrados.Add(animal);
+        }
+
+        if (registrados.Count > 0)
+        {
+            await _unitOfWork.GuardarCambiosAsync();
+        }
+
+        return new RegistrarLoteResponse(registrados.Select(ToResponse).ToList(), rechazados);
     }
 
     public async Task<IReadOnlyList<AnimalResponse>> BuscarAsync(string? busqueda, EstadoAnimal? estado, SexoAnimal? sexo, string? raza)
@@ -61,6 +115,21 @@ public class AnimalService : IAnimalService
         return animales.Select(ToResponse).ToList();
     }
 
+    // HU-67: conteos del rancho actual para las tarjetas del listado.
+    public async Task<ResumenAnimalesResponse> ObtenerResumenAsync()
+    {
+        var conteos = await _animalRepository.ContarPorEstadoYSexoAsync(_currentUser.RanchoId);
+
+        int Sumar(Func<ConteoAnimales, bool> condicion) => conteos.Where(condicion).Sum(c => c.Cantidad);
+
+        return new ResumenAnimalesResponse(
+            Activos: Sumar(c => c.Estado == EstadoAnimal.Activo),
+            HembrasActivas: Sumar(c => c.Estado == EstadoAnimal.Activo && c.Sexo == SexoAnimal.Hembra),
+            MachosActivos: Sumar(c => c.Estado == EstadoAnimal.Activo && c.Sexo == SexoAnimal.Macho),
+            Vendidos: Sumar(c => c.Estado == EstadoAnimal.Vendido),
+            Fallecidos: Sumar(c => c.Estado == EstadoAnimal.Fallecido));
+    }
+
     public async Task<AnimalResponse> ObtenerPorIdAsync(Guid id)
     {
         var animal = await ObtenerDelRanchoActualAsync(id);
@@ -69,25 +138,23 @@ public class AnimalService : IAnimalService
 
     public async Task<AnimalResponse> EditarAsync(Guid id, RegistrarAnimalRequest request)
     {
-        if (string.IsNullOrWhiteSpace(request.Arete))
+        var error = ValidarDatos(request);
+        if (error is not null)
         {
-            throw new ReglaDeNegocioException("El arete es obligatorio.");
+            throw new ReglaDeNegocioException(error);
         }
 
         var animal = await ObtenerDelRanchoActualAsync(id);
+        var arete = request.Arete.Trim();
 
         // RN-01: el arete es único dentro del rancho (sin contarse a sí mismo).
-        var existeArete = await _animalRepository.ExisteAreteAsync(animal.RanchoId, request.Arete, excluirId: id);
+        var existeArete = await _animalRepository.ExisteAreteAsync(animal.RanchoId, arete, excluirId: id);
         if (existeArete)
         {
-            throw new ReglaDeNegocioException($"Ya existe un animal con el arete '{request.Arete}' en este rancho.");
+            throw new ReglaDeNegocioException($"Ya existe un animal con el arete '{arete}' en este rancho.");
         }
 
-        animal.Arete = request.Arete;
-        animal.Sexo = request.Sexo;
-        animal.Raza = request.Raza;
-        animal.Peso = request.Peso;
-
+        CopiarDatos(request, animal);
         await _unitOfWork.GuardarCambiosAsync();
 
         return ToResponse(animal);
@@ -111,6 +178,87 @@ public class AnimalService : IAnimalService
         await _unitOfWork.GuardarCambiosAsync();
     }
 
+    // Devuelve el primer problema encontrado en los datos, o null si son válidos.
+    private static string? ValidarDatos(RegistrarAnimalRequest request)
+    {
+        if (string.IsNullOrWhiteSpace(request.Arete))
+        {
+            return "El arete es obligatorio.";
+        }
+
+        if (request.Arete.Trim().Length > 50)
+        {
+            return "El arete puede tener hasta 50 caracteres.";
+        }
+
+        if (string.IsNullOrWhiteSpace(request.Raza))
+        {
+            return "La raza es obligatoria.";
+        }
+
+        // RN-14: no se registran fechas futuras.
+        if (request.FechaNacimiento is { } nacimiento && nacimiento > Hoy())
+        {
+            return "La fecha de nacimiento no puede ser futura.";
+        }
+
+        if (!PesoValido(request.Peso) || !PesoValido(request.PesoNacimiento))
+        {
+            return $"Los pesos deben ser mayores que 0 y de hasta {PesoMaximoKg} kg.";
+        }
+
+        if (request.Nombre?.Trim().Length > 100)
+        {
+            return "El nombre puede tener hasta 100 caracteres.";
+        }
+
+        if (request.Color?.Trim().Length > 40)
+        {
+            return "El color puede tener hasta 40 caracteres.";
+        }
+
+        if (request.Observaciones?.Trim().Length > 500)
+        {
+            return "Las observaciones pueden tener hasta 500 caracteres.";
+        }
+
+        return null;
+    }
+
+    private static DateOnly Hoy() =>
+        DateOnly.FromDateTime(TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, ZonaHorariaRancho));
+
+    private static bool PesoValido(decimal? peso) => peso is null || (peso > 0 && peso <= PesoMaximoKg);
+
+    private static Animal CrearAnimal(Guid ranchoId, RegistrarAnimalRequest request)
+    {
+        var animal = new Animal
+        {
+            Id = Guid.NewGuid(),
+            RanchoId = ranchoId,
+            // RN-04: todo animal nace Activo; las ventas y muertes se registran como baja (HU-54).
+            Estado = EstadoAnimal.Activo,
+            FechaRegistro = DateTime.UtcNow,
+        };
+        CopiarDatos(request, animal);
+        return animal;
+    }
+
+    private static void CopiarDatos(RegistrarAnimalRequest request, Animal animal)
+    {
+        animal.Arete = request.Arete.Trim();
+        animal.Sexo = request.Sexo;
+        animal.Raza = request.Raza.Trim();
+        animal.Peso = request.Peso;
+        animal.Nombre = TextoOpcional(request.Nombre);
+        animal.FechaNacimiento = request.FechaNacimiento;
+        animal.PesoNacimiento = request.PesoNacimiento;
+        animal.Color = TextoOpcional(request.Color);
+        animal.Observaciones = TextoOpcional(request.Observaciones);
+    }
+
+    private static string? TextoOpcional(string? texto) => string.IsNullOrWhiteSpace(texto) ? null : texto.Trim();
+
     private async Task<Animal> ObtenerDelRanchoActualAsync(Guid id)
     {
         // RN-16: se busca siempre dentro del rancho del usuario actual, nunca
@@ -122,5 +270,17 @@ public class AnimalService : IAnimalService
     private static bool TieneEventosAsociados(Animal animal) => false;
 
     private static AnimalResponse ToResponse(Animal animal) =>
-        new(animal.Id, animal.Arete, animal.Sexo, animal.Raza, animal.Peso, animal.Estado, animal.FechaRegistro);
+        new(
+            animal.Id,
+            animal.Arete,
+            animal.Sexo,
+            animal.Raza,
+            animal.Peso,
+            animal.Estado,
+            animal.FechaRegistro,
+            animal.Nombre,
+            animal.FechaNacimiento,
+            animal.PesoNacimiento,
+            animal.Color,
+            animal.Observaciones);
 }

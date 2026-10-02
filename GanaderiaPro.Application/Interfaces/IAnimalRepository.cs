@@ -1,3 +1,4 @@
+using GanaderiaPro.Application.DTOs;
 using GanaderiaPro.Domain.Entities;
 
 namespace GanaderiaPro.Application.Interfaces;
@@ -9,4 +10,5 @@ public interface IAnimalRepository
     void Agregar(Animal animal);
     void Eliminar(Animal animal);
     Task<IReadOnlyList<Animal>> BuscarAsync(Guid ranchoId, string? busqueda, EstadoAnimal estado, SexoAnimal? sexo, string? raza);
+    Task<IReadOnlyList<ConteoAnimales>> ContarPorEstadoYSexoAsync(Guid ranchoId);
 }

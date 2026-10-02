@@ -27,6 +27,18 @@ public class AnimalConfiguration : IEntityTypeConfiguration<Animal>
         builder.Property(a => a.Peso)
             .HasPrecision(7, 2);
 
+        builder.Property(a => a.Nombre)
+            .HasMaxLength(100);
+
+        builder.Property(a => a.PesoNacimiento)
+            .HasPrecision(7, 2);
+
+        builder.Property(a => a.Color)
+            .HasMaxLength(40);
+
+        builder.Property(a => a.Observaciones)
+            .HasMaxLength(500);
+
         builder.Property(a => a.Sexo)
             .HasConversion<string>()
             .HasMaxLength(10)
