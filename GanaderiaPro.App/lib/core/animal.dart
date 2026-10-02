@@ -12,6 +12,8 @@ class Animal {
     this.pesoNacimiento,
     this.color,
     this.observaciones,
+    this.castrado = false,
+    this.categoria,
   });
 
   final String id;
@@ -26,6 +28,9 @@ class Animal {
   final double? pesoNacimiento;
   final String? color;
   final String? observaciones;
+  final bool castrado;
+  // HU-74: la calcula el servidor; null si el animal no tiene fecha de nacimiento.
+  final String? categoria;
 
   factory Animal.fromJson(Map<String, dynamic> json) {
     final nacimiento = json['fechaNacimiento'] as String?;
@@ -42,6 +47,8 @@ class Animal {
       pesoNacimiento: (json['pesoNacimiento'] as num?)?.toDouble(),
       color: json['color'] as String?,
       observaciones: json['observaciones'] as String?,
+      castrado: json['castrado'] as bool? ?? false,
+      categoria: json['categoria'] as String?,
     );
   }
 }
@@ -58,6 +65,7 @@ class DatosAnimal {
     this.peso,
     this.color,
     this.observaciones,
+    this.castrado = false,
   });
 
   final String arete;
@@ -69,6 +77,7 @@ class DatosAnimal {
   final double? peso;
   final String? color;
   final String? observaciones;
+  final bool castrado;
 
   Map<String, dynamic> toJson() => {
     'arete': arete,
@@ -80,6 +89,8 @@ class DatosAnimal {
     'pesoNacimiento': pesoNacimiento,
     'color': color,
     'observaciones': observaciones,
+    // La castración solo aplica a machos.
+    'castrado': sexo == 'Macho' && castrado,
   };
 
   static String _fechaIso(DateTime fecha) =>

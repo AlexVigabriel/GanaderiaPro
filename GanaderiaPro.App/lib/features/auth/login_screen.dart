@@ -95,13 +95,9 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
             CampoConEtiqueta(
               etiqueta: 'Contraseña',
-              child: TextFormField(
+              child: CampoContrasena(
                 controller: _contrasenaController,
-                decoration: const InputDecoration(
-                  hintText: 'Tu contraseña',
-                  prefixIcon: Icon(Icons.lock_outline),
-                ),
-                obscureText: true,
+                hintText: 'Tu contraseña',
                 validator: (v) => (v == null || v.isEmpty) ? 'La contraseña es obligatoria' : null,
               ),
             ),

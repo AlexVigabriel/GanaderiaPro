@@ -48,6 +48,7 @@ class _FilaCarga {
   String? raza;
   String? color;
   DateTime? nacimiento;
+  bool castrado = false;
   bool detalleAbierto = false;
   Map<String, String> errores = {};
   String? errorServidor;
@@ -59,12 +60,13 @@ class _FilaCarga {
     ..peso.text = peso.text
     ..observaciones.text = observaciones.text
     ..color = color
+    ..castrado = castrado
     ..detalleAbierto = detalleAbierto;
 
   bool get vacia => [arete, nombre, pesoNacimiento, peso, observaciones].every((c) => c.text.trim().isEmpty);
 
   DatosAnimal aDatos() => DatosAnimal(
-    arete: arete.text.trim(),
+    arete: normalizarIdentificacion(arete.text),
     sexo: sexo!,
     raza: raza!,
     nombre: _texto(nombre),
@@ -73,6 +75,7 @@ class _FilaCarga {
     peso: leerPeso(peso.text),
     color: color,
     observaciones: _texto(observaciones),
+    castrado: castrado,
   );
 
   static String? _texto(TextEditingController c) => c.text.trim().isEmpty ? null : c.text.trim();
@@ -144,7 +147,7 @@ class _CargaMultipleAnimalesState extends State<CargaMultipleAnimales> {
     final resumen = <String>[];
     final aretes = <String, int>{};
     for (final fila in _filas.where((f) => !f.vacia)) {
-      final arete = fila.arete.text.trim();
+      final arete = normalizarIdentificacion(fila.arete.text);
       if (arete.isNotEmpty) aretes[arete] = (aretes[arete] ?? 0) + 1;
     }
 
@@ -161,12 +164,12 @@ class _CargaMultipleAnimalesState extends State<CargaMultipleAnimales> {
         'sexo': ?validarSexo(fila.sexo),
         'raza': ?validarRaza(fila.raza),
         'nacimiento': ?validarFechaNacimiento(fila.nacimiento),
-        'pesoNacimiento': ?validarPeso(fila.pesoNacimiento.text),
+        'pesoNacimiento': ?validarPesoNacimiento(fila.pesoNacimiento.text),
         'peso': ?validarPeso(fila.peso.text),
         'nombre': ?validarLargo(fila.nombre.text, 100),
         'observaciones': ?validarLargo(fila.observaciones.text, 500),
       };
-      if (!errores.containsKey('arete') && (aretes[fila.arete.text.trim()] ?? 0) > 1) {
+      if (!errores.containsKey('arete') && (aretes[normalizarIdentificacion(fila.arete.text)] ?? 0) > 1) {
         errores['arete'] = 'Repetido en la tabla';
       }
       // Si el error está en un campo del detalle, se abre para que se vea.
@@ -402,11 +405,11 @@ class _CargaMultipleAnimalesState extends State<CargaMultipleAnimales> {
       child: Row(
         children: [
           columna('#', _FilaWidget.anchoNumero),
-          columna('Arete *', _FilaWidget.anchoArete),
+          columna('Identificación *', _FilaWidget.anchoArete),
           columna('Nombre', _FilaWidget.anchoNombre),
           columna('Sexo *', _FilaWidget.anchoSexo),
           columna('Raza *', _FilaWidget.anchoRaza),
-          columna('Nacimiento', _FilaWidget.anchoFecha),
+          columna('Nacimiento *', _FilaWidget.anchoFecha),
           columna('Peso al nacer (kg)', _FilaWidget.anchoPeso),
           columna('Acciones', _FilaWidget.anchoAcciones),
         ],
@@ -481,6 +484,7 @@ class _FilaWidget extends StatelessWidget {
                 anchoArete,
                 TextField(
                   controller: fila.arete,
+                  inputFormatters: formatoIdentificacion,
                   decoration: _decoracion('arete', hint: 'Ej. AR-001'),
                   onChanged: (_) => onCambio(),
                 ),
@@ -619,6 +623,27 @@ class _FilaWidget extends StatelessWidget {
               ),
             ),
           ),
+          // HU-74: define si el macho es Novillo.
+          if (fila.sexo == 'Macho') ...[
+            const SizedBox(width: 12),
+            SizedBox(
+              width: 110,
+              child: _etiquetado(
+                tema,
+                'Castrado',
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Switch(
+                    value: fila.castrado,
+                    onChanged: (v) {
+                      fila.castrado = v;
+                      onCambio();
+                    },
+                  ),
+                ),
+              ),
+            ),
+          ],
           const SizedBox(width: 12),
           Expanded(
             child: _etiquetado(

@@ -138,15 +138,10 @@ class _RegistroScreenState extends State<RegistroScreen> {
             ),
             CampoConEtiqueta(
               etiqueta: 'Contraseña',
-              child: TextFormField(
+              child: CampoContrasena(
                 controller: _contrasenaController,
-                decoration: const InputDecoration(
-                  hintText: 'Tu contraseña',
-                  helperText: 'Mínimo 8 caracteres, con letra y número',
-                  helperMaxLines: 2,
-                  prefixIcon: Icon(Icons.lock_outline),
-                ),
-                obscureText: true,
+                hintText: 'Tu contraseña',
+                helperText: 'Mínimo 8 caracteres, con letra y número',
                 validator: (v) {
                   if (v == null || v.isEmpty) return 'La contraseña es obligatoria';
                   final tieneLetra = v.contains(RegExp(r'[A-Za-z]'));
@@ -160,13 +155,9 @@ class _RegistroScreenState extends State<RegistroScreen> {
             ),
             CampoConEtiqueta(
               etiqueta: 'Confirmar contraseña',
-              child: TextFormField(
+              child: CampoContrasena(
                 controller: _confirmarController,
-                decoration: const InputDecoration(
-                  hintText: 'Repetí tu contraseña',
-                  prefixIcon: Icon(Icons.lock_outline),
-                ),
-                obscureText: true,
+                hintText: 'Repetí tu contraseña',
                 // HU-08: confirmación debe coincidir con la contraseña.
                 validator: (v) =>
                     (v != _contrasenaController.text) ? 'Las contraseñas no coinciden' : null,

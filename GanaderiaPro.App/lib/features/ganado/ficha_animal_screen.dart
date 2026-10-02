@@ -128,6 +128,7 @@ class _FichaAnimalScreenState extends State<FichaAnimalScreen> {
                           crossAxisAlignment: WrapCrossAlignment.center,
                           children: [
                             Text(animal.arete, style: tema.textTheme.headlineMedium),
+                            EtiquetaCategoria(animal.categoria),
                             EtiquetaEstado(animal.estado),
                           ],
                         ),
@@ -172,6 +173,7 @@ class _FichaAnimalScreenState extends State<FichaAnimalScreen> {
                           final nacimiento = animal.fechaNacimiento;
                           final datos = <(String, String)>[
                             ('Sexo', animal.sexo),
+                            if (animal.sexo == 'Macho') ('Castrado', animal.castrado ? 'Sí' : 'No'),
                             ('Raza', animal.raza),
                             ('Color', animal.color ?? '—'),
                             (

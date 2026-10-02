@@ -167,6 +167,50 @@ class CampoConEtiqueta extends StatelessWidget {
   }
 }
 
+// Campo de contraseña con el botón del ojo para mostrarla u ocultarla.
+// Empieza oculta.
+class CampoContrasena extends StatefulWidget {
+  const CampoContrasena({
+    super.key,
+    required this.controller,
+    required this.hintText,
+    this.helperText,
+    this.validator,
+  });
+
+  final TextEditingController controller;
+  final String hintText;
+  final String? helperText;
+  final FormFieldValidator<String>? validator;
+
+  @override
+  State<CampoContrasena> createState() => _CampoContrasenaState();
+}
+
+class _CampoContrasenaState extends State<CampoContrasena> {
+  bool _visible = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return TextFormField(
+      controller: widget.controller,
+      obscureText: !_visible,
+      validator: widget.validator,
+      decoration: InputDecoration(
+        hintText: widget.hintText,
+        helperText: widget.helperText,
+        helperMaxLines: 2,
+        prefixIcon: const Icon(Icons.lock_outline),
+        suffixIcon: IconButton(
+          tooltip: _visible ? 'Ocultar contraseña' : 'Mostrar contraseña',
+          icon: Icon(_visible ? Icons.visibility_off_outlined : Icons.visibility_outlined),
+          onPressed: () => setState(() => _visible = !_visible),
+        ),
+      ),
+    );
+  }
+}
+
 class _Logotipo extends StatelessWidget {
   const _Logotipo();
 

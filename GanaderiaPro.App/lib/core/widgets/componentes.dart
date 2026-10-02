@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../formato.dart';
+import '../validaciones_animal.dart';
 
 // Botón cuadrado de ícono para acciones de una fila (editar, duplicar,
 // eliminar). El de eliminar se marca como peligroso y se pone rojo al
@@ -65,7 +66,7 @@ class _BotonAccionState extends State<BotonAccion> {
 }
 
 // Campo de solo lectura que abre un calendario. No deja elegir fechas
-// futuras (RN-14).
+// futuras (RN-14) ni de hace más de 25 años.
 class CampoFecha extends StatelessWidget {
   const CampoFecha({
     super.key,
@@ -84,10 +85,12 @@ class CampoFecha extends StatelessWidget {
 
   Future<void> _elegir(BuildContext context) async {
     final hoy = DateTime.now();
+    final minima = fechaNacimientoMinima();
+    final inicial = valor == null || valor!.isAfter(hoy) || valor!.isBefore(minima) ? hoy : valor!;
     final elegida = await showDatePicker(
       context: context,
-      initialDate: valor ?? hoy,
-      firstDate: DateTime(1990),
+      initialDate: inicial,
+      firstDate: minima,
       lastDate: hoy,
       helpText: 'Fecha de nacimiento',
     );
@@ -147,6 +150,34 @@ class EtiquetaEstado extends StatelessWidget {
       child: Text(
         texto,
         style: Theme.of(context).textTheme.labelMedium?.copyWith(color: color, fontWeight: FontWeight.w600),
+      ),
+    );
+  }
+}
+
+// HU-74: categoría del animal (Ternero, Vaquillona, Novillo, etc.).
+class EtiquetaCategoria extends StatelessWidget {
+  const EtiquetaCategoria(this.categoria, {super.key});
+
+  final String? categoria;
+
+  @override
+  Widget build(BuildContext context) {
+    final tema = Theme.of(context);
+    final sinCategoria = categoria == null;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+      decoration: BoxDecoration(
+        color: sinCategoria ? Colors.transparent : tema.colorScheme.secondaryContainer,
+        borderRadius: BorderRadius.circular(8),
+        border: sinCategoria ? Border.all(color: tema.colorScheme.outlineVariant) : null,
+      ),
+      child: Text(
+        categoria ?? 'Sin categoría',
+        style: tema.textTheme.labelMedium?.copyWith(
+          fontWeight: FontWeight.w600,
+          color: sinCategoria ? tema.colorScheme.onSurfaceVariant : tema.colorScheme.onSecondaryContainer,
+        ),
       ),
     );
   }

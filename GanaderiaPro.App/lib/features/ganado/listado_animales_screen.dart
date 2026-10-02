@@ -29,6 +29,7 @@ class _ListadoAnimalesScreenState extends State<ListadoAnimalesScreen> with Rout
   // RN-04: por defecto se ven los Activos.
   String _estado = 'Activo';
   String? _raza;
+  String? _categoria;
 
   List<Animal>? _animales;
   ResumenAnimales? _resumen;
@@ -67,7 +68,13 @@ class _ListadoAnimalesScreenState extends State<ListadoAnimalesScreen> with Rout
     });
     try {
       final resultados = await Future.wait([
-        _api.buscarAnimales(busqueda: _busqueda.text.trim(), sexo: _sexo, estado: _estado, raza: _raza),
+        _api.buscarAnimales(
+          busqueda: _busqueda.text.trim(),
+          sexo: _sexo,
+          estado: _estado,
+          raza: _raza,
+          categoria: _categoria,
+        ),
         _api.obtenerResumen(),
       ]);
       if (!mounted) return;
@@ -122,7 +129,8 @@ class _ListadoAnimalesScreenState extends State<ListadoAnimalesScreen> with Rout
     }
   }
 
-  bool get _hayFiltros => _busqueda.text.trim().isNotEmpty || _sexo != null || _raza != null || _estado != 'Activo';
+  bool get _hayFiltros =>
+      _busqueda.text.trim().isNotEmpty || _sexo != null || _raza != null || _categoria != null || _estado != 'Activo';
 
   @override
   Widget build(BuildContext context) {
@@ -205,10 +213,17 @@ class _ListadoAnimalesScreenState extends State<ListadoAnimalesScreen> with Rout
                   onChanged: _buscarConEspera,
                   decoration: const InputDecoration(
                     isDense: true,
-                    hintText: 'Buscar por arete, nombre o raza…',
+                    hintText: 'Buscar por identificación, nombre o raza…',
                     prefixIcon: Icon(Icons.search),
                   ),
                 ),
+              ),
+              _filtro<String?>(
+                ancho: 200,
+                valor: _categoria,
+                opciones: {null: 'Todas las categorías', for (final c in categoriasAnimal.keys) c: c},
+                descripciones: categoriasAnimal,
+                onChanged: (v) => setState(() => _categoria = v),
               ),
               _filtro<String?>(
                 ancho: 200,
@@ -240,15 +255,38 @@ class _ListadoAnimalesScreenState extends State<ListadoAnimalesScreen> with Rout
     required T valor,
     required Map<T, String> opciones,
     required ValueChanged<T?> onChanged,
+    // Texto de ayuda que se ve en la lista abierta, debajo de cada opción.
+    Map<T, String>? descripciones,
   }) {
+    final tema = Theme.of(context);
     return SizedBox(
       width: ancho,
       child: DropdownButtonFormField<T>(
         initialValue: valor,
         isExpanded: true,
         decoration: const InputDecoration(isDense: true),
+        menuMaxHeight: 480,
+        selectedItemBuilder: (_) => [
+          for (final texto in opciones.values) Text(texto, maxLines: 1, overflow: TextOverflow.ellipsis),
+        ],
         items: [
-          for (final opcion in opciones.entries) DropdownMenuItem<T>(value: opcion.key, child: Text(opcion.value)),
+          for (final opcion in opciones.entries)
+            DropdownMenuItem<T>(
+              value: opcion.key,
+              child: descripciones?[opcion.key] == null
+                  ? Text(opcion.value)
+                  : Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(opcion.value),
+                        Text(
+                          descripciones![opcion.key]!,
+                          style: tema.textTheme.bodySmall?.copyWith(color: tema.colorScheme.onSurfaceVariant),
+                        ),
+                      ],
+                    ),
+            ),
         ],
         onChanged: (v) {
           onChanged(v);
@@ -312,7 +350,7 @@ class _ListadoAnimalesScreenState extends State<ListadoAnimalesScreen> with Rout
     );
     Widget encabezado(String texto, int flex) => Expanded(
       flex: flex,
-      child: Text(texto.toUpperCase(), style: estiloEncabezado),
+      child: Text(texto.toUpperCase(), style: estiloEncabezado, maxLines: 1, overflow: TextOverflow.ellipsis),
     );
 
     return Column(
@@ -322,9 +360,9 @@ class _ListadoAnimalesScreenState extends State<ListadoAnimalesScreen> with Rout
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
           child: Row(
             children: [
-              encabezado('Arete', 2),
+              encabezado('Identificación', 3),
               encabezado('Nombre', 3),
-              encabezado('Sexo', 2),
+              encabezado('Categoría', 2),
               encabezado('Raza', 2),
               encabezado('Nacimiento', 2),
               encabezado('Peso', 2),
@@ -340,9 +378,12 @@ class _ListadoAnimalesScreenState extends State<ListadoAnimalesScreen> with Rout
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
               child: Row(
                 children: [
-                  Expanded(flex: 2, child: Text(animal.arete, style: tema.textTheme.titleSmall)),
+                  Expanded(flex: 3, child: Text(animal.arete, style: tema.textTheme.titleSmall)),
                   Expanded(flex: 3, child: Text(animal.nombre ?? '—', overflow: TextOverflow.ellipsis)),
-                  Expanded(flex: 2, child: _sexoConIcono(animal.sexo)),
+                  Expanded(
+                    flex: 2,
+                    child: Align(alignment: Alignment.centerLeft, child: EtiquetaCategoria(animal.categoria)),
+                  ),
                   Expanded(flex: 2, child: Text(animal.raza, overflow: TextOverflow.ellipsis)),
                   Expanded(
                     flex: 2,
@@ -393,7 +434,11 @@ class _ListadoAnimalesScreenState extends State<ListadoAnimalesScreen> with Rout
                         style: tema.textTheme.bodySmall?.copyWith(color: tema.colorScheme.onSurfaceVariant),
                       ),
                       const SizedBox(height: 8),
-                      EtiquetaEstado(animal.estado),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 6,
+                        children: [EtiquetaCategoria(animal.categoria), EtiquetaEstado(animal.estado)],
+                      ),
                     ],
                   ),
                 ),
@@ -406,18 +451,6 @@ class _ListadoAnimalesScreenState extends State<ListadoAnimalesScreen> with Rout
       ],
     );
   }
-
-  Widget _sexoConIcono(String sexo) => Row(
-    children: [
-      Icon(
-        sexo == 'Hembra' ? Icons.female : Icons.male,
-        size: 16,
-        color: Theme.of(context).colorScheme.onSurfaceVariant,
-      ),
-      const SizedBox(width: 4),
-      Text(sexo),
-    ],
-  );
 
   Widget _acciones(Animal animal) => Row(
     mainAxisSize: MainAxisSize.min,
