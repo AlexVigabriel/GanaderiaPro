@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'core/app_theme.dart';
 import 'core/route_observer.dart';
 import 'features/auth/login_screen.dart';
 import 'features/auth/registro_screen.dart';
@@ -17,7 +18,11 @@ class GanaderiaProApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'GanaderíaPro',
-      theme: ThemeData(colorSchemeSeed: Colors.green, useMaterial3: true),
+      theme: AppTheme.claro,
+      darkTheme: AppTheme.oscuro,
+      // Fijo en claro por decisión del equipo; el interruptor para elegir
+      // el modo oscuro y recordar la elección es la HU-72.
+      themeMode: ThemeMode.light,
       navigatorObservers: [routeObserver],
       initialRoute: '/login',
       // Se maneja a mano en vez de con el mapa `routes` de MaterialApp,

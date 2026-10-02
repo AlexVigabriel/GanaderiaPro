@@ -57,10 +57,13 @@ class AppShell extends StatelessWidget {
         child: ListView(
           padding: EdgeInsets.zero,
           children: [
-            const DrawerHeader(
+            DrawerHeader(
+              decoration: BoxDecoration(color: Theme.of(context).appBarTheme.backgroundColor),
               child: Text(
                 'GanaderíaPro',
-                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  color: Theme.of(context).appBarTheme.foregroundColor,
+                ),
               ),
             ),
             for (final modulo in modulosDisponibles)

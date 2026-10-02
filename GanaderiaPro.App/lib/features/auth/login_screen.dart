@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/api_client.dart';
+import 'auth_layout.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -72,45 +73,50 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Iniciar sesión')),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Form(
-          key: _formKey,
-          child: ListView(
-            children: [
-              TextFormField(
+    return AuthLayout(
+      seccion: SeccionAuth.iniciarSesion,
+      subtitulo: 'Ingresá a tu cuenta',
+      formulario: Form(
+        key: _formKey,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            CampoConEtiqueta(
+              etiqueta: 'Correo electrónico',
+              child: TextFormField(
                 controller: _emailController,
-                decoration: const InputDecoration(labelText: 'Correo *'),
+                decoration: const InputDecoration(
+                  hintText: 'tu@correo.com',
+                  prefixIcon: Icon(Icons.mail_outline),
+                ),
                 keyboardType: TextInputType.emailAddress,
                 validator: (v) => (v == null || v.trim().isEmpty) ? 'El correo es obligatorio' : null,
               ),
-              const SizedBox(height: 12),
-              TextFormField(
+            ),
+            CampoConEtiqueta(
+              etiqueta: 'Contraseña',
+              child: TextFormField(
                 controller: _contrasenaController,
-                decoration: const InputDecoration(labelText: 'Contraseña *'),
+                decoration: const InputDecoration(
+                  hintText: 'Tu contraseña',
+                  prefixIcon: Icon(Icons.lock_outline),
+                ),
                 obscureText: true,
                 validator: (v) => (v == null || v.isEmpty) ? 'La contraseña es obligatoria' : null,
               ),
-              const SizedBox(height: 24),
-              FilledButton(
-                onPressed: _ingresando ? null : _iniciarSesion,
-                child: _ingresando
-                    ? const SizedBox(
-                        height: 18,
-                        width: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Text('Iniciar sesión'),
-              ),
-              const SizedBox(height: 12),
-              TextButton(
-                onPressed: _ingresando ? null : () => Navigator.of(context).pushNamed('/registro'),
-                child: const Text('¿No tenés cuenta? Crear cuenta'),
-              ),
-            ],
-          ),
+            ),
+            const SizedBox(height: 8),
+            FilledButton(
+              onPressed: _ingresando ? null : _iniciarSesion,
+              child: _ingresando
+                  ? const SizedBox(
+                      height: 18,
+                      width: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Text('Ingresar'),
+            ),
+          ],
         ),
       ),
     );
