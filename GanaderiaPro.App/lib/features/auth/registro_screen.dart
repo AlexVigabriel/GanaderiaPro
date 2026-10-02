@@ -4,7 +4,10 @@ import '../../core/api_client.dart';
 import 'auth_layout.dart';
 
 class RegistroScreen extends StatefulWidget {
-  const RegistroScreen({super.key});
+  const RegistroScreen({super.key, this.planInicial});
+
+  // HU-05: plan elegido en el sitio público, si se llegó desde ahí.
+  final String? planInicial;
 
   @override
   State<RegistroScreen> createState() => _RegistroScreenState();
@@ -19,15 +22,12 @@ class _RegistroScreenState extends State<RegistroScreen> {
   final _contrasenaController = TextEditingController();
   final _confirmarController = TextEditingController();
   final _nombreRanchoController = TextEditingController();
-  // HU-05: si se llega acá desde el sitio público con un plan elegido
-  // (ej. "?plan=Intermedio"), se usa como selección inicial.
-  late String _plan = _planDesdeUrl();
+  late String _plan = _planValido(widget.planInicial);
   bool _guardando = false;
 
-  static String _planDesdeUrl() {
+  static String _planValido(String? plan) {
     const planesValidos = {'Basico', 'Intermedio', 'Superior'};
-    final planUrl = Uri.base.queryParameters['plan'];
-    return planesValidos.contains(planUrl) ? planUrl! : 'Basico';
+    return planesValidos.contains(plan) ? plan! : 'Basico';
   }
 
   @override
