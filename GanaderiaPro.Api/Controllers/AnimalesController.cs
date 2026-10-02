@@ -58,9 +58,10 @@ public class AnimalesController : ControllerBase
         [FromQuery] string? busqueda,
         [FromQuery] EstadoAnimal? estado,
         [FromQuery] SexoAnimal? sexo,
-        [FromQuery] string? raza)
+        [FromQuery] string? raza,
+        [FromQuery] CategoriaAnimal? categoria)
     {
-        var animales = await _animalService.BuscarAsync(busqueda, estado, sexo, raza);
+        var animales = await _animalService.BuscarAsync(busqueda, estado, sexo, raza, categoria);
         return Ok(animales);
     }
 

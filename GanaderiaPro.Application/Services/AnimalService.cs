@@ -115,13 +115,23 @@ public class AnimalService : IAnimalService
         return new RegistrarLoteResponse(registrados.Select(ToResponse).ToList(), rechazados);
     }
 
-    public async Task<IReadOnlyList<AnimalResponse>> BuscarAsync(string? busqueda, EstadoAnimal? estado, SexoAnimal? sexo, string? raza)
+    public async Task<IReadOnlyList<AnimalResponse>> BuscarAsync(
+        string? busqueda, EstadoAnimal? estado, SexoAnimal? sexo, string? raza, CategoriaAnimal? categoria = null)
     {
         // RN-04: por defecto solo se muestran animales Activos, salvo que se pida un estado explícito.
         var estadoEfectivo = estado ?? EstadoAnimal.Activo;
 
         var animales = await _animalRepository.BuscarAsync(_currentUser.RanchoId, busqueda, estadoEfectivo, sexo, raza);
-        return animales.Select(ToResponse).ToList();
+        var respuestas = animales.Select(ToResponse);
+
+        // HU-74: la categoría se calcula (no está en la base), así que se
+        // filtra después de buscar. Un rancho tiene a lo sumo unos cientos de animales.
+        if (categoria is not null)
+        {
+            respuestas = respuestas.Where(a => a.Categoria == categoria);
+        }
+
+        return respuestas.ToList();
     }
 
     // HU-67: conteos del rancho actual para las tarjetas del listado.
@@ -288,6 +298,8 @@ public class AnimalService : IAnimalService
         animal.PesoNacimiento = request.PesoNacimiento;
         animal.Color = TextoOpcional(request.Color);
         animal.Observaciones = TextoOpcional(request.Observaciones);
+        // Una hembra nunca queda marcada como castrada.
+        animal.Castrado = request.Sexo == SexoAnimal.Macho && request.Castrado;
     }
 
     private static string? TextoOpcional(string? texto) => string.IsNullOrWhiteSpace(texto) ? null : texto.Trim();
@@ -315,5 +327,7 @@ public class AnimalService : IAnimalService
             animal.FechaNacimiento,
             animal.PesoNacimiento,
             animal.Color,
-            animal.Observaciones);
+            animal.Observaciones,
+            animal.Castrado,
+            animal.CategoriaAl(Hoy()));
 }

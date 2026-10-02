@@ -30,6 +30,7 @@ class _EditarAnimalScreenState extends State<EditarAnimalScreen> {
   late String _raza = widget.animal.raza;
   late String? _color = widget.animal.color;
   late DateTime? _nacimiento = widget.animal.fechaNacimiento;
+  late bool _castrado = widget.animal.castrado;
   String? _errorNacimiento;
   bool _guardando = false;
 
@@ -63,6 +64,7 @@ class _EditarAnimalScreenState extends State<EditarAnimalScreen> {
           peso: leerPeso(_peso.text),
           color: _color,
           observaciones: _observaciones.text.trim().isEmpty ? null : _observaciones.text.trim(),
+          castrado: _castrado,
         ),
       );
       if (mounted) Navigator.of(context).pop(true);
@@ -152,6 +154,17 @@ class _EditarAnimalScreenState extends State<EditarAnimalScreen> {
                                   onChanged: (v) => setState(() => _sexo = v ?? _sexo),
                                 ),
                               ),
+                              // HU-74: solo para machos; define si es Novillo.
+                              if (_sexo == 'Macho')
+                                campo(
+                                  'Castrado',
+                                  SwitchListTile(
+                                    value: _castrado,
+                                    contentPadding: EdgeInsets.zero,
+                                    title: Text(_castrado ? 'Sí' : 'No'),
+                                    onChanged: (v) => setState(() => _castrado = v),
+                                  ),
+                                ),
                               campo(
                                 'Raza *',
                                 DropdownButtonFormField<String>(

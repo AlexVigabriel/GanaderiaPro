@@ -11,7 +11,8 @@ public record RegistrarAnimalRequest(
     DateOnly? FechaNacimiento = null,
     decimal? PesoNacimiento = null,
     string? Color = null,
-    string? Observaciones = null);
+    string? Observaciones = null,
+    bool Castrado = false);
 
 public record AnimalResponse(
     Guid Id,
@@ -25,7 +26,9 @@ public record AnimalResponse(
     DateOnly? FechaNacimiento,
     decimal? PesoNacimiento,
     string? Color,
-    string? Observaciones);
+    string? Observaciones,
+    bool Castrado,
+    CategoriaAnimal? Categoria);
 
 // HU-66: resultado de la carga múltiple. Las filas válidas se registran y
 // las inválidas se informan con su número de fila y el motivo.

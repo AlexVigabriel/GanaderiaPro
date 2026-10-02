@@ -155,6 +155,34 @@ class EtiquetaEstado extends StatelessWidget {
   }
 }
 
+// HU-74: categoría del animal (Ternero, Vaquillona, Novillo, etc.).
+class EtiquetaCategoria extends StatelessWidget {
+  const EtiquetaCategoria(this.categoria, {super.key});
+
+  final String? categoria;
+
+  @override
+  Widget build(BuildContext context) {
+    final tema = Theme.of(context);
+    final sinCategoria = categoria == null;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+      decoration: BoxDecoration(
+        color: sinCategoria ? Colors.transparent : tema.colorScheme.secondaryContainer,
+        borderRadius: BorderRadius.circular(8),
+        border: sinCategoria ? Border.all(color: tema.colorScheme.outlineVariant) : null,
+      ),
+      child: Text(
+        categoria ?? 'Sin categoría',
+        style: tema.textTheme.labelMedium?.copyWith(
+          fontWeight: FontWeight.w600,
+          color: sinCategoria ? tema.colorScheme.onSurfaceVariant : tema.colorScheme.onSecondaryContainer,
+        ),
+      ),
+    );
+  }
+}
+
 // HU-67: tarjeta de conteo (etiqueta, número grande e ícono).
 class TarjetaIndicador extends StatelessWidget {
   const TarjetaIndicador({super.key, required this.etiqueta, required this.valor, required this.icono});

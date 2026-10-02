@@ -93,4 +93,19 @@ void main() {
     expect(find.text('Color'), findsOneWidget);
     expect(find.text('Observaciones'), findsOneWidget);
   });
+
+  testWidgets('Castrado solo aparece en el detalle de un macho', (tester) async {
+    await abrir(tester);
+    await tester.tap(find.byTooltip('Abrir detalle'));
+    await tester.pump();
+    expect(find.text('Castrado'), findsNothing);
+
+    // Las dos primeras listas son los valores por defecto; la tercera es el sexo de la fila.
+    await tester.tap(find.byType(DropdownButtonFormField<String>).at(2));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Macho').last);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Castrado'), findsOneWidget);
+  });
 }

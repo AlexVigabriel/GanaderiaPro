@@ -142,12 +142,14 @@ class ApiClient {
     String? estado,
     String? sexo,
     String? raza,
+    String? categoria,
   }) async {
     final query = <String, String>{};
     if (busqueda != null && busqueda.isNotEmpty) query['busqueda'] = busqueda;
     if (estado != null) query['estado'] = estado;
     if (sexo != null) query['sexo'] = sexo;
     if (raza != null && raza.isNotEmpty) query['raza'] = raza;
+    if (categoria != null) query['categoria'] = categoria;
 
     final uri = Uri.parse(
       '$baseUrl/api/animales',

@@ -48,6 +48,7 @@ class _FilaCarga {
   String? raza;
   String? color;
   DateTime? nacimiento;
+  bool castrado = false;
   bool detalleAbierto = false;
   Map<String, String> errores = {};
   String? errorServidor;
@@ -59,6 +60,7 @@ class _FilaCarga {
     ..peso.text = peso.text
     ..observaciones.text = observaciones.text
     ..color = color
+    ..castrado = castrado
     ..detalleAbierto = detalleAbierto;
 
   bool get vacia => [arete, nombre, pesoNacimiento, peso, observaciones].every((c) => c.text.trim().isEmpty);
@@ -73,6 +75,7 @@ class _FilaCarga {
     peso: leerPeso(peso.text),
     color: color,
     observaciones: _texto(observaciones),
+    castrado: castrado,
   );
 
   static String? _texto(TextEditingController c) => c.text.trim().isEmpty ? null : c.text.trim();
@@ -620,6 +623,27 @@ class _FilaWidget extends StatelessWidget {
               ),
             ),
           ),
+          // HU-74: define si el macho es Novillo.
+          if (fila.sexo == 'Macho') ...[
+            const SizedBox(width: 12),
+            SizedBox(
+              width: 110,
+              child: _etiquetado(
+                tema,
+                'Castrado',
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Switch(
+                    value: fila.castrado,
+                    onChanged: (v) {
+                      fila.castrado = v;
+                      onCambio();
+                    },
+                  ),
+                ),
+              ),
+            ),
+          ],
           const SizedBox(width: 12),
           Expanded(
             child: _etiquetado(

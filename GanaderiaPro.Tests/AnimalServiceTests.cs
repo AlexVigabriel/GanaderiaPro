@@ -320,6 +320,42 @@ public class AnimalServiceTests
     }
 
     [Fact]
+    public async Task Registrar_HembraMarcadaComoCastrada_SeGuardaSinCastrar()
+    {
+        // HU-74: la castración solo aplica a machos.
+        var repoMock = new Mock<IAnimalRepository>();
+        var service = CrearServicio(repoMock);
+        var haceTresAnios = DateOnly.FromDateTime(DateTime.UtcNow).AddYears(-3);
+        var request = new RegistrarAnimalRequest("A016", SexoAnimal.Hembra, "Nelore", null, FechaNacimiento: haceTresAnios, Castrado: true);
+
+        var resultado = await service.RegistrarAsync(request);
+
+        Assert.False(resultado.Castrado);
+        Assert.Equal(CategoriaAnimal.Vaca, resultado.Categoria);
+    }
+
+    [Fact]
+    public async Task Buscar_PorCategoria_DevuelveSoloEsaCategoria()
+    {
+        // HU-74: el filtro usa la categoría calculada.
+        var hoy = DateOnly.FromDateTime(DateTime.UtcNow);
+        var repoMock = new Mock<IAnimalRepository>();
+        repoMock.Setup(r => r.BuscarAsync(RanchoIdDePrueba, null, EstadoAnimal.Activo, null, null))
+            .ReturnsAsync(new List<Animal>
+            {
+                new() { Arete = "T-1", Sexo = SexoAnimal.Macho, FechaNacimiento = hoy.AddMonths(-3) },
+                new() { Arete = "N-1", Sexo = SexoAnimal.Macho, Castrado = true, FechaNacimiento = hoy.AddMonths(-14) },
+                new() { Arete = "N-2", Sexo = SexoAnimal.Macho, Castrado = true, FechaNacimiento = hoy.AddMonths(-40) },
+                new() { Arete = "V-1", Sexo = SexoAnimal.Hembra, FechaNacimiento = hoy.AddMonths(-40) },
+            });
+        var service = CrearServicio(repoMock);
+
+        var novillos = await service.BuscarAsync(null, null, null, null, CategoriaAnimal.Novillo);
+
+        Assert.Equal(new[] { "N-1", "N-2" }, novillos.Select(a => a.Arete));
+    }
+
+    [Fact]
     public async Task ObtenerResumen_CuentaActivosPorSexoYBajas()
     {
         // HU-67: las bajas no cuentan como activos (RN-04).
