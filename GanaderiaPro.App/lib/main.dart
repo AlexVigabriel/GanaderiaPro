@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'core/app_theme.dart';
 import 'core/route_observer.dart';
@@ -22,6 +23,11 @@ class GanaderiaProApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'GanaderíaPro',
+      debugShowCheckedModeBanner: false,
+      // Textos propios de Flutter (calendario, botones de diálogos) en español.
+      locale: const Locale('es'),
+      supportedLocales: const [Locale('es')],
+      localizationsDelegates: GlobalMaterialLocalizations.delegates,
       theme: AppTheme.claro,
       darkTheme: AppTheme.oscuro,
       // Fijo en claro por decisión del equipo; el interruptor para elegir

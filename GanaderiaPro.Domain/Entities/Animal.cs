@@ -26,4 +26,10 @@ public class Animal
     public decimal? Peso { get; set; }
     public EstadoAnimal Estado { get; set; } = EstadoAnimal.Activo;
     public DateTime FechaRegistro { get; set; }
+
+    public string? Nombre { get; set; }
+    public DateOnly? FechaNacimiento { get; set; }
+    public decimal? PesoNacimiento { get; set; }
+    public string? Color { get; set; }
+    public string? Observaciones { get; set; }
 }

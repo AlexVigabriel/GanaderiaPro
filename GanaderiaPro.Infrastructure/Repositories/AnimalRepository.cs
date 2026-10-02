@@ -1,3 +1,4 @@
+using GanaderiaPro.Application.DTOs;
 using GanaderiaPro.Application.Interfaces;
 using GanaderiaPro.Domain.Entities;
 using GanaderiaPro.Infrastructure.Persistence;
@@ -32,7 +33,11 @@ public class AnimalRepository : IAnimalRepository
 
         if (!string.IsNullOrWhiteSpace(busqueda))
         {
-            query = query.Where(a => a.Arete.Contains(busqueda));
+            var patron = $"%{busqueda.Trim()}%";
+            query = query.Where(a =>
+                EF.Functions.ILike(a.Arete, patron) ||
+                (a.Nombre != null && EF.Functions.ILike(a.Nombre, patron)) ||
+                EF.Functions.ILike(a.Raza, patron));
         }
 
         if (sexo is not null)
@@ -49,4 +54,11 @@ public class AnimalRepository : IAnimalRepository
             .OrderByDescending(a => a.FechaRegistro)
             .ToListAsync();
     }
+
+    public async Task<IReadOnlyList<ConteoAnimales>> ContarPorEstadoYSexoAsync(Guid ranchoId) =>
+        await _dbContext.Animales
+            .Where(a => a.RanchoId == ranchoId)
+            .GroupBy(a => new { a.Estado, a.Sexo })
+            .Select(g => new ConteoAnimales(g.Key.Estado, g.Key.Sexo, g.Count()))
+            .ToListAsync();
 }

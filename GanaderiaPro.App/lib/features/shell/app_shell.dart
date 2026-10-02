@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../core/app_theme.dart';
+import '../../core/formato.dart';
 import '../../core/sesion_actual.dart';
 
 class ModuloMenu {
@@ -11,12 +13,14 @@ class ModuloMenu {
 }
 
 // HU-14: lista fija de módulos disponibles. Cuando exista la matriz de
-// permisos por rol (Release 2, HU-34), esto se filtra según el rol.
+// permisos por rol (HU-34), esto se filtra según el rol.
 const modulosDisponibles = [
-  ModuloMenu(titulo: 'Inicio', icono: Icons.home_outlined, ruta: '/'),
-  ModuloMenu(titulo: 'Ganado', icono: Icons.pets_outlined, ruta: '/ganado'),
+  ModuloMenu(titulo: 'Tablero', icono: Icons.space_dashboard_outlined, ruta: '/'),
+  ModuloMenu(titulo: 'Animales', icono: Icons.pets_outlined, ruta: '/ganado'),
 ];
 
+// Estructura común de las pantallas internas: menú lateral fijo en
+// pantallas anchas (desplegable en celular) y barra superior.
 class AppShell extends StatelessWidget {
   const AppShell({super.key, required this.body, required this.seccionActiva});
 
@@ -24,69 +28,204 @@ class AppShell extends StatelessWidget {
 
   // Qué opción del menú se resalta como activa. Se pasa explícitamente
   // desde cada pantalla en vez de inferirse de la ruta de Navigator: las
-  // pantallas como "Registrar animal" o "Ficha" se abren sin nombre de
-  // ruta propio, así que adivinar por ahí las confundía con "Inicio".
+  // pantallas como "Ficha" se abren sin nombre de ruta propio, así que
+  // adivinar por ahí las confundía con el Tablero.
   final String seccionActiva;
+
+  static const double _anchoMenuFijo = 1000;
 
   @override
   Widget build(BuildContext context) {
+    final menuFijo = MediaQuery.sizeOf(context).width >= _anchoMenuFijo;
+    final menu = _MenuLateral(seccionActiva: seccionActiva, enCajon: !menuFijo);
+
     return Scaffold(
-      appBar: AppBar(
-        // HU-15: nombre del rancho actual. El buscador general y las
-        // notificaciones quedan como placeholder visual (deshabilitados)
-        // hasta que existan sus módulos correspondientes.
-        title: Text(SesionActual.instancia.nombreRancho ?? 'GanaderíaPro'),
-        actions: [
-          IconButton(
-            onPressed: null,
-            tooltip: 'Buscar (próximamente)',
-            icon: const Icon(Icons.search),
-          ),
-          IconButton(
-            onPressed: null,
-            tooltip: 'Notificaciones (próximamente)',
-            icon: const Icon(Icons.notifications_none),
-          ),
-          const Padding(
-            padding: EdgeInsets.only(right: 12),
-            child: CircleAvatar(child: Icon(Icons.person_outline)),
+      drawer: menuFijo ? null : Drawer(width: 270, child: menu),
+      body: Row(
+        children: [
+          if (menuFijo) SizedBox(width: 250, child: menu),
+          Expanded(
+            child: Column(
+              children: [
+                _BarraSuperior(mostrarMenu: !menuFijo),
+                Expanded(child: body),
+              ],
+            ),
           ),
         ],
       ),
-      drawer: Drawer(
-        child: ListView(
-          padding: EdgeInsets.zero,
-          children: [
-            DrawerHeader(
-              decoration: BoxDecoration(color: Theme.of(context).appBarTheme.backgroundColor),
+    );
+  }
+}
+
+class _BarraSuperior extends StatelessWidget {
+  const _BarraSuperior({required this.mostrarMenu});
+
+  final bool mostrarMenu;
+
+  @override
+  Widget build(BuildContext context) {
+    final tema = Theme.of(context);
+    final sesion = SesionActual.instancia;
+
+    return Container(
+      height: 64,
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      decoration: BoxDecoration(
+        color: tema.colorScheme.surface,
+        border: Border(bottom: BorderSide(color: tema.colorScheme.outlineVariant)),
+      ),
+      child: Row(
+        children: [
+          if (mostrarMenu)
+            Builder(
+              builder: (context) => IconButton(
+                tooltip: 'Menú',
+                icon: const Icon(Icons.menu),
+                onPressed: () => Scaffold.of(context).openDrawer(),
+              ),
+            ),
+          // HU-15: nombre del rancho actual.
+          Icon(Icons.home_work_outlined, size: 20, color: tema.colorScheme.primary),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              sesion.nombreRancho ?? 'GanaderíaPro',
+              overflow: TextOverflow.ellipsis,
+              style: tema.textTheme.titleSmall,
+            ),
+          ),
+          Tooltip(
+            message: sesion.nombreUsuario ?? '',
+            child: CircleAvatar(
+              radius: 18,
+              backgroundColor: tema.colorScheme.primary,
+              foregroundColor: tema.colorScheme.onPrimary,
               child: Text(
-                'GanaderíaPro',
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  color: Theme.of(context).appBarTheme.foregroundColor,
-                ),
+                iniciales(sesion.nombreUsuario),
+                style: tema.textTheme.labelLarge?.copyWith(color: tema.colorScheme.onPrimary),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MenuLateral extends StatelessWidget {
+  const _MenuLateral({required this.seccionActiva, required this.enCajon});
+
+  final String seccionActiva;
+  final bool enCajon;
+
+  void _ir(BuildContext context, String ruta) {
+    if (enCajon) Navigator.of(context).pop();
+    // Siempre navega, aunque ya "estemos ahí": desde una sub-pantalla
+    // (Ficha, Editar) tocar "Animales" tiene que llevar al listado. Limpia
+    // la pila para no dejar pantallas viejas acumuladas atrás.
+    Navigator.of(context).pushNamedAndRemoveUntil(ruta, (route) => false);
+  }
+
+  void _cerrarSesion(BuildContext context) {
+    // Cierre del lado de la app; invalidar el token en el servidor es parte de HU-52.
+    SesionActual.instancia.cerrar();
+    Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final textos = Theme.of(context).textTheme;
+
+    return Container(
+      color: AppTheme.verdeNoche,
+      child: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
+              child: Row(
+                children: [
+                  Container(
+                    width: 34,
+                    height: 34,
+                    decoration: BoxDecoration(
+                      color: AppTheme.verdeBrillante,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Icons.grass, size: 20, color: AppTheme.verdeNoche),
+                  ),
+                  const SizedBox(width: 10),
+                  Text('GanaderíaPro', style: textos.titleLarge?.copyWith(color: Colors.white)),
+                ],
               ),
             ),
             for (final modulo in modulosDisponibles)
-              ListTile(
-                leading: Icon(modulo.icono),
-                title: Text(modulo.titulo),
-                selected: seccionActiva == modulo.ruta,
-                onTap: () {
-                  Navigator.of(context).pop();
-                  // Siempre navega, aunque ya "estemos ahí" conceptualmente:
-                  // desde una sub-pantalla (Registrar/Ficha/Editar) tocar
-                  // "Ganado" tiene que llevar al listado de verdad, no
-                  // quedarse sin hacer nada. Limpia la pila de navegación
-                  // para no dejar pantallas viejas acumuladas atrás.
-                  Navigator.of(
-                    context,
-                  ).pushNamedAndRemoveUntil(modulo.ruta, (route) => false);
-                },
+              _OpcionMenu(
+                modulo: modulo,
+                activa: seccionActiva == modulo.ruta,
+                onTap: () => _ir(context, modulo.ruta),
               ),
+            const Spacer(),
+            const Divider(color: Colors.white12, height: 1),
+            Padding(
+              padding: const EdgeInsets.all(12),
+              child: TextButton.icon(
+                onPressed: () => _cerrarSesion(context),
+                style: TextButton.styleFrom(
+                  foregroundColor: const Color(0xFFFF8A80),
+                  alignment: Alignment.centerLeft,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                ),
+                icon: const Icon(Icons.logout),
+                label: const Text('Cerrar sesión'),
+              ),
+            ),
           ],
         ),
       ),
-      body: body,
+    );
+  }
+}
+
+class _OpcionMenu extends StatelessWidget {
+  const _OpcionMenu({required this.modulo, required this.activa, required this.onTap});
+
+  final ModuloMenu modulo;
+  final bool activa;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = activa ? Colors.white : Colors.white70;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+      child: Material(
+        color: activa ? AppTheme.verdeBrillante.withValues(alpha: 0.14) : Colors.transparent,
+        borderRadius: BorderRadius.circular(12),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            child: Row(
+              children: [
+                Icon(modulo.icono, size: 20, color: activa ? AppTheme.verdeBrillante : color),
+                const SizedBox(width: 12),
+                Text(
+                  modulo.titulo,
+                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                    color: color,
+                    fontWeight: activa ? FontWeight.w600 : FontWeight.w400,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
