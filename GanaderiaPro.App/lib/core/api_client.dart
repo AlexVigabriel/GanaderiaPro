@@ -151,6 +151,31 @@ class ApiClient {
     throw ApiException(_extraerMensajeError(response.body) ?? 'No se pudo cambiar el estado del animal.');
   }
 
+  // HU-55: historial de pesajes, del más reciente al más antiguo.
+  Future<List<Pesaje>> listarPesajes(String animalId) async {
+    final response = await http.get(Uri.parse('$baseUrl/api/animales/$animalId/pesajes'), headers: _headersAutenticados);
+
+    if (response.statusCode == 200) {
+      return (jsonDecode(response.body) as List<dynamic>)
+          .map((json) => Pesaje.fromJson(json as Map<String, dynamic>))
+          .toList();
+    }
+
+    throw ApiException(_extraerMensajeError(response.body) ?? 'No se pudo cargar el historial de pesajes.');
+  }
+
+  Future<void> registrarPesaje(String animalId, {required double peso, required DateTime fecha, String? observacion}) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/api/animales/$animalId/pesajes'),
+      headers: _headersAutenticados,
+      body: jsonEncode({'peso': peso, 'fecha': DatosAnimal.fechaIso(fecha), 'observacion': observacion}),
+    );
+
+    if (response.statusCode != 200) {
+      throw ApiException(_extraerMensajeError(response.body) ?? 'No se pudo registrar el pesaje.');
+    }
+  }
+
   Future<void> eliminarAnimal(String id) async {
     final response = await http.delete(Uri.parse('$baseUrl/api/animales/$id'), headers: _headersAutenticados);
 

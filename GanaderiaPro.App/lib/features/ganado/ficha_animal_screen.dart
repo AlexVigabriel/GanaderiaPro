@@ -8,6 +8,7 @@ import '../shell/app_shell.dart';
 import 'baja_animal_dialog.dart';
 import 'editar_animal_screen.dart';
 import 'listado_animales_screen.dart';
+import 'pesajes_animal.dart';
 
 // HU-19: ficha completa del animal.
 class FichaAnimalScreen extends StatefulWidget {
@@ -215,6 +216,8 @@ class _FichaAnimalScreenState extends State<FichaAnimalScreen> {
                   ),
                 ),
               ),
+              const SizedBox(height: 16),
+              TarjetaPesajes(animal: animal, onPesoActualizado: _recargar),
               if (!animal.activo) ...[
                 const SizedBox(height: 16),
                 _tarjetaBaja(animal, tema),

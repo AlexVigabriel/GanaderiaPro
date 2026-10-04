@@ -37,6 +37,8 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 builder.Services.AddScoped<IAnimalRepository, AnimalRepository>();
 builder.Services.AddScoped<IAnimalService, AnimalService>();
+builder.Services.AddScoped<IPesajeRepository, PesajeRepository>();
+builder.Services.AddScoped<IPesajeService, PesajeService>();
 builder.Services.AddScoped<IUsuarioRepository, UsuarioRepository>();
 builder.Services.AddScoped<IRanchoRepository, RanchoRepository>();
 builder.Services.AddScoped<IPasswordHasher, PasswordHasher>();

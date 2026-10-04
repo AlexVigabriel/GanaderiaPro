@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using GanaderiaPro.Application.Common;
 using GanaderiaPro.Application.DTOs;
 using GanaderiaPro.Application.Exceptions;
 using GanaderiaPro.Application.Interfaces;
@@ -18,11 +19,6 @@ public class AnimalService : IAnimalService
     // admite letras, números y guiones, para que "ar-001" y "AR-001" sean
     // el mismo animal (RN-01).
     private static readonly Regex FormatoIdentificacion = new("^[A-Z0-9-]+$", RegexOptions.Compiled);
-
-    // RN-14: "hoy" se calcula en la hora de Bolivia, no en UTC. Entre las
-    // 20:00 y la medianoche la fecha UTC ya es la de mañana, y una fecha
-    // futura pasaba como válida.
-    private static readonly TimeZoneInfo ZonaHorariaRancho = TimeZoneInfo.FindSystemTimeZoneById("America/La_Paz");
 
     private readonly IAnimalRepository _animalRepository;
     private readonly ICurrentUserContext _currentUser;
@@ -184,10 +180,8 @@ public class AnimalService : IAnimalService
         var animal = await ObtenerDelRanchoActualAsync(id);
 
         // RN-05: eliminación física solo si no tiene eventos asociados
-        // (vacunaciones, tratamientos, pesajes, preñeces, movimientos de
-        // corral). Ninguno de esos módulos existe todavía (Sprint 2), así
-        // que por ahora esto nunca bloquea — queda listo para cuando existan.
-        if (TieneEventosAsociados(animal))
+        // (pesajes por ahora; vacunaciones y demás se suman con sus módulos).
+        if (await _animalRepository.TieneEventosAsync(animal.Id))
         {
             throw new ReglaDeNegocioException(
                 "No se puede eliminar: el animal tiene eventos registrados. Registrá una baja en su lugar.");
@@ -373,8 +367,7 @@ public class AnimalService : IAnimalService
         return null;
     }
 
-    private static DateOnly Hoy() =>
-        DateOnly.FromDateTime(TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, ZonaHorariaRancho));
+    private static DateOnly Hoy() => FechaRancho.Hoy();
 
     private static string NormalizarIdentificacion(string? identificacion) =>
         (identificacion ?? string.Empty).Trim().ToUpperInvariant();
@@ -417,8 +410,6 @@ public class AnimalService : IAnimalService
         return await _animalRepository.ObtenerPorIdAsync(_currentUser.RanchoId, id)
             ?? throw new RecursoNoEncontradoException("No se encontró el animal.");
     }
-
-    private static bool TieneEventosAsociados(Animal animal) => false;
 
     private static AnimalResponse ToResponse(Animal animal) =>
         new(

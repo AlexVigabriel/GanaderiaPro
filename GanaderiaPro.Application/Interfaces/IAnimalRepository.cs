@@ -11,4 +11,7 @@ public interface IAnimalRepository
     void Eliminar(Animal animal);
     Task<IReadOnlyList<Animal>> BuscarAsync(Guid ranchoId, string? busqueda, EstadoAnimal estado, SexoAnimal? sexo, string? raza);
     Task<IReadOnlyList<ConteoAnimales>> ContarPorEstadoYSexoAsync(Guid ranchoId);
+
+    // RN-05: si tiene eventos (pesajes, y más adelante vacunaciones) no se elimina.
+    Task<bool> TieneEventosAsync(Guid animalId);
 }
