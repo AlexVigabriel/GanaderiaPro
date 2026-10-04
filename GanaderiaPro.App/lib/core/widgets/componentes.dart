@@ -9,14 +9,17 @@ import '../validaciones_animal.dart';
 class BotonAccion extends StatefulWidget {
   const BotonAccion({
     super.key,
-    required this.icono,
+    this.icono,
     required this.tooltip,
     required this.onPressed,
     this.peligro = false,
     this.activo = false,
-  });
+    this.dibujo,
+  }) : assert(icono != null || dibujo != null);
 
-  final IconData icono;
+  final IconData? icono;
+  // Para íconos que Material no trae (por ejemplo, la calavera de la baja).
+  final Widget Function(Color color)? dibujo;
   final String tooltip;
   final VoidCallback? onPressed;
   final bool peligro;
@@ -52,10 +55,9 @@ class _BotonAccionState extends State<BotonAccion> {
             child: SizedBox(
               width: 36,
               height: 36,
-              child: Icon(
-                widget.icono,
-                size: 18,
-                color: resaltado ? acento : colores.onSurfaceVariant,
+              child: Center(
+                child: widget.dibujo?.call(resaltado ? acento : colores.onSurfaceVariant) ??
+                    Icon(widget.icono, size: 18, color: resaltado ? acento : colores.onSurfaceVariant),
               ),
             ),
           ),
@@ -75,9 +77,14 @@ class CampoFecha extends StatelessWidget {
     this.hint = 'dd/mm/aaaa',
     this.errorText,
     this.denso = false,
+    this.titulo = 'Fecha de nacimiento',
+    this.primeraFecha,
   });
 
   final DateTime? valor;
+  final String titulo;
+  // Fecha más antigua que se puede elegir; por defecto, hace 25 años.
+  final DateTime? primeraFecha;
   final ValueChanged<DateTime?> onChanged;
   final String hint;
   final String? errorText;
@@ -85,14 +92,14 @@ class CampoFecha extends StatelessWidget {
 
   Future<void> _elegir(BuildContext context) async {
     final hoy = DateTime.now();
-    final minima = fechaNacimientoMinima();
+    final minima = primeraFecha ?? fechaNacimientoMinima();
     final inicial = valor == null || valor!.isAfter(hoy) || valor!.isBefore(minima) ? hoy : valor!;
     final elegida = await showDatePicker(
       context: context,
       initialDate: inicial,
       firstDate: minima,
       lastDate: hoy,
-      helpText: 'Fecha de nacimiento',
+      helpText: titulo,
     );
     if (elegida != null) onChanged(elegida);
   }
@@ -153,6 +160,59 @@ class EtiquetaEstado extends StatelessWidget {
       ),
     );
   }
+}
+
+// HU-54: calavera para registrar la baja de un animal. Material no trae
+// este ícono, así que se dibuja con trazos en una grilla de 24 x 24.
+class IconoCalavera extends StatelessWidget {
+  const IconoCalavera({super.key, required this.color, this.tamano = 18});
+
+  final Color color;
+  final double tamano;
+
+  @override
+  Widget build(BuildContext context) =>
+      CustomPaint(size: Size.square(tamano), painter: _PintorCalavera(color));
+}
+
+class _PintorCalavera extends CustomPainter {
+  _PintorCalavera(this.color);
+
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    canvas.scale(size.width / 24);
+    final trazo = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.8
+      ..strokeJoin = StrokeJoin.round
+      ..strokeCap = StrokeCap.round;
+    final relleno = Paint()..color = color;
+
+    final craneo = Path()..addOval(const Rect.fromLTWH(4, 2.5, 16, 14.5));
+    final mandibula = Path()
+      ..addRRect(RRect.fromRectAndRadius(const Rect.fromLTWH(8, 14, 8, 7), const Radius.circular(1.8)));
+    canvas.drawPath(Path.combine(PathOperation.union, craneo, mandibula), trazo);
+
+    canvas.drawCircle(const Offset(9.2, 10.2), 2.1, relleno);
+    canvas.drawCircle(const Offset(14.8, 10.2), 2.1, relleno);
+    canvas.drawPath(
+      Path()
+        ..moveTo(12, 12.8)
+        ..lineTo(10.9, 14.8)
+        ..lineTo(13.1, 14.8)
+        ..close(),
+      relleno,
+    );
+    for (final x in const [10.7, 13.3]) {
+      canvas.drawLine(Offset(x, 17.6), Offset(x, 20.4), trazo..strokeWidth = 1.3);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_PintorCalavera anterior) => anterior.color != color;
 }
 
 // HU-74: categoría del animal (Ternero, Vaquillona, Novillo, etc.).

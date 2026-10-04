@@ -197,6 +197,112 @@ public class AnimalService : IAnimalService
         await _unitOfWork.GuardarCambiosAsync();
     }
 
+    // HU-54: la venta o el fallecimiento no borran el animal: cambian su
+    // estado y guardan la fecha, así conserva todo su historial (RN-04).
+    // Esta es la baja desde la calavera: solo para animales activos.
+    public async Task<AnimalResponse> RegistrarBajaAsync(Guid id, CambiarEstadoRequest request)
+    {
+        var animal = await ObtenerDelRanchoActualAsync(id);
+
+        if (animal.Estado != EstadoAnimal.Activo)
+        {
+            throw new ReglaDeNegocioException("Solo se puede dar de baja un animal activo.");
+        }
+
+        if (request.Estado == EstadoAnimal.Activo)
+        {
+            throw new ReglaDeNegocioException("Indicá si el animal se vendió o falleció.");
+        }
+
+        return await AplicarEstadoAsync(animal, request);
+    }
+
+    // HU-54: cambio de estado desde Editar. Permite corregir una baja o volver
+    // a Activo si se marcó por error.
+    public async Task<AnimalResponse> CambiarEstadoAsync(Guid id, CambiarEstadoRequest request)
+    {
+        var animal = await ObtenerDelRanchoActualAsync(id);
+        return await AplicarEstadoAsync(animal, request);
+    }
+
+    private async Task<AnimalResponse> AplicarEstadoAsync(Animal animal, CambiarEstadoRequest request)
+    {
+        if (request.Estado == EstadoAnimal.Activo)
+        {
+            animal.Estado = EstadoAnimal.Activo;
+            animal.FechaBaja = null;
+            animal.ObservacionBaja = null;
+            animal.CausaMuerte = null;
+            animal.DetalleCausaMuerte = null;
+            await _unitOfWork.GuardarCambiosAsync();
+            return ToResponse(animal);
+        }
+
+        var error = ValidarBaja(animal, request);
+        if (error is not null)
+        {
+            throw new ReglaDeNegocioException(error);
+        }
+
+        var fallecido = request.Estado == EstadoAnimal.Fallecido;
+        animal.Estado = request.Estado;
+        animal.FechaBaja = request.Fecha;
+        animal.ObservacionBaja = TextoOpcional(request.Observacion);
+        animal.CausaMuerte = fallecido ? request.Causa : null;
+        animal.DetalleCausaMuerte = fallecido && request.Causa == CausaMuerte.Otra
+            ? TextoOpcional(request.DetalleCausa)
+            : null;
+        await _unitOfWork.GuardarCambiosAsync();
+
+        return ToResponse(animal);
+    }
+
+    private static string? ValidarBaja(Animal animal, CambiarEstadoRequest request)
+    {
+        if (request.Fecha is not { } fecha)
+        {
+            return request.Estado == EstadoAnimal.Vendido
+                ? "La fecha de venta es obligatoria."
+                : "La fecha de defunción es obligatoria.";
+        }
+
+        // RN-14: no se registran fechas futuras.
+        if (fecha > Hoy())
+        {
+            return "La fecha de baja no puede ser futura.";
+        }
+
+        if (animal.FechaNacimiento is { } nacimiento && fecha < nacimiento)
+        {
+            return "La fecha de baja no puede ser anterior al nacimiento.";
+        }
+
+        if (request.Estado == EstadoAnimal.Fallecido)
+        {
+            if (request.Causa is null)
+            {
+                return "La causa de muerte es obligatoria.";
+            }
+
+            if (request.Causa == CausaMuerte.Otra && string.IsNullOrWhiteSpace(request.DetalleCausa))
+            {
+                return "Escribí cuál fue la causa de muerte.";
+            }
+
+            if (request.DetalleCausa?.Trim().Length > 100)
+            {
+                return "El detalle de la causa puede tener hasta 100 caracteres.";
+            }
+        }
+
+        if (request.Observacion?.Trim().Length > 500)
+        {
+            return "La observación puede tener hasta 500 caracteres.";
+        }
+
+        return null;
+    }
+
     // Devuelve el primer problema encontrado en los datos, o null si son válidos.
     private static string? ValidarDatos(RegistrarAnimalRequest request)
     {
@@ -329,5 +435,9 @@ public class AnimalService : IAnimalService
             animal.Color,
             animal.Observaciones,
             animal.Castrado,
-            animal.CategoriaAl(Hoy()));
+            animal.CategoriaAl(Hoy()),
+            animal.FechaBaja,
+            animal.ObservacionBaja,
+            animal.CausaMuerte,
+            animal.DetalleCausaMuerte);
 }

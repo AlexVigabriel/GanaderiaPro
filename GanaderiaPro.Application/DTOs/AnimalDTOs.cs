@@ -28,7 +28,20 @@ public record AnimalResponse(
     string? Color,
     string? Observaciones,
     bool Castrado,
-    CategoriaAnimal? Categoria);
+    CategoriaAnimal? Categoria,
+    DateOnly? FechaBaja,
+    string? ObservacionBaja,
+    CausaMuerte? CausaMuerte,
+    string? DetalleCausaMuerte);
+
+// HU-54: cambio de estado. Para Vendido o Fallecido se pide la fecha (y en
+// Fallecido, la causa); volver a Activo borra los datos de la baja.
+public record CambiarEstadoRequest(
+    EstadoAnimal Estado,
+    DateOnly? Fecha = null,
+    string? Observacion = null,
+    CausaMuerte? Causa = null,
+    string? DetalleCausa = null);
 
 // HU-66: resultado de la carga múltiple. Las filas válidas se registran y
 // las inválidas se informan con su número de fila y el motivo.

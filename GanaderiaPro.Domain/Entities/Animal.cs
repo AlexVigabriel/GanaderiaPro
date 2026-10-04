@@ -13,6 +13,19 @@ public enum EstadoAnimal
     Fallecido
 }
 
+// HU-54: causa registrada al marcar un animal como fallecido.
+public enum CausaMuerte
+{
+    Enfermedad,
+    Accidente,
+    ComplicacionDeParto,
+    Depredador,
+    Intoxicacion,
+    Clima,
+    Desconocida,
+    Otra
+}
+
 // HU-74: categoría productiva según sexo, edad y castración.
 public enum CategoriaAnimal
 {
@@ -50,6 +63,13 @@ public class Animal
 
     // Solo aplica a machos; define si es Novillo en vez de Torito o Toro.
     public bool Castrado { get; set; }
+
+    // HU-54: datos de la baja (venta o fallecimiento). Vacíos mientras está Activo.
+    public DateOnly? FechaBaja { get; set; }
+    public string? ObservacionBaja { get; set; }
+    public CausaMuerte? CausaMuerte { get; set; }
+    // Detalle escrito a mano cuando la causa es "Otra".
+    public string? DetalleCausaMuerte { get; set; }
 
     // La categoría no se guarda: cambia sola con la edad, así que se calcula
     // a la fecha pedida. Sin fecha de nacimiento no se puede calcular.

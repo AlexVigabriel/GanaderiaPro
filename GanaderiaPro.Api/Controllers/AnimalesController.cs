@@ -95,6 +95,32 @@ public class AnimalesController : ControllerBase
         }
     }
 
+    // HU-54: baja de un animal activo (desde la calavera).
+    [HttpPost("{id:guid}/baja")]
+    public Task<ActionResult<AnimalResponse>> RegistrarBaja(Guid id, CambiarEstadoRequest request) =>
+        ResponderCambioDeEstado(() => _animalService.RegistrarBajaAsync(id, request));
+
+    // HU-54: cambio de estado desde Editar (incluye volver a Activo).
+    [HttpPut("{id:guid}/estado")]
+    public Task<ActionResult<AnimalResponse>> CambiarEstado(Guid id, CambiarEstadoRequest request) =>
+        ResponderCambioDeEstado(() => _animalService.CambiarEstadoAsync(id, request));
+
+    private async Task<ActionResult<AnimalResponse>> ResponderCambioDeEstado(Func<Task<AnimalResponse>> accion)
+    {
+        try
+        {
+            return Ok(await accion());
+        }
+        catch (RecursoNoEncontradoException ex)
+        {
+            return NotFound(new { mensaje = ex.Message });
+        }
+        catch (ReglaDeNegocioException ex)
+        {
+            return BadRequest(new { mensaje = ex.Message });
+        }
+    }
+
     [HttpDelete("{id:guid}")]
     public async Task<IActionResult> Eliminar(Guid id)
     {

@@ -129,6 +129,28 @@ class ApiClient {
     throw ApiException(_extraerMensajeError(response.body) ?? 'No se pudo editar el animal.');
   }
 
+  // HU-54: baja desde la calavera (solo animales activos).
+  Future<Animal> registrarBaja(String id, DatosEstado datos) =>
+      _enviarEstado(http.post, '$baseUrl/api/animales/$id/baja', datos);
+
+  // HU-54: cambio de estado desde Editar (incluye volver a Activo).
+  Future<Animal> cambiarEstado(String id, DatosEstado datos) =>
+      _enviarEstado(http.put, '$baseUrl/api/animales/$id/estado', datos);
+
+  Future<Animal> _enviarEstado(
+    Future<http.Response> Function(Uri url, {Map<String, String>? headers, Object? body, Encoding? encoding}) metodo,
+    String url,
+    DatosEstado datos,
+  ) async {
+    final response = await metodo(Uri.parse(url), headers: _headersAutenticados, body: jsonEncode(datos.toJson()));
+
+    if (response.statusCode == 200) {
+      return Animal.fromJson(jsonDecode(response.body) as Map<String, dynamic>);
+    }
+
+    throw ApiException(_extraerMensajeError(response.body) ?? 'No se pudo cambiar el estado del animal.');
+  }
+
   Future<void> eliminarAnimal(String id) async {
     final response = await http.delete(Uri.parse('$baseUrl/api/animales/$id'), headers: _headersAutenticados);
 

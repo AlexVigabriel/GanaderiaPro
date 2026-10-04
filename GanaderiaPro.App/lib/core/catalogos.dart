@@ -27,6 +27,18 @@ const coloresPelaje = [
   'Pinto',
 ];
 
+// HU-54: causas de muerte (valor que entiende el servidor → texto visible).
+const causasMuerte = {
+  'Enfermedad': 'Enfermedad',
+  'Accidente': 'Accidente',
+  'ComplicacionDeParto': 'Complicación de parto',
+  'Depredador': 'Depredador',
+  'Intoxicacion': 'Intoxicación',
+  'Clima': 'Clima (rayo, frío, sequía)',
+  'Desconocida': 'Causa desconocida',
+  'Otra': 'Otra',
+};
+
 // HU-74: categorías que calcula el servidor, con su descripción para el filtro.
 const categoriasAnimal = {
   'Ternero': 'Macho de menos de 8 meses',
