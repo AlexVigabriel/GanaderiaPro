@@ -7,4 +7,5 @@ public interface IPesajeRepository
     void Agregar(Pesaje pesaje);
     Task<IReadOnlyList<Pesaje>> ListarPorAnimalAsync(Guid animalId);
     Task<DateOnly?> ObtenerUltimaFechaAsync(Guid animalId);
+    Task<bool> ExisteEnFechaAsync(Guid animalId, DateOnly fecha);
 }

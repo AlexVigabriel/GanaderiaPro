@@ -81,6 +81,20 @@ public class PesajeServiceTests
         _pesajeRepoMock.Verify(r => r.Agregar(It.IsAny<Pesaje>()), Times.Once);
     }
 
+    [Fact]
+    public async Task Registrar_SegundoPesajeEnLaMismaFecha_LanzaExcepcion()
+    {
+        var animal = AnimalDelRancho();
+        _pesajeRepoMock.Setup(r => r.ExisteEnFechaAsync(animal.Id, Hoy)).ReturnsAsync(true);
+        var service = CrearServicio();
+
+        var ex = await Assert.ThrowsAsync<ReglaDeNegocioException>(
+            () => service.RegistrarAsync(animal.Id, new RegistrarPesajeRequest(300, Hoy)));
+
+        Assert.Contains("esa fecha", ex.Message);
+        _pesajeRepoMock.Verify(r => r.Agregar(It.IsAny<Pesaje>()), Times.Never);
+    }
+
     [Theory]
     [InlineData(0)]
     [InlineData(-5)]

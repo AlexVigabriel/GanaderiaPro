@@ -38,6 +38,13 @@ public class PesajeService : IPesajeService
             throw new ReglaDeNegocioException(error);
         }
 
+        // Un pesaje por día: dos en la misma fecha no se pueden ordenar y
+        // suelen ser un error de carga.
+        if (await _pesajeRepository.ExisteEnFechaAsync(animal.Id, request.Fecha))
+        {
+            throw new ReglaDeNegocioException("Ya hay un pesaje registrado en esa fecha para este animal.");
+        }
+
         var pesaje = new Pesaje
         {
             Id = Guid.NewGuid(),

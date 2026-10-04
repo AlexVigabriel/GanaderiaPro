@@ -27,9 +27,13 @@ class _TarjetaPesajesState extends State<TarjetaPesajes> {
   late Future<List<Pesaje>> _futuro = _api.listarPesajes(widget.animal.id);
 
   Future<void> _registrar() async {
-    final registrado = await abrirRegistroPesaje(context, widget.animal);
+    final historial = await _futuro.catchError((_) => <Pesaje>[]);
+    if (!mounted) return;
+    final registrado = await abrirRegistroPesaje(context, widget.animal, historial);
     if (registrado != true || !mounted) return;
-    setState(() => _futuro = _api.listarPesajes(widget.animal.id));
+    setState(() {
+      _futuro = _api.listarPesajes(widget.animal.id);
+    });
     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Pesaje registrado.')));
     widget.onPesoActualizado();
   }
@@ -89,7 +93,7 @@ class _TarjetaPesajesState extends State<TarjetaPesajes> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     if (pesajes.length >= 2) ...[
-                      SizedBox(height: 120, child: _GraficoPesos(pesajes: pesajes)),
+                      SizedBox(height: 150, child: _GraficoPesos(pesajes: pesajes)),
                       const SizedBox(height: 16),
                     ],
                     for (var i = 0; i < pesajes.length; i++)
@@ -152,7 +156,8 @@ class _FilaPesaje extends StatelessWidget {
   }
 }
 
-// Línea de evolución del peso, del pesaje más antiguo al más reciente.
+// Evolución del peso: los puntos se separan según los días reales entre
+// pesajes, con el peso mínimo y máximo a la izquierda y las fechas abajo.
 class _GraficoPesos extends StatelessWidget {
   const _GraficoPesos({required this.pesajes});
 
@@ -164,46 +169,59 @@ class _GraficoPesos extends StatelessWidget {
     return CustomPaint(
       size: Size.infinite,
       painter: _PintorPesos(
-        pesos: pesajes.reversed.map((p) => p.peso).toList(),
+        pesajes: pesajes.reversed.toList(),
         linea: tema.colorScheme.primary,
         guia: tema.colorScheme.outlineVariant,
+        texto: tema.textTheme.labelSmall!.copyWith(color: tema.colorScheme.onSurfaceVariant),
       ),
     );
   }
 }
 
 class _PintorPesos extends CustomPainter {
-  _PintorPesos({required this.pesos, required this.linea, required this.guia});
+  _PintorPesos({required this.pesajes, required this.linea, required this.guia, required this.texto});
 
-  final List<double> pesos;
+  // Del más antiguo al más reciente.
+  final List<Pesaje> pesajes;
   final Color linea;
   final Color guia;
+  final TextStyle texto;
+
+  TextPainter _rotulo(String valor) =>
+      TextPainter(text: TextSpan(text: valor, style: texto), textDirection: TextDirection.ltr)..layout();
 
   @override
   void paint(Canvas canvas, Size size) {
-    const margen = 8.0;
+    final pesos = pesajes.map((p) => p.peso).toList();
     final minimo = pesos.reduce(math.min);
     final maximo = pesos.reduce(math.max);
-    final rango = maximo - minimo == 0 ? 1 : maximo - minimo;
-    final alto = size.height - margen * 2;
-    final paso = (size.width - margen * 2) / (pesos.length - 1);
+    final rangoPeso = maximo - minimo == 0 ? 1.0 : maximo - minimo;
 
-    Offset punto(int i) => Offset(margen + paso * i, margen + alto - (pesos[i] - minimo) / rango * alto);
+    final rotuloMax = _rotulo(formatearPeso(maximo));
+    final rotuloMin = _rotulo(formatearPeso(minimo));
+    final izquierda = math.max(rotuloMax.width, rotuloMin.width) + 10;
+    const arriba = 8.0;
+    const derecha = 8.0;
+    final abajo = rotuloMin.height + 10;
+    final ancho = size.width - izquierda - derecha;
+    final alto = size.height - arriba - abajo;
 
-    final pincelGuia = Paint()
-      ..color = guia
-      ..strokeWidth = 1;
-    for (final y in [margen, margen + alto / 2, margen + alto]) {
-      canvas.drawLine(Offset(margen, y), Offset(size.width - margen, y), pincelGuia);
-    }
+    final inicio = pesajes.first.fecha;
+    final totalDias = pesajes.last.fecha.difference(inicio).inDays;
+    double x(int i) => totalDias == 0
+        ? izquierda + ancho * i / math.max(1, pesajes.length - 1)
+        : izquierda + ancho * pesajes[i].fecha.difference(inicio).inDays / totalDias;
+    double y(double peso) => arriba + alto - (peso - minimo) / rangoPeso * alto;
+    final puntos = [for (var i = 0; i < pesajes.length; i++) Offset(x(i), y(pesos[i]))];
 
-    final trazo = Path()..moveTo(punto(0).dx, punto(0).dy);
-    for (var i = 1; i < pesos.length; i++) {
-      trazo.lineTo(punto(i).dx, punto(i).dy);
+    // Relleno degradado bajo la línea.
+    final trazo = Path()..moveTo(puntos.first.dx, puntos.first.dy);
+    for (final punto in puntos.skip(1)) {
+      trazo.lineTo(punto.dx, punto.dy);
     }
     final area = Path.from(trazo)
-      ..lineTo(punto(pesos.length - 1).dx, margen + alto)
-      ..lineTo(punto(0).dx, margen + alto)
+      ..lineTo(puntos.last.dx, arriba + alto)
+      ..lineTo(puntos.first.dx, arriba + alto)
       ..close();
     canvas.drawPath(
       area,
@@ -212,8 +230,17 @@ class _PintorPesos extends CustomPainter {
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
           colors: [linea.withValues(alpha: 0.22), linea.withValues(alpha: 0)],
-        ).createShader(Offset.zero & size),
+        ).createShader(Rect.fromLTWH(0, arriba, size.width, alto)),
     );
+
+    // Guías por encima del relleno, para que se vean continuas.
+    final pincelGuia = Paint()
+      ..color = guia
+      ..strokeWidth = 1;
+    for (final altura in [arriba, arriba + alto / 2, arriba + alto]) {
+      canvas.drawLine(Offset(izquierda, altura), Offset(size.width - derecha, altura), pincelGuia);
+    }
+
     canvas.drawPath(
       trazo,
       Paint()
@@ -222,19 +249,40 @@ class _PintorPesos extends CustomPainter {
         ..strokeWidth = 2.4
         ..strokeJoin = StrokeJoin.round,
     );
-    for (var i = 0; i < pesos.length; i++) {
-      canvas.drawCircle(punto(i), 3.5, Paint()..color = linea);
+    for (final punto in puntos) {
+      canvas.drawCircle(punto, 3.5, Paint()..color = linea);
     }
+
+    // Escala: peso máximo y mínimo a la izquierda; primera y última fecha abajo.
+    rotuloMax.paint(canvas, Offset(0, arriba - rotuloMax.height / 2));
+    rotuloMin.paint(canvas, Offset(0, arriba + alto - rotuloMin.height / 2));
+    final fechaInicio = _rotulo(formatearFecha(inicio));
+    final fechaFin = _rotulo(formatearFecha(pesajes.last.fecha));
+    fechaInicio.paint(canvas, Offset(izquierda, size.height - fechaInicio.height));
+    fechaFin.paint(canvas, Offset(size.width - derecha - fechaFin.width, size.height - fechaFin.height));
   }
 
   @override
   bool shouldRepaint(_PintorPesos anterior) =>
-      anterior.pesos != pesos || anterior.linea != linea || anterior.guia != guia;
+      anterior.pesajes != pesajes || anterior.linea != linea || anterior.guia != guia;
 }
 
 // HU-55: formulario de pesaje. Devuelve true si se registró.
-Future<bool?> abrirRegistroPesaje(BuildContext context, Animal animal) =>
-    showDialog<bool>(context: context, builder: (_) => _RegistroPesaje(animal: animal));
+Future<bool?> abrirRegistroPesaje(BuildContext context, Animal animal, [List<Pesaje> historial = const []]) =>
+    showDialog<bool>(context: context, builder: (_) => _RegistroPesaje(animal: animal, historial: historial));
+
+// Pesaje inmediatamente anterior a la fecha indicada (o null si no hay).
+Pesaje? pesajeAnterior(List<Pesaje> historial, DateTime fecha) {
+  final anteriores = historial.where((p) => p.fecha.isBefore(fecha)).toList()
+    ..sort((a, b) => b.fecha.compareTo(a.fecha));
+  return anteriores.isEmpty ? null : anteriores.first;
+}
+
+// Un cambio de más del 30 % respecto del pesaje anterior suele ser un error
+// de tipeo: se pide confirmación, pero no se bloquea.
+bool esCambioBrusco(double anterior, double nuevo) => anterior > 0 && (nuevo - anterior).abs() / anterior > 0.3;
+
+bool _mismoDia(DateTime a, DateTime b) => a.year == b.year && a.month == b.month && a.day == b.day;
 
 // Mismas reglas que el servidor: obligatorio, mayor que 0 y hasta 1500 kg.
 String? validarPesoPesaje(String? valor) {
@@ -243,9 +291,10 @@ String? validarPesoPesaje(String? valor) {
 }
 
 class _RegistroPesaje extends StatefulWidget {
-  const _RegistroPesaje({required this.animal});
+  const _RegistroPesaje({required this.animal, required this.historial});
 
   final Animal animal;
+  final List<Pesaje> historial;
 
   @override
   State<_RegistroPesaje> createState() => _RegistroPesajeState();
@@ -255,7 +304,7 @@ class _RegistroPesajeState extends State<_RegistroPesaje> {
   final _api = ApiClient();
   final _peso = TextEditingController();
   final _observacion = TextEditingController();
-  DateTime? _fecha = DateTime.now();
+  DateTime? _fecha = fechaDeHoy();
   Map<String, String> _errores = {};
   String? _errorServidor;
   bool _guardando = false;
@@ -274,9 +323,18 @@ class _RegistroPesajeState extends State<_RegistroPesaje> {
         'fecha': ?validarFechaBaja(_fecha, widget.animal.fechaNacimiento, obligatoria: 'La fecha es obligatoria'),
         'observacion': ?validarLargo(_observacion.text, 500),
       };
+      if (!_errores.containsKey('fecha') && widget.historial.any((p) => _mismoDia(p.fecha, _fecha!))) {
+        _errores['fecha'] = 'Ya hay un pesaje en esa fecha';
+      }
       _errorServidor = null;
     });
     if (_errores.isNotEmpty) return;
+
+    final anterior = pesajeAnterior(widget.historial, _fecha!);
+    final nuevo = leerPeso(_peso.text)!;
+    if (anterior != null && esCambioBrusco(anterior.peso, nuevo) && !await _confirmarCambioBrusco(anterior, nuevo)) {
+      return;
+    }
 
     setState(() => _guardando = true);
     try {
@@ -295,6 +353,27 @@ class _RegistroPesajeState extends State<_RegistroPesaje> {
     } finally {
       if (mounted) setState(() => _guardando = false);
     }
+  }
+
+  Future<bool> _confirmarCambioBrusco(Pesaje anterior, double nuevo) async {
+    final porcentaje = ((nuevo - anterior.peso) / anterior.peso * 100).round();
+    final respuesta = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        icon: Icon(Icons.warning_amber_rounded, color: Theme.of(context).colorScheme.tertiary, size: 32),
+        title: const Text('El peso cambió mucho'),
+        content: Text(
+          'El pesaje anterior (${formatearFecha(anterior.fecha)}) fue de ${formatearPeso(anterior.peso)}. '
+          'El nuevo es de ${formatearPeso(nuevo)} (${porcentaje > 0 ? '+' : ''}$porcentaje %). '
+          '¿Está bien el dato?',
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Revisar')),
+          FilledButton(onPressed: () => Navigator.of(context).pop(true), child: const Text('Sí, guardar')),
+        ],
+      ),
+    );
+    return respuesta ?? false;
   }
 
   @override

@@ -31,7 +31,11 @@ class _FichaAnimalScreenState extends State<FichaAnimalScreen> {
     _futuroAnimal = _api.obtenerAnimal(widget.animalId);
   }
 
-  void _recargar() => setState(() => _futuroAnimal = _api.obtenerAnimal(widget.animalId));
+  // Con llaves: si setState recibe "() => x = futuro", devuelve ese Future y
+  // Flutter corta la recarga (la pantalla quedaba sin actualizar).
+  void _recargar() => setState(() {
+    _futuroAnimal = _api.obtenerAnimal(widget.animalId);
+  });
 
   void _avisar(String mensaje) => ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(mensaje)));
 

@@ -24,6 +24,9 @@ public class PesajeRepository : IPesajeRepository
             .ThenByDescending(p => p.FechaRegistro)
             .ToListAsync();
 
+    public Task<bool> ExisteEnFechaAsync(Guid animalId, DateOnly fecha) =>
+        _dbContext.Pesajes.AnyAsync(p => p.AnimalId == animalId && p.Fecha == fecha);
+
     public Task<DateOnly?> ObtenerUltimaFechaAsync(Guid animalId) =>
         _dbContext.Pesajes
             .Where(p => p.AnimalId == animalId)

@@ -15,9 +15,9 @@ Future<Animal?> abrirRegistroBaja(BuildContext context, Animal animal) =>
 // Mismas reglas que el servidor (RN-14 y no antes del nacimiento).
 String? validarFechaBaja(DateTime? fecha, DateTime? nacimiento, {String obligatoria = 'La fecha es obligatoria'}) {
   if (fecha == null) return obligatoria;
-  final ahora = DateTime.now();
-  if (fecha.isAfter(DateTime(ahora.year, ahora.month, ahora.day))) return 'La fecha no puede ser futura';
-  if (nacimiento != null && fecha.isBefore(nacimiento)) return 'No puede ser anterior al nacimiento';
+  final dia = DateTime(fecha.year, fecha.month, fecha.day);
+  if (dia.isAfter(fechaDeHoy())) return 'La fecha no puede ser futura';
+  if (nacimiento != null && dia.isBefore(nacimiento)) return 'No puede ser anterior al nacimiento';
   return null;
 }
 
@@ -175,7 +175,7 @@ class _MarcarFallecido extends StatefulWidget {
 
 class _MarcarFallecidoState extends State<_MarcarFallecido> {
   final _api = ApiClient();
-  final _datos = DatosBajaFormulario(fecha: DateTime.now());
+  final _datos = DatosBajaFormulario(fecha: fechaDeHoy());
   String? _errorServidor;
   bool _guardando = false;
 
