@@ -7,11 +7,15 @@ String formatearPeso(double? peso) {
   return '$texto kg';
 }
 
-String describirEdad(DateTime nacimiento) {
-  final hoy = DateTime.now();
+// Edad a hoy, o a la fecha indicada (por ejemplo, la de defunción).
+String describirEdad(DateTime nacimiento, {DateTime? hasta}) {
+  final hoy = hasta ?? DateTime.now();
   var meses = (hoy.year - nacimiento.year) * 12 + hoy.month - nacimiento.month;
   if (hoy.day < nacimiento.day) meses--;
-  if (meses < 1) return 'menos de 1 mes';
+  if (meses < 1) {
+    final dias = hoy.difference(nacimiento).inDays;
+    return dias == 1 ? '1 día' : '$dias días';
+  }
   if (meses < 24) return meses == 1 ? '1 mes' : '$meses meses';
   final anios = meses ~/ 12;
   return '$anios años';

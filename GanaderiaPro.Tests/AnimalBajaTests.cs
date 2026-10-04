@@ -8,7 +8,8 @@ using Xunit;
 
 namespace GanaderiaPro.Tests;
 
-// HU-54: baja de un animal por venta o fallecimiento.
+// HU-54: baja de un animal (fallecimiento desde la calavera; venta, fallecimiento
+// o vuelta a Activo desde Editar).
 public class AnimalBajaTests
 {
     private static readonly Guid RanchoIdDePrueba = Guid.NewGuid();
@@ -40,23 +41,60 @@ public class AnimalBajaTests
         return animal;
     }
 
-    [Theory]
-    [InlineData(TipoBaja.Venta, EstadoAnimal.Vendido)]
-    [InlineData(TipoBaja.Fallecimiento, EstadoAnimal.Fallecido)]
-    public async Task RegistrarBaja_DeUnAnimalActivo_CambiaElEstadoYConservaSusDatos(TipoBaja tipo, EstadoAnimal esperado)
+    private static CambiarEstadoRequest Fallecido(DateOnly fecha, CausaMuerte? causa = CausaMuerte.Enfermedad, string? detalle = null) =>
+        new(EstadoAnimal.Fallecido, fecha, " Revisado por el veterinario ", causa, detalle);
+
+    [Fact]
+    public async Task RegistrarBaja_PorFallecimiento_CambiaElEstadoYConservaSusDatos()
     {
         // RN-04: el animal no se borra, cambia de estado y conserva su historial.
         var animal = AnimalDelRancho();
         var service = CrearServicio();
 
-        var resultado = await service.RegistrarBajaAsync(animal.Id, new RegistrarBajaRequest(tipo, Hoy, " Vendido en feria "));
+        var resultado = await service.RegistrarBajaAsync(animal.Id, Fallecido(Hoy));
 
-        Assert.Equal(esperado, resultado.Estado);
+        Assert.Equal(EstadoAnimal.Fallecido, resultado.Estado);
         Assert.Equal(Hoy, resultado.FechaBaja);
-        Assert.Equal("Vendido en feria", resultado.ObservacionBaja);
+        Assert.Equal(CausaMuerte.Enfermedad, resultado.CausaMuerte);
+        Assert.Equal("Revisado por el veterinario", resultado.ObservacionBaja);
         Assert.Equal("B-001", resultado.Arete);
         _repoMock.Verify(r => r.Eliminar(It.IsAny<Animal>()), Times.Never);
         _unitOfWorkMock.Verify(u => u.GuardarCambiosAsync(), Times.Once);
+    }
+
+    [Fact]
+    public async Task RegistrarBaja_SinCausaDeMuerte_LanzaExcepcion()
+    {
+        var animal = AnimalDelRancho();
+        var service = CrearServicio();
+
+        var ex = await Assert.ThrowsAsync<ReglaDeNegocioException>(
+            () => service.RegistrarBajaAsync(animal.Id, Fallecido(Hoy, causa: null)));
+
+        Assert.Contains("causa", ex.Message);
+        Assert.Equal(EstadoAnimal.Activo, animal.Estado);
+    }
+
+    [Fact]
+    public async Task RegistrarBaja_ConCausaOtraSinDetalle_LanzaExcepcion()
+    {
+        var animal = AnimalDelRancho();
+        var service = CrearServicio();
+
+        await Assert.ThrowsAsync<ReglaDeNegocioException>(
+            () => service.RegistrarBajaAsync(animal.Id, Fallecido(Hoy, CausaMuerte.Otra, "  ")));
+    }
+
+    [Fact]
+    public async Task RegistrarBaja_ConCausaOtra_GuardaElDetalleEscrito()
+    {
+        var animal = AnimalDelRancho();
+        var service = CrearServicio();
+
+        var resultado = await service.RegistrarBajaAsync(animal.Id, Fallecido(Hoy, CausaMuerte.Otra, " Mordedura de víbora "));
+
+        Assert.Equal(CausaMuerte.Otra, resultado.CausaMuerte);
+        Assert.Equal("Mordedura de víbora", resultado.DetalleCausaMuerte);
     }
 
     [Fact]
@@ -67,10 +105,9 @@ public class AnimalBajaTests
         var service = CrearServicio();
 
         var ex = await Assert.ThrowsAsync<ReglaDeNegocioException>(
-            () => service.RegistrarBajaAsync(animal.Id, new RegistrarBajaRequest(TipoBaja.Venta, Hoy.AddDays(2))));
+            () => service.RegistrarBajaAsync(animal.Id, Fallecido(Hoy.AddDays(2))));
 
         Assert.Contains("futura", ex.Message);
-        Assert.Equal(EstadoAnimal.Activo, animal.Estado);
     }
 
     [Fact]
@@ -80,7 +117,7 @@ public class AnimalBajaTests
         var service = CrearServicio();
 
         var ex = await Assert.ThrowsAsync<ReglaDeNegocioException>(
-            () => service.RegistrarBajaAsync(animal.Id, new RegistrarBajaRequest(TipoBaja.Fallecimiento, Hoy.AddYears(-4))));
+            () => service.RegistrarBajaAsync(animal.Id, Fallecido(Hoy.AddYears(-4))));
 
         Assert.Contains("nacimiento", ex.Message);
     }
@@ -92,7 +129,7 @@ public class AnimalBajaTests
         var service = CrearServicio();
 
         var ex = await Assert.ThrowsAsync<ReglaDeNegocioException>(
-            () => service.RegistrarBajaAsync(animal.Id, new RegistrarBajaRequest(TipoBaja.Fallecimiento, Hoy)));
+            () => service.RegistrarBajaAsync(animal.Id, Fallecido(Hoy)));
 
         Assert.Contains("activo", ex.Message);
         _unitOfWorkMock.Verify(u => u.GuardarCambiosAsync(), Times.Never);
@@ -105,6 +142,49 @@ public class AnimalBajaTests
         var service = CrearServicio();
 
         await Assert.ThrowsAsync<RecursoNoEncontradoException>(
-            () => service.RegistrarBajaAsync(Guid.NewGuid(), new RegistrarBajaRequest(TipoBaja.Venta, Hoy)));
+            () => service.RegistrarBajaAsync(Guid.NewGuid(), Fallecido(Hoy)));
+    }
+
+    [Fact]
+    public async Task CambiarEstado_AVendidoSinFecha_LanzaExcepcion()
+    {
+        var animal = AnimalDelRancho();
+        var service = CrearServicio();
+
+        var ex = await Assert.ThrowsAsync<ReglaDeNegocioException>(
+            () => service.CambiarEstadoAsync(animal.Id, new CambiarEstadoRequest(EstadoAnimal.Vendido)));
+
+        Assert.Contains("fecha de venta", ex.Message);
+    }
+
+    [Fact]
+    public async Task CambiarEstado_AVendido_NoGuardaCausaDeMuerte()
+    {
+        var animal = AnimalDelRancho();
+        var service = CrearServicio();
+
+        var resultado = await service.CambiarEstadoAsync(
+            animal.Id, new CambiarEstadoRequest(EstadoAnimal.Vendido, Hoy, "Feria", CausaMuerte.Accidente));
+
+        Assert.Equal(EstadoAnimal.Vendido, resultado.Estado);
+        Assert.Null(resultado.CausaMuerte);
+    }
+
+    [Fact]
+    public async Task CambiarEstado_DeVueltaAActivo_BorraLosDatosDeLaBaja()
+    {
+        // Para corregir una baja registrada por error.
+        var animal = AnimalDelRancho(EstadoAnimal.Fallecido);
+        animal.FechaBaja = Hoy;
+        animal.CausaMuerte = CausaMuerte.Clima;
+        animal.ObservacionBaja = "Rayo";
+        var service = CrearServicio();
+
+        var resultado = await service.CambiarEstadoAsync(animal.Id, new CambiarEstadoRequest(EstadoAnimal.Activo));
+
+        Assert.Equal(EstadoAnimal.Activo, resultado.Estado);
+        Assert.Null(resultado.FechaBaja);
+        Assert.Null(resultado.CausaMuerte);
+        Assert.Null(resultado.ObservacionBaja);
     }
 }

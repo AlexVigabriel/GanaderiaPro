@@ -272,11 +272,17 @@ Widget _tarjetaBaja(Animal animal, ThemeData tema) {
             children: [
               _Dato(etiqueta: 'Motivo', valor: animal.estado == 'Vendido' ? 'Venta' : 'Fallecimiento'),
               _Dato(etiqueta: 'Fecha', valor: animal.fechaBaja == null ? '—' : formatearFecha(animal.fechaBaja!)),
+              if (animal.textoCausaMuerte != null) _Dato(etiqueta: 'Causa de muerte', valor: animal.textoCausaMuerte!),
+              if (animal.fechaNacimiento != null && animal.fechaBaja != null && animal.estado == 'Fallecido')
+                _Dato(
+                  etiqueta: 'Edad al morir',
+                  valor: describirEdad(animal.fechaNacimiento!, hasta: animal.fechaBaja),
+                ),
             ],
           ),
           if (animal.observacionBaja != null) ...[
             const SizedBox(height: 16),
-            _Dato(etiqueta: 'Observación', valor: animal.observacionBaja!),
+            _Dato(etiqueta: 'Notas', valor: animal.observacionBaja!),
           ],
         ],
       ),

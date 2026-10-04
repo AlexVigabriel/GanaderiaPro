@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace GanaderiaPro.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(GanaderiaProDbContext))]
-    [Migration("20261004205653_RegistrarBajaAnimal")]
+    [Migration("20261004214612_RegistrarBajaAnimal")]
     partial class RegistrarBajaAnimal
     {
         /// <inheritdoc />
@@ -39,9 +39,17 @@ namespace GanaderiaPro.Infrastructure.Persistence.Migrations
                     b.Property<bool>("Castrado")
                         .HasColumnType("boolean");
 
+                    b.Property<string>("CausaMuerte")
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
                     b.Property<string>("Color")
                         .HasMaxLength(40)
                         .HasColumnType("character varying(40)");
+
+                    b.Property<string>("DetalleCausaMuerte")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
 
                     b.Property<string>("Estado")
                         .IsRequired()

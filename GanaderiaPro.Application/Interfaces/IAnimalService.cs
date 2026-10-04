@@ -13,5 +13,6 @@ public interface IAnimalService
     Task<AnimalResponse> ObtenerPorIdAsync(Guid id);
     Task<AnimalResponse> EditarAsync(Guid id, RegistrarAnimalRequest request);
     Task EliminarAsync(Guid id);
-    Task<AnimalResponse> RegistrarBajaAsync(Guid id, RegistrarBajaRequest request);
+    Task<AnimalResponse> RegistrarBajaAsync(Guid id, CambiarEstadoRequest request);
+    Task<AnimalResponse> CambiarEstadoAsync(Guid id, CambiarEstadoRequest request);
 }

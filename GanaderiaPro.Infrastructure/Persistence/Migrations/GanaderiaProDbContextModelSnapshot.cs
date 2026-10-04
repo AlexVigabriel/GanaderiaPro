@@ -36,9 +36,17 @@ namespace GanaderiaPro.Infrastructure.Persistence.Migrations
                     b.Property<bool>("Castrado")
                         .HasColumnType("boolean");
 
+                    b.Property<string>("CausaMuerte")
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
                     b.Property<string>("Color")
                         .HasMaxLength(40)
                         .HasColumnType("character varying(40)");
+
+                    b.Property<string>("DetalleCausaMuerte")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
 
                     b.Property<string>("Estado")
                         .IsRequired()

@@ -6,6 +6,7 @@ import '../../core/catalogos.dart';
 import '../../core/validaciones_animal.dart';
 import '../../core/widgets/componentes.dart';
 import '../shell/app_shell.dart';
+import 'baja_animal_dialog.dart';
 
 // HU-20: edición de un animal. Devuelve true al guardar.
 class EditarAnimalScreen extends StatefulWidget {
@@ -31,6 +32,9 @@ class _EditarAnimalScreenState extends State<EditarAnimalScreen> {
   late String? _color = widget.animal.color;
   late DateTime? _nacimiento = widget.animal.fechaNacimiento;
   late bool _castrado = widget.animal.castrado;
+  // HU-54: estado y, si está de baja, sus datos (fecha, causa, notas).
+  late String _estado = widget.animal.estado;
+  late final _baja = DatosBajaFormulario.desde(widget.animal);
   String? _errorNacimiento;
   bool _guardando = false;
 
@@ -41,6 +45,7 @@ class _EditarAnimalScreenState extends State<EditarAnimalScreen> {
     for (final c in [_arete, _nombre, _pesoNacimiento, _peso, _observaciones]) {
       c.dispose();
     }
+    _baja.dispose();
     super.dispose();
   }
 
@@ -48,7 +53,9 @@ class _EditarAnimalScreenState extends State<EditarAnimalScreen> {
     final errorFecha = validarFechaNacimiento(_nacimiento);
     setState(() => _errorNacimiento = errorFecha);
     final formularioValido = _formKey.currentState!.validate();
-    if (!formularioValido || errorFecha != null) return;
+    final bajaValida = _estado == 'Activo' || _baja.validar(_estado, _nacimiento);
+    setState(() {});
+    if (!formularioValido || errorFecha != null || !bajaValida) return;
 
     setState(() => _guardando = true);
     try {
@@ -67,6 +74,11 @@ class _EditarAnimalScreenState extends State<EditarAnimalScreen> {
           castrado: _castrado,
         ),
       );
+      // El estado se guarda aparte: cambia a Vendido/Fallecido con sus datos,
+      // o vuelve a Activo y borra los datos de la baja.
+      if (_estado != widget.animal.estado || _estado != 'Activo') {
+        await _api.cambiarEstado(widget.animal.id, _baja.aDatos(_estado));
+      }
       if (mounted) Navigator.of(context).pop(true);
     } on ApiException catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.mensaje)));
@@ -228,6 +240,53 @@ class _EditarAnimalScreenState extends State<EditarAnimalScreen> {
                                 ),
                                 completo: true,
                               ),
+                              campo(
+                                'Estado',
+                                DropdownButtonFormField<String>(
+                                  initialValue: _estado,
+                                  items: const [
+                                    DropdownMenuItem(value: 'Activo', child: Text('Activo')),
+                                    DropdownMenuItem(value: 'Vendido', child: Text('Vendido')),
+                                    DropdownMenuItem(value: 'Fallecido', child: Text('Fallecido')),
+                                  ],
+                                  onChanged: (v) => setState(() {
+                                    _estado = v ?? _estado;
+                                    _baja.errores = {};
+                                  }),
+                                ),
+                              ),
+                              if (_estado != widget.animal.estado && _estado == 'Activo')
+                                SizedBox(
+                                  width: ancho,
+                                  child: Padding(
+                                    padding: const EdgeInsets.only(top: 30),
+                                    child: Text(
+                                      'Al guardar se borran los datos de la baja.',
+                                      style: tema.textTheme.bodyMedium?.copyWith(
+                                        color: tema.colorScheme.onSurfaceVariant,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              if (_estado != 'Activo')
+                                SizedBox(
+                                  width: restricciones.maxWidth,
+                                  child: Container(
+                                    padding: const EdgeInsets.all(18),
+                                    decoration: BoxDecoration(
+                                      color: tema.colorScheme.surfaceContainerLow,
+                                      borderRadius: BorderRadius.circular(14),
+                                      border: Border.all(color: tema.colorScheme.outlineVariant),
+                                    ),
+                                    child: CamposBaja(
+                                      key: ValueKey(_estado),
+                                      estado: _estado,
+                                      datos: _baja,
+                                      nacimiento: _nacimiento,
+                                      onCambio: () => setState(() {}),
+                                    ),
+                                  ),
+                                ),
                             ],
                           );
                         },

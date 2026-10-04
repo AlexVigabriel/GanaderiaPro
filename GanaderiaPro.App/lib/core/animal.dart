@@ -1,3 +1,5 @@
+import 'catalogos.dart';
+
 class Animal {
   Animal({
     required this.id,
@@ -16,6 +18,8 @@ class Animal {
     this.categoria,
     this.fechaBaja,
     this.observacionBaja,
+    this.causaMuerte,
+    this.detalleCausaMuerte,
   });
 
   final String id;
@@ -36,6 +40,12 @@ class Animal {
   // HU-54: datos de la baja; null mientras el animal está Activo.
   final DateTime? fechaBaja;
   final String? observacionBaja;
+  final String? causaMuerte;
+  final String? detalleCausaMuerte;
+
+  // Texto de la causa para mostrar: el detalle escrito si fue "Otra".
+  String? get textoCausaMuerte =>
+      causaMuerte == 'Otra' ? detalleCausaMuerte : (causaMuerte == null ? null : causasMuerte[causaMuerte]);
 
   bool get activo => estado == 'Activo';
 
@@ -59,6 +69,8 @@ class Animal {
       categoria: json['categoria'] as String?,
       fechaBaja: baja == null ? null : DateTime.parse(baja),
       observacionBaja: json['observacionBaja'] as String?,
+      causaMuerte: json['causaMuerte'] as String?,
+      detalleCausaMuerte: json['detalleCausaMuerte'] as String?,
     );
   }
 }
@@ -105,6 +117,26 @@ class DatosAnimal {
 
   static String fechaIso(DateTime fecha) =>
       '${fecha.year.toString().padLeft(4, '0')}-${fecha.month.toString().padLeft(2, '0')}-${fecha.day.toString().padLeft(2, '0')}';
+}
+
+// HU-54: cambio de estado. Para Vendido o Fallecido lleva la fecha; para
+// Fallecido, además, la causa.
+class DatosEstado {
+  const DatosEstado({required this.estado, this.fecha, this.observacion, this.causa, this.detalleCausa});
+
+  final String estado;
+  final DateTime? fecha;
+  final String? observacion;
+  final String? causa;
+  final String? detalleCausa;
+
+  Map<String, dynamic> toJson() => {
+    'estado': estado,
+    'fecha': fecha == null ? null : DatosAnimal.fechaIso(fecha!),
+    'observacion': observacion,
+    'causa': causa,
+    'detalleCausa': detalleCausa,
+  };
 }
 
 class ResumenAnimales {
