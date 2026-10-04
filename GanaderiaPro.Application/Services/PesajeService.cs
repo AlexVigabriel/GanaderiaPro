@@ -69,6 +69,72 @@ public class PesajeService : IPesajeService
         return new RegistrarPesajeResponse(ToResponse(pesaje), animal.Peso);
     }
 
+    // Corrige un pesaje cargado con error; el peso actual se recalcula.
+    public async Task<RegistrarPesajeResponse> EditarAsync(Guid animalId, Guid pesajeId, RegistrarPesajeRequest request)
+    {
+        var animal = await ObtenerAnimalDelRanchoAsync(animalId);
+        var pesaje = await ObtenerPesajeAsync(animal.Id, pesajeId);
+
+        var error = Validar(animal, request);
+        if (error is not null)
+        {
+            throw new ReglaDeNegocioException(error);
+        }
+
+        if (await _pesajeRepository.ExisteEnFechaAsync(animal.Id, request.Fecha, excluirId: pesaje.Id))
+        {
+            throw new ReglaDeNegocioException("Ya hay un pesaje registrado en esa fecha para este animal.");
+        }
+
+        pesaje.Fecha = request.Fecha;
+        pesaje.Peso = request.Peso;
+        pesaje.Observacion = string.IsNullOrWhiteSpace(request.Observacion) ? null : request.Observacion.Trim();
+
+        await RecalcularPesoActualAsync(animal, quitado: null);
+        await _unitOfWork.GuardarCambiosAsync();
+
+        return new RegistrarPesajeResponse(ToResponse(pesaje), animal.Peso);
+    }
+
+    // Borra un pesaje cargado con error; devuelve el peso actual recalculado.
+    public async Task<decimal?> EliminarAsync(Guid animalId, Guid pesajeId)
+    {
+        var animal = await ObtenerAnimalDelRanchoAsync(animalId);
+        var pesaje = await ObtenerPesajeAsync(animal.Id, pesajeId);
+
+        if (animal.Estado != EstadoAnimal.Activo)
+        {
+            throw new ReglaDeNegocioException("Solo se pueden corregir pesajes de animales activos.");
+        }
+
+        _pesajeRepository.Eliminar(pesaje);
+        await RecalcularPesoActualAsync(animal, quitado: pesaje.Id);
+        await _unitOfWork.GuardarCambiosAsync();
+
+        return animal.Peso;
+    }
+
+    // El peso actual es el del pesaje más reciente que quede. Si no queda
+    // ninguno, se conserva el último peso conocido.
+    private async Task RecalcularPesoActualAsync(Animal animal, Guid? quitado)
+    {
+        var pesajes = await _pesajeRepository.ListarPorAnimalAsync(animal.Id);
+        var masReciente = pesajes
+            .Where(p => p.Id != quitado)
+            .OrderByDescending(p => p.Fecha)
+            .ThenByDescending(p => p.FechaRegistro)
+            .FirstOrDefault();
+
+        if (masReciente is not null)
+        {
+            animal.Peso = masReciente.Peso;
+        }
+    }
+
+    private async Task<Pesaje> ObtenerPesajeAsync(Guid animalId, Guid pesajeId) =>
+        await _pesajeRepository.ObtenerPorIdAsync(animalId, pesajeId)
+            ?? throw new RecursoNoEncontradoException("No se encontró el pesaje.");
+
     public async Task<IReadOnlyList<PesajeResponse>> ListarAsync(Guid animalId)
     {
         var animal = await ObtenerAnimalDelRanchoAsync(animalId);

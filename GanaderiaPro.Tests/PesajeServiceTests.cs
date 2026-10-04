@@ -174,4 +174,88 @@ public class PesajeServiceTests
         Assert.Contains("baja", ex.Message);
         _animalRepoMock.Verify(r => r.Eliminar(It.IsAny<Animal>()), Times.Never);
     }
+
+    private Pesaje PesajeDe(Animal animal, DateOnly fecha, decimal peso)
+    {
+        var pesaje = new Pesaje { Id = Guid.NewGuid(), AnimalId = animal.Id, Fecha = fecha, Peso = peso };
+        _pesajeRepoMock.Setup(r => r.ObtenerPorIdAsync(animal.Id, pesaje.Id)).ReturnsAsync(pesaje);
+        return pesaje;
+    }
+
+    [Fact]
+    public async Task Editar_ElPesajeMasReciente_RecalculaElPesoActual()
+    {
+        var animal = AnimalDelRancho(peso: 666);
+        var antiguo = PesajeDe(animal, Hoy.AddDays(-30), 333);
+        var reciente = PesajeDe(animal, Hoy, 666);
+        _pesajeRepoMock.Setup(r => r.ListarPorAnimalAsync(animal.Id)).ReturnsAsync(new List<Pesaje> { reciente, antiguo });
+        var service = CrearServicio();
+
+        var resultado = await service.EditarAsync(animal.Id, reciente.Id, new RegistrarPesajeRequest(366, Hoy, "Corregido"));
+
+        Assert.Equal(366, reciente.Peso);
+        Assert.Equal(366, animal.Peso);
+        Assert.Equal(366, resultado.PesoActualAnimal);
+        _unitOfWorkMock.Verify(u => u.GuardarCambiosAsync(), Times.Once);
+    }
+
+    [Fact]
+    public async Task Editar_AUnaFechaQueYaTieneOtroPesaje_LanzaExcepcion()
+    {
+        var animal = AnimalDelRancho();
+        var pesaje = PesajeDe(animal, Hoy.AddDays(-5), 300);
+        _pesajeRepoMock.Setup(r => r.ExisteEnFechaAsync(animal.Id, Hoy, pesaje.Id)).ReturnsAsync(true);
+        var service = CrearServicio();
+
+        await Assert.ThrowsAsync<ReglaDeNegocioException>(
+            () => service.EditarAsync(animal.Id, pesaje.Id, new RegistrarPesajeRequest(300, Hoy)));
+    }
+
+    [Fact]
+    public async Task Eliminar_ElPesajeMasReciente_VuelveAlPesoDelAnterior()
+    {
+        var animal = AnimalDelRancho(peso: 55);
+        var antiguo = PesajeDe(animal, Hoy.AddDays(-30), 333);
+        var erroneo = PesajeDe(animal, Hoy, 55);
+        _pesajeRepoMock.Setup(r => r.ListarPorAnimalAsync(animal.Id)).ReturnsAsync(new List<Pesaje> { erroneo, antiguo });
+        var service = CrearServicio();
+
+        var pesoActual = await service.EliminarAsync(animal.Id, erroneo.Id);
+
+        Assert.Equal(333, pesoActual);
+        _pesajeRepoMock.Verify(r => r.Eliminar(erroneo), Times.Once);
+    }
+
+    [Fact]
+    public async Task Eliminar_ElUnicoPesaje_ConservaElUltimoPesoConocido()
+    {
+        var animal = AnimalDelRancho(peso: 300);
+        var unico = PesajeDe(animal, Hoy, 300);
+        _pesajeRepoMock.Setup(r => r.ListarPorAnimalAsync(animal.Id)).ReturnsAsync(new List<Pesaje> { unico });
+        var service = CrearServicio();
+
+        var pesoActual = await service.EliminarAsync(animal.Id, unico.Id);
+
+        Assert.Equal(300, pesoActual);
+    }
+
+    [Fact]
+    public async Task Eliminar_PesajeDeAnimalDadoDeBaja_LanzaExcepcion()
+    {
+        var animal = AnimalDelRancho(EstadoAnimal.Fallecido);
+        var pesaje = PesajeDe(animal, Hoy.AddDays(-2), 300);
+        var service = CrearServicio();
+
+        await Assert.ThrowsAsync<ReglaDeNegocioException>(() => service.EliminarAsync(animal.Id, pesaje.Id));
+        _pesajeRepoMock.Verify(r => r.Eliminar(It.IsAny<Pesaje>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Eliminar_PesajeInexistente_LanzaRecursoNoEncontrado()
+    {
+        var animal = AnimalDelRancho();
+        var service = CrearServicio();
+
+        await Assert.ThrowsAsync<RecursoNoEncontradoException>(() => service.EliminarAsync(animal.Id, Guid.NewGuid()));
+    }
 }

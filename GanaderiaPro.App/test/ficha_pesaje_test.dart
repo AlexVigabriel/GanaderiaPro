@@ -32,6 +32,17 @@ class _ServidorFalso {
       return http.Response(jsonEncode({'pesaje': pesajes.first, 'pesoActualAnimal': peso}), 200);
     }
     if (ruta.endsWith('/pesajes')) return http.Response(jsonEncode(pesajes), 200);
+    if (ruta.contains('/pesajes/')) {
+      final id = ruta.split('/').last;
+      if (request.method == 'DELETE') {
+        pesajes.removeWhere((p) => p['id'] == id);
+      } else {
+        final cuerpo = jsonDecode(request.body) as Map<String, dynamic>;
+        pesajes.firstWhere((p) => p['id'] == id)['peso'] = (cuerpo['peso'] as num).toDouble();
+      }
+      if (pesajes.isNotEmpty) peso = (pesajes.first['peso'] as num).toDouble();
+      return http.Response(jsonEncode({'pesoActualAnimal': peso}), 200);
+    }
     return http.Response(jsonEncode(animal), 200);
   }
 }
@@ -60,6 +71,42 @@ void main() {
       expect(find.text('La fecha no puede ser futura'), findsNothing);
       expect(find.text('Guardar pesaje'), findsNothing);
       expect(find.text('669 kg'), findsWidgets);
+    }, () => MockClient(servidor.responder));
+  });
+
+  testWidgets('Un pesaje cargado por error se corrige y se elimina desde la ficha', (tester) async {
+    tester.view.physicalSize = const Size(1400, 1800);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    final servidor = _ServidorFalso()
+      ..pesajes.addAll([
+        {'id': 'p2', 'fecha': '2026-10-03', 'peso': 55.0, 'observacion': null},
+        {'id': 'p1', 'fecha': '2026-08-31', 'peso': 333.0, 'observacion': null},
+      ])
+      ..peso = 55;
+
+    await http.runWithClient(() async {
+      await tester.pumpWidget(
+        MaterialApp(theme: AppTheme.claro, home: const FichaAnimalScreen(animalId: 'a1')),
+      );
+      await tester.pumpAndSettle();
+
+      // Corregir 55 → 355 (cambio brusco respecto de 333: no, es +7 %).
+      await tester.tap(find.byTooltip('Editar pesaje').first);
+      await tester.pumpAndSettle();
+      expect(find.text('Editar pesaje'), findsOneWidget);
+      await tester.enterText(find.byType(TextField).first, '355');
+      await tester.tap(find.text('Guardar cambios'));
+      await tester.pumpAndSettle();
+      expect(find.text('355 kg'), findsWidgets);
+
+      // Eliminar ese pesaje: el peso actual vuelve al anterior (333).
+      await tester.tap(find.byTooltip('Eliminar pesaje').first);
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(FilledButton, 'Eliminar'));
+      await tester.pumpAndSettle();
+      expect(find.text('355 kg'), findsNothing);
+      expect(find.text('333 kg'), findsWidgets);
     }, () => MockClient(servidor.responder));
   });
 }

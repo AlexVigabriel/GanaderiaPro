@@ -26,15 +26,55 @@ class _TarjetaPesajesState extends State<TarjetaPesajes> {
   final _api = ApiClient();
   late Future<List<Pesaje>> _futuro = _api.listarPesajes(widget.animal.id);
 
-  Future<void> _registrar() async {
+  // pesaje == null registra uno nuevo; si no, lo edita.
+  Future<void> _abrirFormulario([Pesaje? pesaje]) async {
     final historial = await _futuro.catchError((_) => <Pesaje>[]);
     if (!mounted) return;
-    final registrado = await abrirRegistroPesaje(context, widget.animal, historial);
-    if (registrado != true || !mounted) return;
+    final guardado = await abrirRegistroPesaje(context, widget.animal, historial: historial, pesaje: pesaje);
+    if (guardado == true) _actualizar(pesaje == null ? 'Pesaje registrado.' : 'Pesaje corregido.');
+  }
+
+  // Para corregir un pesaje cargado por error.
+  Future<void> _eliminar(Pesaje pesaje) async {
+    final tema = Theme.of(context);
+    final confirmado = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('¿Eliminar este pesaje?'),
+        content: Text(
+          '${formatearFecha(pesaje.fecha)} · ${formatearPeso(pesaje.peso)}. '
+          'El peso actual del animal se recalcula con los pesajes que queden.',
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Cancelar')),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: tema.colorScheme.error),
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Eliminar'),
+          ),
+        ],
+      ),
+    );
+    if (confirmado != true || !mounted) return;
+
+    try {
+      await _api.eliminarPesaje(widget.animal.id, pesaje.id);
+      _actualizar('Pesaje eliminado.');
+    } on ApiException catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.mensaje)));
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('No se pudo conectar con el servidor.')));
+      }
+    }
+  }
+
+  void _actualizar(String mensaje) {
+    if (!mounted) return;
     setState(() {
       _futuro = _api.listarPesajes(widget.animal.id);
     });
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Pesaje registrado.')));
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(mensaje)));
     widget.onPesoActualizado();
   }
 
@@ -58,7 +98,7 @@ class _TarjetaPesajesState extends State<TarjetaPesajes> {
                 Text('Historial de pesajes', style: tema.textTheme.titleMedium),
                 if (widget.animal.activo)
                   FilledButton.icon(
-                    onPressed: _registrar,
+                    onPressed: _abrirFormulario,
                     icon: const Icon(Icons.monitor_weight_outlined, size: 18),
                     label: const Text('Registrar pesaje'),
                   ),
@@ -97,7 +137,13 @@ class _TarjetaPesajesState extends State<TarjetaPesajes> {
                       const SizedBox(height: 16),
                     ],
                     for (var i = 0; i < pesajes.length; i++)
-                      _FilaPesaje(pesaje: pesajes[i], anterior: i + 1 < pesajes.length ? pesajes[i + 1] : null),
+                      _FilaPesaje(
+                        pesaje: pesajes[i],
+                        anterior: i + 1 < pesajes.length ? pesajes[i + 1] : null,
+                        // Solo se corrigen pesajes de animales activos.
+                        onEditar: widget.animal.activo ? () => _abrirFormulario(pesajes[i]) : null,
+                        onEliminar: widget.animal.activo ? () => _eliminar(pesajes[i]) : null,
+                      ),
                   ],
                 );
               },
@@ -111,10 +157,12 @@ class _TarjetaPesajesState extends State<TarjetaPesajes> {
 
 // Una fila del historial: fecha, peso y cuánto cambió respecto del anterior.
 class _FilaPesaje extends StatelessWidget {
-  const _FilaPesaje({required this.pesaje, required this.anterior});
+  const _FilaPesaje({required this.pesaje, required this.anterior, this.onEditar, this.onEliminar});
 
   final Pesaje pesaje;
   final Pesaje? anterior;
+  final VoidCallback? onEditar;
+  final VoidCallback? onEliminar;
 
   @override
   Widget build(BuildContext context) {
@@ -128,7 +176,6 @@ class _FilaPesaje extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 12),
       decoration: BoxDecoration(border: Border(top: BorderSide(color: tema.colorScheme.outlineVariant))),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(width: 110, child: Text(formatearFecha(pesaje.fecha))),
           SizedBox(
@@ -150,6 +197,12 @@ class _FilaPesaje extends StatelessWidget {
               style: tema.textTheme.bodyMedium?.copyWith(color: tema.colorScheme.onSurfaceVariant),
             ),
           ),
+          if (onEditar != null) ...[
+            BotonAccion(icono: Icons.edit_outlined, tooltip: 'Editar pesaje', onPressed: onEditar),
+            const SizedBox(width: 8),
+          ],
+          if (onEliminar != null)
+            BotonAccion(icono: Icons.delete_outline, tooltip: 'Eliminar pesaje', peligro: true, onPressed: onEliminar),
         ],
       ),
     );
@@ -267,9 +320,22 @@ class _PintorPesos extends CustomPainter {
       anterior.pesajes != pesajes || anterior.linea != linea || anterior.guia != guia;
 }
 
-// HU-55: formulario de pesaje. Devuelve true si se registró.
-Future<bool?> abrirRegistroPesaje(BuildContext context, Animal animal, [List<Pesaje> historial = const []]) =>
-    showDialog<bool>(context: context, builder: (_) => _RegistroPesaje(animal: animal, historial: historial));
+// HU-55: formulario de pesaje. Con [pesaje] edita ese pesaje en lugar de
+// registrar uno nuevo. Devuelve true si se guardó.
+Future<bool?> abrirRegistroPesaje(
+  BuildContext context,
+  Animal animal, {
+  List<Pesaje> historial = const [],
+  Pesaje? pesaje,
+}) => showDialog<bool>(
+  context: context,
+  builder: (_) => _RegistroPesaje(
+    animal: animal,
+    // Al editar, el propio pesaje no cuenta para "fecha repetida" ni para comparar.
+    historial: [for (final p in historial) if (p.id != pesaje?.id) p],
+    pesaje: pesaje,
+  ),
+);
 
 // Pesaje inmediatamente anterior a la fecha indicada (o null si no hay).
 Pesaje? pesajeAnterior(List<Pesaje> historial, DateTime fecha) {
@@ -291,10 +357,12 @@ String? validarPesoPesaje(String? valor) {
 }
 
 class _RegistroPesaje extends StatefulWidget {
-  const _RegistroPesaje({required this.animal, required this.historial});
+  const _RegistroPesaje({required this.animal, required this.historial, this.pesaje});
 
   final Animal animal;
   final List<Pesaje> historial;
+  // null: pesaje nuevo; si no, el que se corrige.
+  final Pesaje? pesaje;
 
   @override
   State<_RegistroPesaje> createState() => _RegistroPesajeState();
@@ -302,9 +370,14 @@ class _RegistroPesaje extends StatefulWidget {
 
 class _RegistroPesajeState extends State<_RegistroPesaje> {
   final _api = ApiClient();
-  final _peso = TextEditingController();
-  final _observacion = TextEditingController();
-  DateTime? _fecha = fechaDeHoy();
+  late final _peso = TextEditingController(text: widget.pesaje == null ? '' : _textoPeso(widget.pesaje!.peso));
+  late final _observacion = TextEditingController(text: widget.pesaje?.observacion ?? '');
+  late DateTime? _fecha = widget.pesaje?.fecha ?? fechaDeHoy();
+
+  bool get _editando => widget.pesaje != null;
+
+  static String _textoPeso(double peso) =>
+      peso == peso.roundToDouble() ? peso.toStringAsFixed(0) : peso.toString().replaceAll('.', ',');
   Map<String, String> _errores = {};
   String? _errorServidor;
   bool _guardando = false;
@@ -339,12 +412,22 @@ class _RegistroPesajeState extends State<_RegistroPesaje> {
     setState(() => _guardando = true);
     try {
       final nota = _observacion.text.trim();
-      await _api.registrarPesaje(
-        widget.animal.id,
-        peso: leerPeso(_peso.text)!,
-        fecha: _fecha!,
-        observacion: nota.isEmpty ? null : nota,
-      );
+      if (_editando) {
+        await _api.editarPesaje(
+          widget.animal.id,
+          widget.pesaje!.id,
+          peso: nuevo,
+          fecha: _fecha!,
+          observacion: nota.isEmpty ? null : nota,
+        );
+      } else {
+        await _api.registrarPesaje(
+          widget.animal.id,
+          peso: nuevo,
+          fecha: _fecha!,
+          observacion: nota.isEmpty ? null : nota,
+        );
+      }
       if (mounted) Navigator.of(context).pop(true);
     } on ApiException catch (e) {
       if (mounted) setState(() => _errorServidor = e.mensaje);
@@ -396,7 +479,7 @@ class _RegistroPesajeState extends State<_RegistroPesaje> {
                 children: [
                   Icon(Icons.monitor_weight_outlined, color: tema.colorScheme.primary, size: 26),
                   const SizedBox(width: 12),
-                  Expanded(child: Text('Registrar pesaje', style: tema.textTheme.titleLarge)),
+                  Expanded(child: Text(_editando ? 'Editar pesaje' : 'Registrar pesaje', style: tema.textTheme.titleLarge)),
                   IconButton(
                     tooltip: 'Cerrar',
                     onPressed: _guardando ? null : () => Navigator.of(context).pop(),
@@ -455,7 +538,7 @@ class _RegistroPesajeState extends State<_RegistroPesaje> {
                     onPressed: _guardando ? null : _guardar,
                     child: _guardando
                         ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
-                        : const Text('Guardar pesaje'),
+                        : Text(_editando ? 'Guardar cambios' : 'Guardar pesaje'),
                   ),
                 ],
               ),

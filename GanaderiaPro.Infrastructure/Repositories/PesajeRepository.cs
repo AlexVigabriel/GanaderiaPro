@@ -24,8 +24,14 @@ public class PesajeRepository : IPesajeRepository
             .ThenByDescending(p => p.FechaRegistro)
             .ToListAsync();
 
-    public Task<bool> ExisteEnFechaAsync(Guid animalId, DateOnly fecha) =>
-        _dbContext.Pesajes.AnyAsync(p => p.AnimalId == animalId && p.Fecha == fecha);
+    public Task<bool> ExisteEnFechaAsync(Guid animalId, DateOnly fecha, Guid? excluirId = null) =>
+        _dbContext.Pesajes.AnyAsync(
+            p => p.AnimalId == animalId && p.Fecha == fecha && (excluirId == null || p.Id != excluirId));
+
+    public Task<Pesaje?> ObtenerPorIdAsync(Guid animalId, Guid pesajeId) =>
+        _dbContext.Pesajes.FirstOrDefaultAsync(p => p.AnimalId == animalId && p.Id == pesajeId);
+
+    public void Eliminar(Pesaje pesaje) => _dbContext.Pesajes.Remove(pesaje);
 
     public Task<DateOnly?> ObtenerUltimaFechaAsync(Guid animalId) =>
         _dbContext.Pesajes

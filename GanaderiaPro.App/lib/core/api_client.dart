@@ -176,6 +176,35 @@ class ApiClient {
     }
   }
 
+  Future<void> editarPesaje(
+    String animalId,
+    String pesajeId, {
+    required double peso,
+    required DateTime fecha,
+    String? observacion,
+  }) async {
+    final response = await http.put(
+      Uri.parse('$baseUrl/api/animales/$animalId/pesajes/$pesajeId'),
+      headers: _headersAutenticados,
+      body: jsonEncode({'peso': peso, 'fecha': DatosAnimal.fechaIso(fecha), 'observacion': observacion}),
+    );
+
+    if (response.statusCode != 200) {
+      throw ApiException(_extraerMensajeError(response.body) ?? 'No se pudo editar el pesaje.');
+    }
+  }
+
+  Future<void> eliminarPesaje(String animalId, String pesajeId) async {
+    final response = await http.delete(
+      Uri.parse('$baseUrl/api/animales/$animalId/pesajes/$pesajeId'),
+      headers: _headersAutenticados,
+    );
+
+    if (response.statusCode != 200) {
+      throw ApiException(_extraerMensajeError(response.body) ?? 'No se pudo eliminar el pesaje.');
+    }
+  }
+
   Future<void> eliminarAnimal(String id) async {
     final response = await http.delete(Uri.parse('$baseUrl/api/animales/$id'), headers: _headersAutenticados);
 

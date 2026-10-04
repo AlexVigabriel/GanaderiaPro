@@ -48,4 +48,38 @@ public class PesajesController : ControllerBase
             return BadRequest(new { mensaje = ex.Message });
         }
     }
+
+    [HttpPut("{pesajeId:guid}")]
+    public async Task<ActionResult<RegistrarPesajeResponse>> Editar(Guid animalId, Guid pesajeId, RegistrarPesajeRequest request)
+    {
+        try
+        {
+            return Ok(await _pesajeService.EditarAsync(animalId, pesajeId, request));
+        }
+        catch (RecursoNoEncontradoException ex)
+        {
+            return NotFound(new { mensaje = ex.Message });
+        }
+        catch (ReglaDeNegocioException ex)
+        {
+            return BadRequest(new { mensaje = ex.Message });
+        }
+    }
+
+    [HttpDelete("{pesajeId:guid}")]
+    public async Task<IActionResult> Eliminar(Guid animalId, Guid pesajeId)
+    {
+        try
+        {
+            return Ok(new { pesoActualAnimal = await _pesajeService.EliminarAsync(animalId, pesajeId) });
+        }
+        catch (RecursoNoEncontradoException ex)
+        {
+            return NotFound(new { mensaje = ex.Message });
+        }
+        catch (ReglaDeNegocioException ex)
+        {
+            return BadRequest(new { mensaje = ex.Message });
+        }
+    }
 }
