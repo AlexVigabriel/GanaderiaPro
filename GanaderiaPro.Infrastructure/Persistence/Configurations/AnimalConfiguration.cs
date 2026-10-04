@@ -39,6 +39,9 @@ public class AnimalConfiguration : IEntityTypeConfiguration<Animal>
         builder.Property(a => a.Observaciones)
             .HasMaxLength(500);
 
+        builder.Property(a => a.ObservacionBaja)
+            .HasMaxLength(500);
+
         builder.Property(a => a.Sexo)
             .HasConversion<string>()
             .HasMaxLength(10)

@@ -13,6 +13,13 @@ public enum EstadoAnimal
     Fallecido
 }
 
+// HU-54: motivo de la baja. Define si el animal pasa a Vendido o a Fallecido.
+public enum TipoBaja
+{
+    Venta,
+    Fallecimiento
+}
+
 // HU-74: categoría productiva según sexo, edad y castración.
 public enum CategoriaAnimal
 {
@@ -50,6 +57,10 @@ public class Animal
 
     // Solo aplica a machos; define si es Novillo en vez de Torito o Toro.
     public bool Castrado { get; set; }
+
+    // HU-54: datos de la baja (venta o fallecimiento). Vacíos mientras está Activo.
+    public DateOnly? FechaBaja { get; set; }
+    public string? ObservacionBaja { get; set; }
 
     // La categoría no se guarda: cambia sola con la edad, así que se calcula
     // a la fecha pedida. Sin fecha de nacimiento no se puede calcular.

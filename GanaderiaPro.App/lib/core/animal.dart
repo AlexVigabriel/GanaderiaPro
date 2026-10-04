@@ -14,6 +14,8 @@ class Animal {
     this.observaciones,
     this.castrado = false,
     this.categoria,
+    this.fechaBaja,
+    this.observacionBaja,
   });
 
   final String id;
@@ -31,9 +33,15 @@ class Animal {
   final bool castrado;
   // HU-74: la calcula el servidor; null si el animal no tiene fecha de nacimiento.
   final String? categoria;
+  // HU-54: datos de la baja; null mientras el animal está Activo.
+  final DateTime? fechaBaja;
+  final String? observacionBaja;
+
+  bool get activo => estado == 'Activo';
 
   factory Animal.fromJson(Map<String, dynamic> json) {
     final nacimiento = json['fechaNacimiento'] as String?;
+    final baja = json['fechaBaja'] as String?;
     return Animal(
       id: json['id'] as String,
       arete: json['arete'] as String,
@@ -49,6 +57,8 @@ class Animal {
       observaciones: json['observaciones'] as String?,
       castrado: json['castrado'] as bool? ?? false,
       categoria: json['categoria'] as String?,
+      fechaBaja: baja == null ? null : DateTime.parse(baja),
+      observacionBaja: json['observacionBaja'] as String?,
     );
   }
 }
@@ -85,7 +95,7 @@ class DatosAnimal {
     'raza': raza,
     'peso': peso,
     'nombre': nombre,
-    'fechaNacimiento': fechaNacimiento == null ? null : _fechaIso(fechaNacimiento!),
+    'fechaNacimiento': fechaNacimiento == null ? null : fechaIso(fechaNacimiento!),
     'pesoNacimiento': pesoNacimiento,
     'color': color,
     'observaciones': observaciones,
@@ -93,7 +103,7 @@ class DatosAnimal {
     'castrado': sexo == 'Macho' && castrado,
   };
 
-  static String _fechaIso(DateTime fecha) =>
+  static String fechaIso(DateTime fecha) =>
       '${fecha.year.toString().padLeft(4, '0')}-${fecha.month.toString().padLeft(2, '0')}-${fecha.day.toString().padLeft(2, '0')}';
 }
 

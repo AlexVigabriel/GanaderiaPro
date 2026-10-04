@@ -28,7 +28,12 @@ public record AnimalResponse(
     string? Color,
     string? Observaciones,
     bool Castrado,
-    CategoriaAnimal? Categoria);
+    CategoriaAnimal? Categoria,
+    DateOnly? FechaBaja,
+    string? ObservacionBaja);
+
+// HU-54: baja por venta o fallecimiento.
+public record RegistrarBajaRequest(TipoBaja Tipo, DateOnly Fecha, string? Observacion = null);
 
 // HU-66: resultado de la carga múltiple. Las filas válidas se registran y
 // las inválidas se informan con su número de fila y el motivo.

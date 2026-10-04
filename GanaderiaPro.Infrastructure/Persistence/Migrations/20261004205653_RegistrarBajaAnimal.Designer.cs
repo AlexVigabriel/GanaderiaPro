@@ -3,6 +3,7 @@ using System;
 using GanaderiaPro.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace GanaderiaPro.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(GanaderiaProDbContext))]
-    partial class GanaderiaProDbContextModelSnapshot : ModelSnapshot
+    [Migration("20261004205653_RegistrarBajaAnimal")]
+    partial class RegistrarBajaAnimal
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

@@ -5,6 +5,7 @@ import '../../core/api_client.dart';
 import '../../core/formato.dart';
 import '../../core/widgets/componentes.dart';
 import '../shell/app_shell.dart';
+import 'baja_animal_dialog.dart';
 import 'editar_animal_screen.dart';
 import 'listado_animales_screen.dart';
 
@@ -41,6 +42,13 @@ class _FichaAnimalScreenState extends State<FichaAnimalScreen> {
       _avisar('Cambios guardados.');
       _recargar();
     }
+  }
+
+  Future<void> _darDeBaja(Animal animal) async {
+    final actualizado = await abrirRegistroBaja(context, animal);
+    if (actualizado == null || !mounted) return;
+    _avisar('${animal.arete} quedó como ${actualizado.estado}.');
+    _recargar();
   }
 
   // HU-21: eliminar, solo para corregir registros cargados por error.
@@ -148,6 +156,15 @@ class _FichaAnimalScreenState extends State<FichaAnimalScreen> {
                     onPressed: _eliminando ? null : () => _editar(animal),
                   ),
                   const SizedBox(width: 8),
+                  if (animal.activo) ...[
+                    BotonAccion(
+                      tooltip: 'Registrar baja',
+                      peligro: true,
+                      dibujo: (color) => IconoCalavera(color: color),
+                      onPressed: _eliminando ? null : () => _darDeBaja(animal),
+                    ),
+                    const SizedBox(width: 8),
+                  ],
                   BotonAccion(
                     icono: Icons.delete_outline,
                     tooltip: 'Eliminar',
@@ -198,6 +215,10 @@ class _FichaAnimalScreenState extends State<FichaAnimalScreen> {
                   ),
                 ),
               ),
+              if (!animal.activo) ...[
+                const SizedBox(height: 16),
+                _tarjetaBaja(animal, tema),
+              ],
               if (animal.observaciones != null) ...[
                 const SizedBox(height: 16),
                 Card(
@@ -221,6 +242,46 @@ class _FichaAnimalScreenState extends State<FichaAnimalScreen> {
       ),
     );
   }
+}
+
+// HU-54: datos de la venta o el fallecimiento.
+Widget _tarjetaBaja(Animal animal, ThemeData tema) {
+  final color = tema.colorScheme.error;
+  return Card(
+    margin: EdgeInsets.zero,
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(16),
+      side: BorderSide(color: color.withValues(alpha: 0.35)),
+    ),
+    child: Padding(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              IconoCalavera(color: color, tamano: 22),
+              const SizedBox(width: 10),
+              Text('Baja registrada', style: tema.textTheme.titleMedium),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Wrap(
+            spacing: 48,
+            runSpacing: 16,
+            children: [
+              _Dato(etiqueta: 'Motivo', valor: animal.estado == 'Vendido' ? 'Venta' : 'Fallecimiento'),
+              _Dato(etiqueta: 'Fecha', valor: animal.fechaBaja == null ? '—' : formatearFecha(animal.fechaBaja!)),
+            ],
+          ),
+          if (animal.observacionBaja != null) ...[
+            const SizedBox(height: 16),
+            _Dato(etiqueta: 'Observación', valor: animal.observacionBaja!),
+          ],
+        ],
+      ),
+    ),
+  );
 }
 
 class _Dato extends StatelessWidget {

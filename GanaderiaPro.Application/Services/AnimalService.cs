@@ -197,6 +197,41 @@ public class AnimalService : IAnimalService
         await _unitOfWork.GuardarCambiosAsync();
     }
 
+    // HU-54: la venta o el fallecimiento no borran el animal: cambian su
+    // estado y guardan la fecha, así conserva todo su historial (RN-04).
+    public async Task<AnimalResponse> RegistrarBajaAsync(Guid id, RegistrarBajaRequest request)
+    {
+        var animal = await ObtenerDelRanchoActualAsync(id);
+
+        if (animal.Estado != EstadoAnimal.Activo)
+        {
+            throw new ReglaDeNegocioException("Solo se puede dar de baja un animal activo.");
+        }
+
+        // RN-14: no se registran fechas futuras.
+        if (request.Fecha > Hoy())
+        {
+            throw new ReglaDeNegocioException("La fecha de baja no puede ser futura.");
+        }
+
+        if (animal.FechaNacimiento is { } nacimiento && request.Fecha < nacimiento)
+        {
+            throw new ReglaDeNegocioException("La fecha de baja no puede ser anterior al nacimiento.");
+        }
+
+        if (request.Observacion?.Trim().Length > 500)
+        {
+            throw new ReglaDeNegocioException("La observación puede tener hasta 500 caracteres.");
+        }
+
+        animal.Estado = request.Tipo == TipoBaja.Venta ? EstadoAnimal.Vendido : EstadoAnimal.Fallecido;
+        animal.FechaBaja = request.Fecha;
+        animal.ObservacionBaja = TextoOpcional(request.Observacion);
+        await _unitOfWork.GuardarCambiosAsync();
+
+        return ToResponse(animal);
+    }
+
     // Devuelve el primer problema encontrado en los datos, o null si son válidos.
     private static string? ValidarDatos(RegistrarAnimalRequest request)
     {
@@ -329,5 +364,7 @@ public class AnimalService : IAnimalService
             animal.Color,
             animal.Observaciones,
             animal.Castrado,
-            animal.CategoriaAl(Hoy()));
+            animal.CategoriaAl(Hoy()),
+            animal.FechaBaja,
+            animal.ObservacionBaja);
 }

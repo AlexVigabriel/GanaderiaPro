@@ -9,6 +9,7 @@ import '../../core/formato.dart';
 import '../../core/route_observer.dart';
 import '../../core/widgets/componentes.dart';
 import '../shell/app_shell.dart';
+import 'baja_animal_dialog.dart';
 import 'carga_multiple_dialog.dart';
 import 'editar_animal_screen.dart';
 import 'ficha_animal_screen.dart';
@@ -112,6 +113,14 @@ class _ListadoAnimalesScreenState extends State<ListadoAnimalesScreen> with Rout
     final guardado = await Navigator.of(context)
         .push<bool>(MaterialPageRoute(builder: (_) => EditarAnimalScreen(animal: animal)));
     if (guardado == true && mounted) _avisar('Cambios guardados.');
+  }
+
+  // HU-54: la baja deja al animal fuera de los Activos sin borrarlo.
+  Future<void> _darDeBaja(Animal animal) async {
+    final actualizado = await abrirRegistroBaja(context, animal);
+    if (actualizado == null || !mounted) return;
+    _avisar('${animal.arete} quedó como ${actualizado.estado}.');
+    _cargar();
   }
 
   Future<void> _eliminar(Animal animal) async {
@@ -367,7 +376,7 @@ class _ListadoAnimalesScreenState extends State<ListadoAnimalesScreen> with Rout
               encabezado('Nacimiento', 2),
               encabezado('Peso', 2),
               encabezado('Estado', 2),
-              SizedBox(width: 84, child: Text('ACCIONES', style: estiloEncabezado)),
+              SizedBox(width: 128, child: Text('ACCIONES', style: estiloEncabezado)),
             ],
           ),
         ),
@@ -394,7 +403,7 @@ class _ListadoAnimalesScreenState extends State<ListadoAnimalesScreen> with Rout
                     flex: 2,
                     child: Align(alignment: Alignment.centerLeft, child: EtiquetaEstado(animal.estado)),
                   ),
-                  SizedBox(width: 84, child: _acciones(animal)),
+                  SizedBox(width: 128, child: _acciones(animal)),
                 ],
               ),
             ),
@@ -457,6 +466,15 @@ class _ListadoAnimalesScreenState extends State<ListadoAnimalesScreen> with Rout
     children: [
       BotonAccion(icono: Icons.edit_outlined, tooltip: 'Editar', onPressed: () => _editar(animal)),
       const SizedBox(width: 8),
+      if (animal.activo) ...[
+        BotonAccion(
+          tooltip: 'Registrar baja',
+          peligro: true,
+          dibujo: (color) => IconoCalavera(color: color),
+          onPressed: () => _darDeBaja(animal),
+        ),
+        const SizedBox(width: 8),
+      ],
       BotonAccion(icono: Icons.delete_outline, tooltip: 'Eliminar', peligro: true, onPressed: () => _eliminar(animal)),
     ],
   );

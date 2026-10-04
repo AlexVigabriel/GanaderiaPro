@@ -129,6 +129,21 @@ class ApiClient {
     throw ApiException(_extraerMensajeError(response.body) ?? 'No se pudo editar el animal.');
   }
 
+  // HU-54: tipo es 'Venta' o 'Fallecimiento'.
+  Future<Animal> registrarBaja(String id, {required String tipo, required DateTime fecha, String? observacion}) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/api/animales/$id/baja'),
+      headers: _headersAutenticados,
+      body: jsonEncode({'tipo': tipo, 'fecha': DatosAnimal.fechaIso(fecha), 'observacion': observacion}),
+    );
+
+    if (response.statusCode == 200) {
+      return Animal.fromJson(jsonDecode(response.body) as Map<String, dynamic>);
+    }
+
+    throw ApiException(_extraerMensajeError(response.body) ?? 'No se pudo registrar la baja.');
+  }
+
   Future<void> eliminarAnimal(String id) async {
     final response = await http.delete(Uri.parse('$baseUrl/api/animales/$id'), headers: _headersAutenticados);
 

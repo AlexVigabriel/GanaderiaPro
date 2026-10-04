@@ -95,6 +95,24 @@ public class AnimalesController : ControllerBase
         }
     }
 
+    // HU-54: baja por venta o fallecimiento.
+    [HttpPost("{id:guid}/baja")]
+    public async Task<ActionResult<AnimalResponse>> RegistrarBaja(Guid id, RegistrarBajaRequest request)
+    {
+        try
+        {
+            return Ok(await _animalService.RegistrarBajaAsync(id, request));
+        }
+        catch (RecursoNoEncontradoException ex)
+        {
+            return NotFound(new { mensaje = ex.Message });
+        }
+        catch (ReglaDeNegocioException ex)
+        {
+            return BadRequest(new { mensaje = ex.Message });
+        }
+    }
+
     [HttpDelete("{id:guid}")]
     public async Task<IActionResult> Eliminar(Guid id)
     {
