@@ -396,7 +396,8 @@ class _RegistroPesajeState extends State<_RegistroPesaje> {
         'fecha': ?validarFechaBaja(_fecha, widget.animal.fechaNacimiento, obligatoria: 'La fecha es obligatoria'),
         'observacion': ?validarLargo(_observacion.text, 500),
       };
-      if (!_errores.containsKey('fecha') && widget.historial.any((p) => _mismoDia(p.fecha, _fecha!))) {
+      final cambioLaFecha = !_editando || !_mismoDia(widget.pesaje!.fecha, _fecha!);
+      if (!_errores.containsKey('fecha') && cambioLaFecha && widget.historial.any((p) => _mismoDia(p.fecha, _fecha!))) {
         _errores['fecha'] = 'Ya hay un pesaje en esa fecha';
       }
       _errorServidor = null;

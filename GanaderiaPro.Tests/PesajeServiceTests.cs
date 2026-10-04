@@ -212,6 +212,21 @@ public class PesajeServiceTests
     }
 
     [Fact]
+    public async Task Editar_SinCambiarLaFecha_SePermiteAunqueHayaOtroPesajeEseDia()
+    {
+        // Días repetidos cargados antes de la regla: corregir el peso no se bloquea.
+        var animal = AnimalDelRancho();
+        var pesaje = PesajeDe(animal, Hoy, 700);
+        _pesajeRepoMock.Setup(r => r.ExisteEnFechaAsync(animal.Id, Hoy, pesaje.Id)).ReturnsAsync(true);
+        _pesajeRepoMock.Setup(r => r.ListarPorAnimalAsync(animal.Id)).ReturnsAsync(new List<Pesaje> { pesaje });
+        var service = CrearServicio();
+
+        var resultado = await service.EditarAsync(animal.Id, pesaje.Id, new RegistrarPesajeRequest(788, Hoy));
+
+        Assert.Equal(788, resultado.Pesaje.Peso);
+    }
+
+    [Fact]
     public async Task Eliminar_ElPesajeMasReciente_VuelveAlPesoDelAnterior()
     {
         var animal = AnimalDelRancho(peso: 55);

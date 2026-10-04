@@ -81,7 +81,10 @@ public class PesajeService : IPesajeService
             throw new ReglaDeNegocioException(error);
         }
 
-        if (await _pesajeRepository.ExisteEnFechaAsync(animal.Id, request.Fecha, excluirId: pesaje.Id))
+        // Solo si cambia la fecha: corregir el peso de un pesaje no crea un
+        // conflicto nuevo (puede haber días repetidos cargados antes de la regla).
+        if (request.Fecha != pesaje.Fecha &&
+            await _pesajeRepository.ExisteEnFechaAsync(animal.Id, request.Fecha, excluirId: pesaje.Id))
         {
             throw new ReglaDeNegocioException("Ya hay un pesaje registrado en esa fecha para este animal.");
         }
