@@ -8,6 +8,7 @@ import '../shell/app_shell.dart';
 import 'baja_animal_dialog.dart';
 import 'editar_animal_screen.dart';
 import 'listado_animales_screen.dart';
+import 'pesajes_animal.dart';
 
 // HU-19: ficha completa del animal.
 class FichaAnimalScreen extends StatefulWidget {
@@ -30,7 +31,11 @@ class _FichaAnimalScreenState extends State<FichaAnimalScreen> {
     _futuroAnimal = _api.obtenerAnimal(widget.animalId);
   }
 
-  void _recargar() => setState(() => _futuroAnimal = _api.obtenerAnimal(widget.animalId));
+  // Con llaves: si setState recibe "() => x = futuro", devuelve ese Future y
+  // Flutter corta la recarga (la pantalla quedaba sin actualizar).
+  void _recargar() => setState(() {
+    _futuroAnimal = _api.obtenerAnimal(widget.animalId);
+  });
 
   void _avisar(String mensaje) => ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(mensaje)));
 
@@ -215,6 +220,8 @@ class _FichaAnimalScreenState extends State<FichaAnimalScreen> {
                   ),
                 ),
               ),
+              const SizedBox(height: 16),
+              TarjetaPesajes(animal: animal, onPesoActualizado: _recargar),
               if (!animal.activo) ...[
                 const SizedBox(height: 16),
                 _tarjetaBaja(animal, tema),

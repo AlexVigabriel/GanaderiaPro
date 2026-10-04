@@ -157,7 +157,14 @@ class _MenuLateral extends StatelessWidget {
                     child: const Icon(Icons.grass, size: 20, color: AppTheme.verdeNoche),
                   ),
                   const SizedBox(width: 10),
-                  Text('GanaderíaPro', style: textos.titleLarge?.copyWith(color: Colors.white)),
+                  Flexible(
+                    child: Text(
+                      'GanaderíaPro',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: textos.titleLarge?.copyWith(color: Colors.white),
+                    ),
+                  ),
                 ],
               ),
             ),

@@ -38,10 +38,14 @@ String? validarRaza(String? valor) =>
 
 String? validarSexo(String? valor) => (valor == null || valor.isEmpty) ? 'Elegí el sexo' : null;
 
-DateTime _hoy() {
+// Fecha de hoy sin la hora. DateTime.now() trae la hora, y "hoy a las 18:44"
+// es posterior a "hoy a las 00:00": compararlas así daba "fecha futura".
+DateTime fechaDeHoy() {
   final ahora = DateTime.now();
   return DateTime(ahora.year, ahora.month, ahora.day);
 }
+
+DateTime _hoy() => fechaDeHoy();
 
 // Fecha más antigua que se acepta como nacimiento.
 DateTime fechaNacimientoMinima() {

@@ -139,6 +139,23 @@ class DatosEstado {
   };
 }
 
+// HU-55: un pesaje del historial.
+class Pesaje {
+  const Pesaje({required this.id, required this.fecha, required this.peso, this.observacion});
+
+  final String id;
+  final DateTime fecha;
+  final double peso;
+  final String? observacion;
+
+  factory Pesaje.fromJson(Map<String, dynamic> json) => Pesaje(
+    id: json['id'] as String,
+    fecha: DateTime.parse(json['fecha'] as String),
+    peso: (json['peso'] as num).toDouble(),
+    observacion: json['observacion'] as String?,
+  );
+}
+
 class ResumenAnimales {
   const ResumenAnimales({
     required this.activos,
