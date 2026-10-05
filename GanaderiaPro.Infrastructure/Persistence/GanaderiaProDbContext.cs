@@ -13,6 +13,8 @@ public class GanaderiaProDbContext : DbContext
     public DbSet<Usuario> Usuarios => Set<Usuario>();
     public DbSet<Animal> Animales => Set<Animal>();
     public DbSet<Pesaje> Pesajes => Set<Pesaje>();
+    public DbSet<Vacuna> Vacunas => Set<Vacuna>();
+    public DbSet<Vacunacion> Vacunaciones => Set<Vacunacion>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

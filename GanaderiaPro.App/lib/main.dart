@@ -8,6 +8,7 @@ import 'core/sesion_actual.dart';
 import 'features/auth/login_screen.dart';
 import 'features/auth/registro_screen.dart';
 import 'features/ganado/listado_animales_screen.dart';
+import 'features/sanidad/sanidad_screen.dart';
 import 'features/shell/home_screen.dart';
 
 void main() {
@@ -18,7 +19,7 @@ class GanaderiaProApp extends StatelessWidget {
   const GanaderiaProApp({super.key});
 
   // Pantallas que solo se ven con sesión iniciada.
-  static const _rutasProtegidas = {'/', '/ganado'};
+  static const _rutasProtegidas = {'/', '/ganado', '/sanidad'};
 
   @override
   Widget build(BuildContext context) {
@@ -73,6 +74,8 @@ class GanaderiaProApp extends StatelessWidget {
         return const HomeScreen();
       case '/ganado':
         return const ListadoAnimalesScreen();
+      case '/sanidad':
+        return const SanidadScreen();
       case '/login':
       default:
         return const LoginScreen();
