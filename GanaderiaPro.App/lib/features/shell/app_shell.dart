@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/api_client.dart';
 import '../../core/app_theme.dart';
 import '../../core/cerrar_sesion.dart';
+import '../../core/colaborador.dart';
 import '../../core/formato.dart';
 import '../../core/sesion_actual.dart';
 
@@ -96,13 +97,20 @@ class _BarraSuperior extends StatelessWidget {
           // HU-15: nombre del rancho actual.
           Icon(Icons.home_work_outlined, size: 20, color: tema.colorScheme.primary),
           const SizedBox(width: 8),
-          Expanded(
+          Flexible(
             child: Text(
               sesion.nombreRancho ?? 'GanaderíaPro',
               overflow: TextOverflow.ellipsis,
               style: tema.textTheme.titleSmall,
             ),
           ),
+          // HU-32: el rol de quien inició sesión, para saber siempre con qué
+          // cuenta se está trabajando.
+          if (sesion.rol != null) ...[
+            const SizedBox(width: 10),
+            EtiquetaRol(rol: sesion.rol!),
+          ],
+          const Spacer(),
           // HU-52: menú de perfil con el usuario, el rancho y "Cerrar sesión".
           PopupMenuButton<String>(
             tooltip: 'Perfil',
@@ -118,6 +126,10 @@ class _BarraSuperior extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(sesion.nombreUsuario ?? '', style: tema.textTheme.titleSmall),
+                    Text(
+                      nombreDeRol(sesion.rol ?? ''),
+                      style: tema.textTheme.bodySmall?.copyWith(color: tema.colorScheme.primary, fontWeight: FontWeight.w600),
+                    ),
                     Text(
                       sesion.nombreRancho ?? '',
                       style: tema.textTheme.bodySmall?.copyWith(color: tema.colorScheme.onSurfaceVariant),
@@ -287,4 +299,31 @@ Future<void> cerrarSesion(BuildContext context) async {
     // Sin conexión: la sesión se cierra igual en este dispositivo.
   }
   irAlLoginSinSesion();
+}
+
+// Rol del usuario en la barra superior.
+class EtiquetaRol extends StatelessWidget {
+  const EtiquetaRol({super.key, required this.rol});
+
+  final String rol;
+
+  @override
+  Widget build(BuildContext context) {
+    final colores = Theme.of(context).colorScheme;
+    final color = rol == 'Propietario' ? colores.primary : colores.tertiary;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: color.withValues(alpha: 0.35)),
+      ),
+      child: Text(
+        nombreDeRol(rol),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: Theme.of(context).textTheme.labelMedium?.copyWith(color: color, fontWeight: FontWeight.w600),
+      ),
+    );
+  }
 }

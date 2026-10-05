@@ -69,6 +69,20 @@ void main() {
     expect(find.text('Colaboradores'), findsOneWidget);
   });
 
+  testWidgets('La barra superior y el menú de perfil muestran el rol', (tester) async {
+    pantallaGrande(tester);
+    SesionActual.instancia.guardar(token: 't', nombreRancho: 'La Esperanza', nombreUsuario: 'Laura Rojas', rol: 'EncargadoCorrales');
+    await tester.pumpWidget(
+      MaterialApp(theme: AppTheme.claro, home: const AppShell(seccionActiva: '/', body: SizedBox())),
+    );
+
+    expect(find.text('Encargado de corrales'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Perfil'));
+    await tester.pumpAndSettle();
+    expect(find.text('Encargado de corrales'), findsNWidgets(2));
+  });
+
   testWidgets('La lista muestra rol, estado y el enlace para los pendientes', (tester) async {
     pantallaGrande(tester);
     SesionActual.instancia.guardar(token: 't', nombreRancho: 'R', nombreUsuario: 'Ana');
