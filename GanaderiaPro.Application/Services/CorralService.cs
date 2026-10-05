@@ -102,24 +102,57 @@ public class CorralService : ICorralService
         return ToResponse(corral, ocupados);
     }
 
-    // Al desactivar un corral, sus animales quedan sin corral.
+    // RN-08: solo se desactiva un corral vacío. Desactivar no lo borra, así
+    // que su historial se conserva.
     public async Task<CorralResponse> CambiarEstadoAsync(Guid id, bool activo)
     {
         var corral = await ObtenerDelRanchoAsync(id);
+        var ocupados = (await _corralRepository.ListarAnimalesActivosAsync(corral.Id)).Count;
 
-        if (!activo)
+        if (!activo && ocupados > 0)
         {
-            foreach (var animal in await _corralRepository.ListarAnimalesActivosAsync(corral.Id))
-            {
-                animal.CorralId = null;
-            }
+            throw new ReglaDeNegocioException(
+                ocupados == 1
+                    ? "El corral tiene 1 animal: reasignalo antes de desactivarlo."
+                    : $"El corral tiene {ocupados} animales: reasignalos antes de desactivarlo.");
         }
 
         corral.Activo = activo;
         await _unitOfWork.GuardarCambiosAsync();
 
-        var ocupados = activo ? (await _corralRepository.ListarAnimalesActivosAsync(corral.Id)).Count : 0;
         return ToResponse(corral, ocupados);
+    }
+
+    // Cambia el corral de un animal, o lo saca de su corral con corralId null.
+    // Respeta la capacidad del corral de destino (RN-07).
+    public async Task AsignarAnimalAsync(Guid animalId, Guid? corralId)
+    {
+        var ranchoId = _currentUser.RanchoId;
+        var animal = await _animalRepository.ObtenerPorIdAsync(ranchoId, animalId)
+            ?? throw new RecursoNoEncontradoException("No se encontró el animal.");
+
+        if (animal.Estado != EstadoAnimal.Activo)
+        {
+            throw new ReglaDeNegocioException($"El animal {animal.Arete} está dado de baja: no se puede mover de corral.");
+        }
+
+        if (corralId is { } id && id != animal.CorralId)
+        {
+            var corral = await ObtenerDelRanchoAsync(id);
+            if (!corral.Activo)
+            {
+                throw new ReglaDeNegocioException($"El corral «{corral.Nombre}» está desactivado.");
+            }
+
+            var ocupados = (await _corralRepository.ListarAnimalesActivosAsync(corral.Id)).Count;
+            if (ocupados >= corral.Capacidad)
+            {
+                throw new ReglaDeNegocioException($"El corral «{corral.Nombre}» está lleno ({ocupados}/{corral.Capacidad}).");
+            }
+        }
+
+        animal.CorralId = corralId;
+        await _unitOfWork.GuardarCambiosAsync();
     }
 
     private async Task<string> ValidarNombreYCapacidadAsync(Guid ranchoId, string? nombre, int capacidad, Guid? excluirId)

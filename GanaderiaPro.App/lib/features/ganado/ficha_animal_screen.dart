@@ -8,6 +8,7 @@ import '../shell/app_shell.dart';
 import 'baja_animal_dialog.dart';
 import 'editar_animal_screen.dart';
 import 'listado_animales_screen.dart';
+import '../corrales/cambiar_corral_dialog.dart';
 import '../sanidad/vacunaciones_widgets.dart';
 import 'pesajes_animal.dart';
 
@@ -54,6 +55,13 @@ class _FichaAnimalScreenState extends State<FichaAnimalScreen> {
     final actualizado = await abrirRegistroBaja(context, animal);
     if (actualizado == null || !mounted) return;
     _avisar('${animal.arete} quedó como ${actualizado.estado}.');
+    _recargar();
+  }
+
+  Future<void> _cambiarCorral(Animal animal) async {
+    final guardado = await abrirCambioCorral(context, animal);
+    if (guardado != true || !mounted) return;
+    _avisar('Corral actualizado.');
     _recargar();
   }
 
@@ -162,6 +170,14 @@ class _FichaAnimalScreenState extends State<FichaAnimalScreen> {
                     onPressed: _eliminando ? null : () => _editar(animal),
                   ),
                   const SizedBox(width: 8),
+                  if (animal.activo) ...[
+                    BotonAccion(
+                      icono: Icons.fence,
+                      tooltip: 'Cambiar corral',
+                      onPressed: _eliminando ? null : () => _cambiarCorral(animal),
+                    ),
+                    const SizedBox(width: 8),
+                  ],
                   if (animal.activo) ...[
                     BotonAccion(
                       tooltip: 'Registrar baja',

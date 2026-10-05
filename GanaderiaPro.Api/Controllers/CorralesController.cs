@@ -39,6 +39,14 @@ public class CorralesController : ControllerBase
     public Task<ActionResult> Activar(Guid id) =>
         Responder(async () => Ok(await _corralService.CambiarEstadoAsync(id, activo: true)));
 
+    [HttpPut("/api/animales/{animalId:guid}/corral")]
+    public Task<ActionResult> AsignarAnimal(Guid animalId, AsignarCorralRequest request) =>
+        Responder(async () =>
+        {
+            await _corralService.AsignarAnimalAsync(animalId, request.CorralId);
+            return NoContent();
+        });
+
     private async Task<ActionResult> Responder(Func<Task<ActionResult>> accion)
     {
         try

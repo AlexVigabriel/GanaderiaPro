@@ -5,6 +5,9 @@ public record CrearCorralRequest(string Nombre, int Capacidad, IReadOnlyList<Gui
 
 public record EditarCorralRequest(string Nombre, int Capacidad);
 
+// Corral nuevo del animal; null lo deja sin corral.
+public record AsignarCorralRequest(Guid? CorralId);
+
 // HU-24: animales activos (sin bajas, RN-04) y porcentaje de ocupación.
 public record CorralResponse(
     Guid Id,

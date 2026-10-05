@@ -161,16 +161,100 @@ public class CorralServiceTests
     }
 
     [Fact]
-    public async Task Desactivar_DejaALosAnimalesSinCorral()
+    public async Task Desactivar_CorralConAnimales_LoBloqueaEIndicaCuantosReasignar()
     {
+        // RN-08: solo se desactiva un corral vacío.
         var animal = AnimalDelRancho("C-10");
-        var corral = CorralDelRancho("Corral Viejo", 5, animal);
+        var corral = CorralDelRancho("Corral Viejo", 5, animal, AnimalDelRancho("C-11"));
         animal.CorralId = corral.Id;
+        var service = CrearServicio();
+
+        var ex = await Assert.ThrowsAsync<ReglaDeNegocioException>(() => service.CambiarEstadoAsync(corral.Id, activo: false));
+
+        Assert.Contains("tiene 2 animales", ex.Message);
+        Assert.True(corral.Activo);
+        Assert.Equal(corral.Id, animal.CorralId);
+    }
+
+    [Fact]
+    public async Task Desactivar_CorralVacio_LoDesactiva()
+    {
+        var corral = CorralDelRancho("Corral Vacío", 5);
         var service = CrearServicio();
 
         var resultado = await service.CambiarEstadoAsync(corral.Id, activo: false);
 
         Assert.False(resultado.Activo);
+        _unitOfWorkMock.Verify(u => u.GuardarCambiosAsync(), Times.Once);
+    }
+
+    [Fact]
+    public async Task AsignarAnimal_ACorralConLugar_LoMueve()
+    {
+        var animal = AnimalDelRancho("C-12");
+        animal.CorralId = Guid.NewGuid();
+        var destino = CorralDelRancho("Corral Destino", 2, AnimalDelRancho("C-13"));
+        var service = CrearServicio();
+
+        await service.AsignarAnimalAsync(animal.Id, destino.Id);
+
+        Assert.Equal(destino.Id, animal.CorralId);
+    }
+
+    [Fact]
+    public async Task AsignarAnimal_ACorralLleno_LoBloquea()
+    {
+        // RN-07
+        var animal = AnimalDelRancho("C-14");
+        var lleno = CorralDelRancho("Corral Lleno", 1, AnimalDelRancho("C-15"));
+        var service = CrearServicio();
+
+        var ex = await Assert.ThrowsAsync<ReglaDeNegocioException>(() => service.AsignarAnimalAsync(animal.Id, lleno.Id));
+
+        Assert.Contains("lleno (1/1)", ex.Message);
         Assert.Null(animal.CorralId);
+    }
+
+    [Fact]
+    public async Task AsignarAnimal_ACorralDesactivado_LoBloquea()
+    {
+        var animal = AnimalDelRancho("C-16");
+        var inactivo = CorralDelRancho("Corral Cerrado", 5);
+        inactivo.Activo = false;
+        var service = CrearServicio();
+
+        await Assert.ThrowsAsync<ReglaDeNegocioException>(() => service.AsignarAnimalAsync(animal.Id, inactivo.Id));
+    }
+
+    [Fact]
+    public async Task AsignarAnimal_SinCorral_LoSacaDelCorral()
+    {
+        var animal = AnimalDelRancho("C-17");
+        animal.CorralId = Guid.NewGuid();
+        var service = CrearServicio();
+
+        await service.AsignarAnimalAsync(animal.Id, null);
+
+        Assert.Null(animal.CorralId);
+    }
+
+    [Fact]
+    public async Task AsignarAnimal_DadoDeBaja_LoBloquea()
+    {
+        var vendido = AnimalDelRancho("C-18", EstadoAnimal.Vendido);
+        var corral = CorralDelRancho("Corral Z", 5);
+        var service = CrearServicio();
+
+        await Assert.ThrowsAsync<ReglaDeNegocioException>(() => service.AsignarAnimalAsync(vendido.Id, corral.Id));
+    }
+
+    [Fact]
+    public async Task AsignarAnimal_ACorralDeOtroRancho_LanzaRecursoNoEncontrado()
+    {
+        // RN-16
+        var animal = AnimalDelRancho("C-19");
+        var service = CrearServicio();
+
+        await Assert.ThrowsAsync<RecursoNoEncontradoException>(() => service.AsignarAnimalAsync(animal.Id, Guid.NewGuid()));
     }
 }
