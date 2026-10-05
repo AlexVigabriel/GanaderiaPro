@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ganaderia_pro_app/core/app_theme.dart';
+import 'package:ganaderia_pro_app/core/sesion_actual.dart';
 import 'package:ganaderia_pro_app/features/ganado/ficha_animal_screen.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -48,6 +49,10 @@ class _ServidorFalso {
 }
 
 void main() {
+  // Los botones de pesaje dependen de los permisos del rol (HU-34).
+  setUp(() => SesionActual.instancia.guardar(token: 't', nombreRancho: 'R', nombreUsuario: 'Ana'));
+  tearDown(SesionActual.instancia.cerrar);
+
   testWidgets('Al guardar un pesaje con la fecha de hoy, la ficha se actualiza sola', (tester) async {
     tester.view.physicalSize = const Size(1400, 1600);
     tester.view.devicePixelRatio = 1.0;

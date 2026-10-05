@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../../core/animal.dart';
 import '../../core/api_client.dart';
 import '../../core/formato.dart';
+import '../../core/permisos.dart';
+import '../../core/sesion_actual.dart';
 import '../../core/widgets/componentes.dart';
 import '../shell/app_shell.dart';
 import 'baja_animal_dialog.dart';
@@ -57,6 +59,8 @@ class _FichaAnimalScreenState extends State<FichaAnimalScreen> {
     _avisar('${animal.arete} quedó como ${actualizado.estado}.');
     _recargar();
   }
+
+  bool _puede(String modulo) => SesionActual.instancia.puedeEditar(modulo);
 
   Future<void> _cambiarCorral(Animal animal) async {
     final guardado = await abrirCambioCorral(context, animal);
@@ -164,13 +168,16 @@ class _FichaAnimalScreenState extends State<FichaAnimalScreen> {
                       ],
                     ),
                   ),
-                  BotonAccion(
-                    icono: Icons.edit_outlined,
-                    tooltip: 'Editar',
-                    onPressed: _eliminando ? null : () => _editar(animal),
-                  ),
-                  const SizedBox(width: 8),
-                  if (animal.activo) ...[
+                  if (_puede(Modulos.ganado)) ...[
+                    BotonAccion(
+                      icono: Icons.edit_outlined,
+                      tooltip: 'Editar',
+                      onPressed: _eliminando ? null : () => _editar(animal),
+                    ),
+                    const SizedBox(width: 8),
+                  ],
+                  // HU-34: mover de corral es del módulo Corrales.
+                  if (animal.activo && _puede(Modulos.corrales)) ...[
                     BotonAccion(
                       icono: Icons.fence,
                       tooltip: 'Cambiar corral',
@@ -178,7 +185,7 @@ class _FichaAnimalScreenState extends State<FichaAnimalScreen> {
                     ),
                     const SizedBox(width: 8),
                   ],
-                  if (animal.activo) ...[
+                  if (animal.activo && _puede(Modulos.ganado)) ...[
                     BotonAccion(
                       tooltip: 'Registrar baja',
                       peligro: true,
@@ -187,12 +194,13 @@ class _FichaAnimalScreenState extends State<FichaAnimalScreen> {
                     ),
                     const SizedBox(width: 8),
                   ],
-                  BotonAccion(
-                    icono: Icons.delete_outline,
-                    tooltip: 'Eliminar',
-                    peligro: true,
-                    onPressed: _eliminando ? null : () => _eliminar(animal),
-                  ),
+                  if (_puede(Modulos.ganado))
+                    BotonAccion(
+                      icono: Icons.delete_outline,
+                      tooltip: 'Eliminar',
+                      peligro: true,
+                      onPressed: _eliminando ? null : () => _eliminar(animal),
+                    ),
                 ],
               ),
               const SizedBox(height: 24),

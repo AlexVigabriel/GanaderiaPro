@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using System.Text;
 using System.Text.Json.Serialization;
+using GanaderiaPro.Api.Permisos;
 using GanaderiaPro.Application.Common;
 using GanaderiaPro.Application.Interfaces;
 using GanaderiaPro.Application.Services;
@@ -16,7 +17,8 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 
-builder.Services.AddControllers()
+// HU-34: cada pedido pasa por el control de permisos por módulo.
+builder.Services.AddControllers(options => options.Filters.Add<PermisoPorModuloFilter>())
     .AddJsonOptions(options => options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();

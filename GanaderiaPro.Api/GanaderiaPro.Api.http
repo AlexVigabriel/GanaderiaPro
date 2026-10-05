@@ -1,6 +1,12 @@
-@GanaderiaPro.Api_HostAddress = http://localhost:5157
+@GanaderiaPro.Api_HostAddress = http://localhost:5199
 
-GET {{GanaderiaPro.Api_HostAddress}}/weatherforecast/
-Accept: application/json
+# Iniciar sesión: la respuesta trae el token, el rol y los permisos.
+POST {{GanaderiaPro.Api_HostAddress}}/api/auth/iniciar-sesion
+Content-Type: application/json
+
+{
+  "email": "demo@ganaderiapro.test",
+  "contrasena": "Demo1234"
+}
 
 ###

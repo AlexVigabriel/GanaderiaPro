@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../../core/api_client.dart';
 import '../../core/corral.dart';
+import '../../core/permisos.dart';
+import '../../core/sesion_actual.dart';
 import '../../core/widgets/componentes.dart';
 import '../shell/app_shell.dart';
 import 'corral_dialog.dart';
@@ -23,6 +25,8 @@ class _CorralesScreenState extends State<CorralesScreen> {
   void _recargar() => setState(() {
     _corrales = _api.listarCorrales(incluirInactivos: _mostrarInactivos);
   });
+
+  bool get _puedeEditar => SesionActual.instancia.puedeEditar(Modulos.corrales);
 
   void _avisar(String mensaje) => ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(mensaje)));
 
@@ -89,8 +93,10 @@ class _CorralesScreenState extends State<CorralesScreen> {
                 EncabezadoPantalla(
                   titulo: 'Corrales',
                   subtitulo: 'Organizá la distribución del ganado y controlá la ocupación de cada corral.',
+                  soloConsulta: !_puedeEditar,
                   acciones: [
-                    FilledButton.icon(onPressed: _crear, icon: const Icon(Icons.add), label: const Text('Nuevo corral')),
+                    if (_puedeEditar)
+                      FilledButton.icon(onPressed: _crear, icon: const Icon(Icons.add), label: const Text('Nuevo corral')),
                   ],
                 ),
                 const SizedBox(height: 24),
@@ -164,12 +170,14 @@ class _CorralesScreenState extends State<CorralesScreen> {
               const SizedBox(height: 12),
               Text('No hay corrales', style: tema.textTheme.titleMedium),
               const SizedBox(height: 4),
-              Text(
-                'Creá el primero para organizar tu ganado.',
-                style: tema.textTheme.bodyMedium?.copyWith(color: tema.colorScheme.onSurfaceVariant),
-              ),
-              const SizedBox(height: 20),
-              FilledButton.icon(onPressed: _crear, icon: const Icon(Icons.add), label: const Text('Crear el primero')),
+              if (_puedeEditar) ...[
+                Text(
+                  'Creá el primero para organizar tu ganado.',
+                  style: tema.textTheme.bodyMedium?.copyWith(color: tema.colorScheme.onSurfaceVariant),
+                ),
+                const SizedBox(height: 20),
+                FilledButton.icon(onPressed: _crear, icon: const Icon(Icons.add), label: const Text('Crear el primero')),
+              ],
             ],
           ),
         ),
@@ -188,7 +196,12 @@ class _CorralesScreenState extends State<CorralesScreen> {
             for (final c in corrales)
               SizedBox(
                 width: ancho,
-                child: _TarjetaCorral(corral: c, onEditar: () => _editar(c), onCambiarEstado: () => _cambiarEstado(c)),
+                child: _TarjetaCorral(
+                  corral: c,
+                  editable: _puedeEditar,
+                  onEditar: () => _editar(c),
+                  onCambiarEstado: () => _cambiarEstado(c),
+                ),
               ),
           ],
         );
@@ -205,9 +218,16 @@ Color colorOcupacion(int porcentaje, ColorScheme colores) {
 }
 
 class _TarjetaCorral extends StatelessWidget {
-  const _TarjetaCorral({required this.corral, required this.onEditar, required this.onCambiarEstado});
+  const _TarjetaCorral({
+    required this.corral,
+    required this.editable,
+    required this.onEditar,
+    required this.onCambiarEstado,
+  });
 
   final Corral corral;
+  // HU-34: sin escritura en Corrales no se muestran editar ni desactivar.
+  final bool editable;
   final VoidCallback onEditar;
   final VoidCallback onCambiarEstado;
 
@@ -278,6 +298,7 @@ class _TarjetaCorral extends StatelessWidget {
                 c.lugaresLibres <= 0 ? 'Corral lleno' : '${c.lugaresLibres} lugares libres',
                 style: tema.textTheme.bodySmall?.copyWith(color: tema.colorScheme.onSurfaceVariant),
               ),
+              if (editable) ...[
               const SizedBox(height: 14),
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
@@ -301,6 +322,7 @@ class _TarjetaCorral extends StatelessWidget {
                   ),
                 ],
               ),
+              ],
             ],
           ),
         ),

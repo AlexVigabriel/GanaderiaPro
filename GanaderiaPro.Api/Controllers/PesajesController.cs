@@ -1,6 +1,8 @@
 using GanaderiaPro.Application.DTOs;
 using GanaderiaPro.Application.Exceptions;
 using GanaderiaPro.Application.Interfaces;
+using GanaderiaPro.Api.Permisos;
+using GanaderiaPro.Domain.Permisos;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -10,6 +12,7 @@ namespace GanaderiaPro.Api.Controllers;
 [ApiController]
 [Route("api/animales/{animalId:guid}/pesajes")]
 [Authorize]
+[Modulo(Modulo.Pesaje)]
 public class PesajesController : ControllerBase
 {
     private readonly IPesajeService _pesajeService;

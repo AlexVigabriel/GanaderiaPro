@@ -312,11 +312,19 @@ class TarjetaIndicador extends StatelessWidget {
 
 // Título de pantalla con su bajada y acciones a la derecha.
 class EncabezadoPantalla extends StatelessWidget {
-  const EncabezadoPantalla({super.key, required this.titulo, this.subtitulo, this.acciones = const []});
+  const EncabezadoPantalla({
+    super.key,
+    required this.titulo,
+    this.subtitulo,
+    this.acciones = const [],
+    this.soloConsulta = false,
+  });
 
   final String titulo;
   final String? subtitulo;
   final List<Widget> acciones;
+  // HU-34: el rol solo puede mirar este módulo; explica por qué no hay botones.
+  final bool soloConsulta;
 
   @override
   Widget build(BuildContext context) {
@@ -331,7 +339,15 @@ class EncabezadoPantalla extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(titulo, style: tema.textTheme.headlineMedium),
+            Wrap(
+              spacing: 12,
+              runSpacing: 8,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                Text(titulo, style: tema.textTheme.headlineMedium),
+                if (soloConsulta) const EtiquetaSoloConsulta(),
+              ],
+            ),
             if (subtitulo != null) ...[
               const SizedBox(height: 6),
               Text(
@@ -343,6 +359,34 @@ class EncabezadoPantalla extends StatelessWidget {
         ),
         if (acciones.isNotEmpty) Wrap(spacing: 12, runSpacing: 12, children: acciones),
       ],
+    );
+  }
+}
+
+class EtiquetaSoloConsulta extends StatelessWidget {
+  const EtiquetaSoloConsulta({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final tema = Theme.of(context);
+    final color = tema.colorScheme.onSurfaceVariant;
+    return Tooltip(
+      message: 'Tu rol puede ver este módulo, pero no modificarlo.',
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(color: tema.colorScheme.outline),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.visibility_outlined, size: 16, color: color),
+            const SizedBox(width: 6),
+            Text('Solo consulta', style: tema.textTheme.labelMedium?.copyWith(color: color, fontWeight: FontWeight.w600)),
+          ],
+        ),
+      ),
     );
   }
 }
