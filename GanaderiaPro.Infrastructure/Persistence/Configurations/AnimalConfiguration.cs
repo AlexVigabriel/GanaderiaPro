@@ -59,6 +59,12 @@ public class AnimalConfiguration : IEntityTypeConfiguration<Animal>
             .HasMaxLength(20)
             .IsRequired();
 
+        // HU-23: si se borra el corral, el animal queda sin corral.
+        builder.HasOne(a => a.Corral)
+            .WithMany()
+            .HasForeignKey(a => a.CorralId)
+            .OnDelete(DeleteBehavior.SetNull);
+
         builder.HasOne(a => a.Rancho)
             .WithMany(r => r.Animales)
             .HasForeignKey(a => a.RanchoId)

@@ -64,6 +64,10 @@ public class Animal
     // Solo aplica a machos; define si es Novillo en vez de Torito o Toro.
     public bool Castrado { get; set; }
 
+    // HU-23: corral donde está el animal (null si no está en ninguno).
+    public Guid? CorralId { get; set; }
+    public Corral? Corral { get; set; }
+
     // HU-54: datos de la baja (venta o fallecimiento). Vacíos mientras está Activo.
     public DateOnly? FechaBaja { get; set; }
     public string? ObservacionBaja { get; set; }

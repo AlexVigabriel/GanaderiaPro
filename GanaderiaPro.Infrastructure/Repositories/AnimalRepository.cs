@@ -22,7 +22,7 @@ public class AnimalRepository : IAnimalRepository
             a => a.RanchoId == ranchoId && a.Arete.ToUpper() == arete.ToUpper() && (excluirId == null || a.Id != excluirId));
 
     public Task<Animal?> ObtenerPorIdAsync(Guid ranchoId, Guid id) =>
-        _dbContext.Animales.FirstOrDefaultAsync(a => a.RanchoId == ranchoId && a.Id == id);
+        _dbContext.Animales.Include(a => a.Corral).FirstOrDefaultAsync(a => a.RanchoId == ranchoId && a.Id == id);
 
     public void Agregar(Animal animal) => _dbContext.Animales.Add(animal);
 
@@ -31,6 +31,7 @@ public class AnimalRepository : IAnimalRepository
     public async Task<IReadOnlyList<Animal>> BuscarAsync(Guid ranchoId, string? busqueda, EstadoAnimal estado, SexoAnimal? sexo, string? raza)
     {
         var query = _dbContext.Animales
+            .Include(a => a.Corral)
             .Where(a => a.RanchoId == ranchoId && a.Estado == estado);
 
         if (!string.IsNullOrWhiteSpace(busqueda))

@@ -32,7 +32,9 @@ public record AnimalResponse(
     DateOnly? FechaBaja,
     string? ObservacionBaja,
     CausaMuerte? CausaMuerte,
-    string? DetalleCausaMuerte);
+    string? DetalleCausaMuerte,
+    Guid? CorralId = null,
+    string? Corral = null);
 
 // HU-54: cambio de estado. Para Vendido o Fallecido se pide la fecha (y en
 // Fallecido, la causa); volver a Activo borra los datos de la baja.
