@@ -14,4 +14,4 @@ public record RegistrarCuentaResponse(Guid RanchoId, Guid UsuarioId, string Mens
 
 public record IniciarSesionRequest(string Email, string Contrasena);
 
-public record IniciarSesionResponse(string Token, string NombreRancho, string NombreUsuario);
+public record IniciarSesionResponse(string Token, string NombreRancho, string NombreUsuario, RolUsuario Rol);

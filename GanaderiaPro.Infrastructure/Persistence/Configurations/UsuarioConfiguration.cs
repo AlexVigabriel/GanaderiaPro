@@ -31,6 +31,11 @@ public class UsuarioConfiguration : IEntityTypeConfiguration<Usuario>
             .HasMaxLength(20)
             .IsRequired();
 
+        builder.Property(u => u.Estado)
+            .HasConversion<string>()
+            .HasMaxLength(15)
+            .IsRequired();
+
         builder.HasOne(u => u.Rancho)
             .WithMany(r => r.Usuarios)
             .HasForeignKey(u => u.RanchoId)

@@ -173,7 +173,7 @@ public class AuthServiceTests
     public async Task CerrarSesion_IncrementaLaVersionYElTokenAnteriorDejaDeServir()
     {
         // HU-52: el token viejo (versión 0) ya no es válido después de cerrar sesión.
-        var usuario = new Usuario { Id = Guid.NewGuid(), Activo = true, VersionSesion = 0 };
+        var usuario = new Usuario { Id = Guid.NewGuid(), Estado = EstadoUsuario.Activo, VersionSesion = 0 };
         var usuarioRepoMock = new Mock<IUsuarioRepository>();
         usuarioRepoMock.Setup(r => r.ObtenerPorIdAsync(usuario.Id)).ReturnsAsync(usuario);
         var service = CrearServicio(usuarioRepoMock);
@@ -190,7 +190,7 @@ public class AuthServiceTests
     [Fact]
     public async Task SesionVigente_DeUsuarioInactivoOInexistente_EsFalso()
     {
-        var inactivo = new Usuario { Id = Guid.NewGuid(), Activo = false };
+        var inactivo = new Usuario { Id = Guid.NewGuid(), Estado = EstadoUsuario.Inactivo };
         var usuarioRepoMock = new Mock<IUsuarioRepository>();
         usuarioRepoMock.Setup(r => r.ObtenerPorIdAsync(inactivo.Id)).ReturnsAsync(inactivo);
         var service = CrearServicio(usuarioRepoMock);
@@ -198,4 +198,62 @@ public class AuthServiceTests
         Assert.False(await service.SesionVigenteAsync(inactivo.Id, 0));
         Assert.False(await service.SesionVigenteAsync(Guid.NewGuid(), 0));
     }
+
+    [Theory]
+    [InlineData(EstadoUsuario.Inactivo, "hash-guardado")]
+    [InlineData(EstadoUsuario.Pendiente, "")]
+    public async Task IniciarSesion_DesactivadoOSinAceptarLaInvitacion_MensajeGenerico(EstadoUsuario estado, string hash)
+    {
+        // HU-32: no entra quien fue desactivado ni quien no definió su contraseña.
+        var usuario = new Usuario { Email = "vet@ejemplo.com", PasswordHash = hash, Estado = estado };
+        var usuarioRepoMock = new Mock<IUsuarioRepository>();
+        usuarioRepoMock.Setup(r => r.ObtenerPorEmailAsync("vet@ejemplo.com")).ReturnsAsync(usuario);
+        var passwordHasherMock = new Mock<IPasswordHasher>();
+        passwordHasherMock.Setup(h => h.Verificar(It.IsAny<string>(), It.IsAny<string>())).Returns(true);
+        var service = CrearServicio(usuarioRepoMock, passwordHasherMock: passwordHasherMock);
+
+        var ex = await Assert.ThrowsAsync<ReglaDeNegocioException>(
+            () => service.IniciarSesionAsync(new IniciarSesionRequest("vet@ejemplo.com", "Clave123")));
+
+        Assert.Equal("Correo o contraseña incorrectos.", ex.Message);
+    }
+
+    [Fact]
+    public async Task IniciarSesion_PrimerIngresoDelColaborador_PasaAActivoYGuardaElAcceso()
+    {
+        var usuario = new Usuario
+        {
+            Email = "vet@ejemplo.com",
+            PasswordHash = "hash-guardado",
+            Rol = RolUsuario.Veterinario,
+            Estado = EstadoUsuario.Pendiente,
+        };
+        var usuarioRepoMock = new Mock<IUsuarioRepository>();
+        usuarioRepoMock.Setup(r => r.ObtenerPorEmailAsync("vet@ejemplo.com")).ReturnsAsync(usuario);
+        var passwordHasherMock = new Mock<IPasswordHasher>();
+        passwordHasherMock.Setup(h => h.Verificar("hash-guardado", "Clave123")).Returns(true);
+        var service = CrearServicio(usuarioRepoMock, passwordHasherMock: passwordHasherMock);
+
+        // El correo se acepta escrito con mayúsculas (RN-02).
+        await service.IniciarSesionAsync(new IniciarSesionRequest(" VET@Ejemplo.com ", "Clave123"));
+
+        Assert.Equal(EstadoUsuario.Activo, usuario.Estado);
+        Assert.NotNull(usuario.UltimoAcceso);
+    }
+
+    [Fact]
+    public async Task Registrar_GuardaElCorreoEnMinusculas()
+    {
+        Usuario? guardado = null;
+        var usuarioRepoMock = new Mock<IUsuarioRepository>();
+        usuarioRepoMock.Setup(r => r.ExisteEmailAsync("ana@ejemplo.com")).ReturnsAsync(false);
+        usuarioRepoMock.Setup(r => r.Agregar(It.IsAny<Usuario>())).Callback<Usuario>(u => guardado = u);
+        var service = CrearServicio(usuarioRepoMock);
+
+        await service.RegistrarAsync(new RegistrarCuentaRequest("Ana", " Ana@Ejemplo.COM ", "Clave123", "Clave123", "Rancho", PlanSuscripcion.Basico));
+
+        Assert.Equal("ana@ejemplo.com", guardado!.Email);
+        Assert.Equal(EstadoUsuario.Activo, guardado.Estado);
+    }
 }
+

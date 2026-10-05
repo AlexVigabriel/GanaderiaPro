@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 
 import 'animal.dart';
 import 'cerrar_sesion.dart';
+import 'colaborador.dart';
 import 'corral.dart';
 import 'sanidad.dart';
 import 'sesion_actual.dart';
@@ -81,6 +82,7 @@ class ApiClient {
       token: data['token'] as String,
       nombreRancho: data['nombreRancho'] as String,
       nombreUsuario: data['nombreUsuario'] as String,
+      rol: data['rol'] as String? ?? 'Propietario',
     );
   }
 
@@ -214,6 +216,80 @@ class ApiClient {
 
     if (response.statusCode != 200) {
       throw ApiException(_extraerMensajeError(response.body) ?? 'No se pudo eliminar el pesaje.');
+    }
+  }
+
+  // ---- HU-32: Colaboradores e invitaciones
+  Future<List<Colaborador>> listarColaboradores() async {
+    final response = await _http.get(Uri.parse('$baseUrl/api/colaboradores'), headers: _headersAutenticados);
+    if (response.statusCode == 200) {
+      return (jsonDecode(response.body) as List<dynamic>)
+          .map((json) => Colaborador.fromJson(json as Map<String, dynamic>))
+          .toList();
+    }
+    throw ApiException(_extraerMensajeError(response.body) ?? 'No se pudieron cargar los colaboradores.');
+  }
+
+  Future<InvitacionCreada> invitarColaborador({required String nombre, required String email, required String rol}) =>
+      _enviarInvitacion(
+        _http.post(
+          Uri.parse('$baseUrl/api/colaboradores'),
+          headers: _headersAutenticados,
+          body: jsonEncode({'nombre': nombre, 'email': email, 'rol': rol}),
+        ),
+      );
+
+  Future<InvitacionCreada> regenerarInvitacion(String colaboradorId) => _enviarInvitacion(
+    _http.post(Uri.parse('$baseUrl/api/colaboradores/$colaboradorId/invitacion'), headers: _headersAutenticados),
+  );
+
+  Future<InvitacionCreada> _enviarInvitacion(Future<http.Response> pedido) async {
+    final response = await pedido;
+    if (response.statusCode == 200) {
+      return InvitacionCreada.fromJson(jsonDecode(response.body) as Map<String, dynamic>);
+    }
+    throw ApiException(_extraerMensajeError(response.body) ?? 'No se pudo generar la invitación.');
+  }
+
+  Future<void> cambiarRolColaborador(String colaboradorId, String rol) => _enviarColaborador(
+    _http.put(
+      Uri.parse('$baseUrl/api/colaboradores/$colaboradorId/rol'),
+      headers: _headersAutenticados,
+      body: jsonEncode({'rol': rol}),
+    ),
+  );
+
+  Future<void> cambiarEstadoColaborador(String colaboradorId, {required bool activo}) => _enviarColaborador(
+    _http.post(
+      Uri.parse('$baseUrl/api/colaboradores/$colaboradorId/${activo ? 'activar' : 'desactivar'}'),
+      headers: _headersAutenticados,
+    ),
+  );
+
+  Future<void> _enviarColaborador(Future<http.Response> pedido) async {
+    final response = await pedido;
+    if (response.statusCode != 200) {
+      throw ApiException(_extraerMensajeError(response.body) ?? 'No se pudo actualizar el colaborador.');
+    }
+  }
+
+  // Público: el colaborador todavía no tiene sesión.
+  Future<DatosInvitacion> obtenerInvitacion(String codigo) async {
+    final response = await _http.get(Uri.parse('$baseUrl/api/invitaciones/${Uri.encodeComponent(codigo)}'));
+    if (response.statusCode == 200) {
+      return DatosInvitacion.fromJson(jsonDecode(response.body) as Map<String, dynamic>);
+    }
+    throw ApiException(_extraerMensajeError(response.body) ?? 'El enlace no es válido.');
+  }
+
+  Future<void> aceptarInvitacion(String codigo, {required String contrasena, required String confirmar}) async {
+    final response = await _http.post(
+      Uri.parse('$baseUrl/api/invitaciones/${Uri.encodeComponent(codigo)}/aceptar'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'contrasena': contrasena, 'confirmarContrasena': confirmar}),
+    );
+    if (response.statusCode != 204) {
+      throw ApiException(_extraerMensajeError(response.body) ?? 'No se pudo aceptar la invitación.');
     }
   }
 

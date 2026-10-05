@@ -7,11 +7,14 @@ import '../../core/formato.dart';
 import '../../core/sesion_actual.dart';
 
 class ModuloMenu {
-  const ModuloMenu({required this.titulo, required this.icono, required this.ruta});
+  const ModuloMenu({required this.titulo, required this.icono, required this.ruta, this.soloPropietario = false});
 
   final String titulo;
   final IconData icono;
   final String ruta;
+  // HU-32: Colaboradores solo lo ve el propietario. La matriz completa de
+  // permisos por rol llega con HU-34.
+  final bool soloPropietario;
 }
 
 // HU-14: lista fija de módulos disponibles. Cuando exista la matriz de
@@ -21,6 +24,7 @@ const modulosDisponibles = [
   ModuloMenu(titulo: 'Animales', icono: Icons.pets_outlined, ruta: '/ganado'),
   ModuloMenu(titulo: 'Corrales', icono: Icons.fence, ruta: '/corrales'),
   ModuloMenu(titulo: 'Sanidad', icono: Icons.vaccines_outlined, ruta: '/sanidad'),
+  ModuloMenu(titulo: 'Colaboradores', icono: Icons.group_outlined, ruta: '/colaboradores', soloPropietario: true),
 ];
 
 // Estructura común de las pantallas internas: menú lateral fijo en
@@ -199,7 +203,7 @@ class _MenuLateral extends StatelessWidget {
                 ],
               ),
             ),
-            for (final modulo in modulosDisponibles)
+            for (final modulo in modulosDisponibles.where((m) => !m.soloPropietario || SesionActual.instancia.esPropietario))
               _OpcionMenu(
                 modulo: modulo,
                 activa: seccionActiva == modulo.ruta,
@@ -252,11 +256,15 @@ class _OpcionMenu extends StatelessWidget {
               children: [
                 Icon(modulo.icono, size: 20, color: activa ? AppTheme.verdeBrillante : color),
                 const SizedBox(width: 12),
-                Text(
-                  modulo.titulo,
-                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                    color: color,
-                    fontWeight: activa ? FontWeight.w600 : FontWeight.w400,
+                Flexible(
+                  child: Text(
+                    modulo.titulo,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                      color: color,
+                      fontWeight: activa ? FontWeight.w600 : FontWeight.w400,
+                    ),
                   ),
                 ),
               ],

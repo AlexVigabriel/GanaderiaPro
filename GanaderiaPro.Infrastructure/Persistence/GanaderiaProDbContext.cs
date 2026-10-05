@@ -16,6 +16,7 @@ public class GanaderiaProDbContext : DbContext
     public DbSet<Vacuna> Vacunas => Set<Vacuna>();
     public DbSet<Vacunacion> Vacunaciones => Set<Vacunacion>();
     public DbSet<Corral> Corrales => Set<Corral>();
+    public DbSet<Invitacion> Invitaciones => Set<Invitacion>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

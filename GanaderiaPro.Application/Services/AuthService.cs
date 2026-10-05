@@ -1,3 +1,4 @@
+using GanaderiaPro.Application.Common;
 using GanaderiaPro.Application.DTOs;
 using GanaderiaPro.Application.Exceptions;
 using GanaderiaPro.Application.Interfaces;
@@ -45,14 +46,14 @@ public class AuthService : IAuthService
         }
 
         // RN-03: mínimo 8 caracteres, con al menos una letra y un número.
-        if (!EsContrasenaValida(request.Contrasena))
+        if (!ReglasCuenta.EsContrasenaValida(request.Contrasena))
         {
-            throw new ReglaDeNegocioException(
-                "La contraseña debe tener al menos 8 caracteres, con al menos una letra y un número.");
+            throw new ReglaDeNegocioException(ReglasCuenta.MensajeContrasena);
         }
 
-        // RN-02: el correo es único en todo el sistema.
-        if (await _usuarioRepository.ExisteEmailAsync(request.Email))
+        // RN-02: el correo es único en todo el sistema (sin distinguir mayúsculas).
+        var email = ReglasCuenta.NormalizarEmail(request.Email);
+        if (await _usuarioRepository.ExisteEmailAsync(email))
         {
             throw new ReglaDeNegocioException("Ya existe una cuenta registrada con ese correo.");
         }
@@ -74,11 +75,11 @@ public class AuthService : IAuthService
             Id = Guid.NewGuid(),
             RanchoId = rancho.Id,
             Nombre = request.Nombre,
-            Email = request.Email,
+            Email = email,
             PasswordHash = _passwordHasher.Hashear(request.Contrasena),
             Rol = RolUsuario.Propietario,
             FechaRegistro = ahora,
-            Activo = true,
+            Estado = EstadoUsuario.Activo,
         };
 
         _ranchoRepository.Agregar(rancho);
@@ -90,18 +91,31 @@ public class AuthService : IAuthService
 
     public async Task<IniciarSesionResponse> IniciarSesionAsync(IniciarSesionRequest request)
     {
-        var usuario = await _usuarioRepository.ObtenerPorEmailAsync(request.Email);
+        var usuario = await _usuarioRepository.ObtenerPorEmailAsync(ReglasCuenta.NormalizarEmail(request.Email));
 
         // HU-09: el mensaje de error es el mismo tanto si el correo no existe
         // como si la contraseña es incorrecta — no se revela cuál de los dos falló.
-        if (usuario is null || !_passwordHasher.Verificar(usuario.PasswordHash, request.Contrasena))
+        // Tampoco entra un usuario desactivado ni uno que no aceptó la invitación.
+        if (usuario is null ||
+            usuario.Estado == EstadoUsuario.Inactivo ||
+            string.IsNullOrEmpty(usuario.PasswordHash) ||
+            !_passwordHasher.Verificar(usuario.PasswordHash, request.Contrasena))
         {
             throw new ReglaDeNegocioException(MensajeCredencialesInvalidas);
         }
 
+        // HU-32: el colaborador deja de estar Pendiente en su primer inicio de sesión.
+        if (usuario.Estado == EstadoUsuario.Pendiente)
+        {
+            usuario.Estado = EstadoUsuario.Activo;
+        }
+
+        usuario.UltimoAcceso = DateTime.UtcNow;
+        await _unitOfWork.GuardarCambiosAsync();
+
         var token = _tokenGenerator.GenerarToken(usuario);
 
-        return new IniciarSesionResponse(token, usuario.Rancho?.Nombre ?? string.Empty, usuario.Nombre);
+        return new IniciarSesionResponse(token, usuario.Rancho?.Nombre ?? string.Empty, usuario.Nombre, usuario.Rol);
     }
 
     // HU-52: invalida en el servidor todos los tokens emitidos hasta ahora
@@ -123,9 +137,7 @@ public class AuthService : IAuthService
     public async Task<bool> SesionVigenteAsync(Guid usuarioId, int versionDelToken)
     {
         var usuario = await _usuarioRepository.ObtenerPorIdAsync(usuarioId);
-        return usuario is { Activo: true } && usuario.VersionSesion == versionDelToken;
+        return usuario is { Estado: EstadoUsuario.Activo } && usuario.VersionSesion == versionDelToken;
     }
 
-    private static bool EsContrasenaValida(string contrasena) =>
-        contrasena.Length >= 8 && contrasena.Any(char.IsLetter) && contrasena.Any(char.IsDigit);
 }
