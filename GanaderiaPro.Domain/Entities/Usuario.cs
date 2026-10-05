@@ -20,4 +20,8 @@ public class Usuario
     public RolUsuario Rol { get; set; } = RolUsuario.Colaborador;
     public DateTime FechaRegistro { get; set; }
     public bool Activo { get; set; } = true;
+
+    // HU-52: va en cada token. Al cerrar sesión se incrementa y todos los
+    // tokens emitidos antes dejan de servir.
+    public int VersionSesion { get; set; }
 }

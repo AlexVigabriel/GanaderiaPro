@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 import 'animal.dart';
+import 'cerrar_sesion.dart';
 import 'sesion_actual.dart';
 
 class ApiException implements Exception {
@@ -18,6 +19,7 @@ class ApiClient {
   ApiClient({this.baseUrl = 'http://localhost:5199'});
 
   final String baseUrl;
+  final _http = ClienteConSesion();
 
   Map<String, String> get _headersAutenticados {
     final token = SesionActual.instancia.token;
@@ -25,6 +27,14 @@ class ApiClient {
       'Content-Type': 'application/json',
       if (token != null) 'Authorization': 'Bearer $token',
     };
+  }
+
+  // HU-52: invalida el token en el servidor. Si falla la red, la sesión se
+  // cierra igual en la app.
+  Future<void> cerrarSesion() async {
+    await _http
+        .post(Uri.parse('$baseUrl/api/auth/cerrar-sesion'), headers: _headersAutenticados)
+        .timeout(const Duration(seconds: 5));
   }
 
   Future<void> registrarCuenta({
@@ -35,7 +45,7 @@ class ApiClient {
     required String nombreRancho,
     required String plan,
   }) async {
-    final response = await http.post(
+    final response = await _http.post(
       Uri.parse('$baseUrl/api/auth/registrar'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
@@ -54,7 +64,7 @@ class ApiClient {
   }
 
   Future<void> iniciarSesion({required String email, required String contrasena}) async {
-    final response = await http.post(
+    final response = await _http.post(
       Uri.parse('$baseUrl/api/auth/iniciar-sesion'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'email': email, 'contrasena': contrasena}),
@@ -75,7 +85,7 @@ class ApiClient {
   // HU-66: carga múltiple. Las filas rechazadas vuelven con su número
   // (empezando en 1, en el mismo orden en que se enviaron) y el motivo.
   Future<ResultadoCarga> registrarLote(List<DatosAnimal> filas) async {
-    final response = await http.post(
+    final response = await _http.post(
       Uri.parse('$baseUrl/api/animales/lote'),
       headers: _headersAutenticados,
       body: jsonEncode(filas.map((f) => f.toJson()).toList()),
@@ -96,7 +106,7 @@ class ApiClient {
   }
 
   Future<ResumenAnimales> obtenerResumen() async {
-    final response = await http.get(Uri.parse('$baseUrl/api/animales/resumen'), headers: _headersAutenticados);
+    final response = await _http.get(Uri.parse('$baseUrl/api/animales/resumen'), headers: _headersAutenticados);
 
     if (response.statusCode == 200) {
       return ResumenAnimales.fromJson(jsonDecode(response.body) as Map<String, dynamic>);
@@ -106,7 +116,7 @@ class ApiClient {
   }
 
   Future<Animal> obtenerAnimal(String id) async {
-    final response = await http.get(Uri.parse('$baseUrl/api/animales/$id'), headers: _headersAutenticados);
+    final response = await _http.get(Uri.parse('$baseUrl/api/animales/$id'), headers: _headersAutenticados);
 
     if (response.statusCode == 200) {
       return Animal.fromJson(jsonDecode(response.body) as Map<String, dynamic>);
@@ -116,7 +126,7 @@ class ApiClient {
   }
 
   Future<Animal> editarAnimal(String id, DatosAnimal datos) async {
-    final response = await http.put(
+    final response = await _http.put(
       Uri.parse('$baseUrl/api/animales/$id'),
       headers: _headersAutenticados,
       body: jsonEncode(datos.toJson()),
@@ -131,11 +141,11 @@ class ApiClient {
 
   // HU-54: baja desde la calavera (solo animales activos).
   Future<Animal> registrarBaja(String id, DatosEstado datos) =>
-      _enviarEstado(http.post, '$baseUrl/api/animales/$id/baja', datos);
+      _enviarEstado(_http.post, '$baseUrl/api/animales/$id/baja', datos);
 
   // HU-54: cambio de estado desde Editar (incluye volver a Activo).
   Future<Animal> cambiarEstado(String id, DatosEstado datos) =>
-      _enviarEstado(http.put, '$baseUrl/api/animales/$id/estado', datos);
+      _enviarEstado(_http.put, '$baseUrl/api/animales/$id/estado', datos);
 
   Future<Animal> _enviarEstado(
     Future<http.Response> Function(Uri url, {Map<String, String>? headers, Object? body, Encoding? encoding}) metodo,
@@ -153,7 +163,7 @@ class ApiClient {
 
   // HU-55: historial de pesajes, del más reciente al más antiguo.
   Future<List<Pesaje>> listarPesajes(String animalId) async {
-    final response = await http.get(Uri.parse('$baseUrl/api/animales/$animalId/pesajes'), headers: _headersAutenticados);
+    final response = await _http.get(Uri.parse('$baseUrl/api/animales/$animalId/pesajes'), headers: _headersAutenticados);
 
     if (response.statusCode == 200) {
       return (jsonDecode(response.body) as List<dynamic>)
@@ -165,7 +175,7 @@ class ApiClient {
   }
 
   Future<void> registrarPesaje(String animalId, {required double peso, required DateTime fecha, String? observacion}) async {
-    final response = await http.post(
+    final response = await _http.post(
       Uri.parse('$baseUrl/api/animales/$animalId/pesajes'),
       headers: _headersAutenticados,
       body: jsonEncode({'peso': peso, 'fecha': DatosAnimal.fechaIso(fecha), 'observacion': observacion}),
@@ -183,7 +193,7 @@ class ApiClient {
     required DateTime fecha,
     String? observacion,
   }) async {
-    final response = await http.put(
+    final response = await _http.put(
       Uri.parse('$baseUrl/api/animales/$animalId/pesajes/$pesajeId'),
       headers: _headersAutenticados,
       body: jsonEncode({'peso': peso, 'fecha': DatosAnimal.fechaIso(fecha), 'observacion': observacion}),
@@ -195,7 +205,7 @@ class ApiClient {
   }
 
   Future<void> eliminarPesaje(String animalId, String pesajeId) async {
-    final response = await http.delete(
+    final response = await _http.delete(
       Uri.parse('$baseUrl/api/animales/$animalId/pesajes/$pesajeId'),
       headers: _headersAutenticados,
     );
@@ -206,7 +216,7 @@ class ApiClient {
   }
 
   Future<void> eliminarAnimal(String id) async {
-    final response = await http.delete(Uri.parse('$baseUrl/api/animales/$id'), headers: _headersAutenticados);
+    final response = await _http.delete(Uri.parse('$baseUrl/api/animales/$id'), headers: _headersAutenticados);
 
     if (response.statusCode != 204) {
       throw ApiException(_extraerMensajeError(response.body) ?? 'No se pudo eliminar el animal.');
@@ -231,7 +241,7 @@ class ApiClient {
       '$baseUrl/api/animales',
     ).replace(queryParameters: query.isEmpty ? null : query);
 
-    final response = await http.get(uri, headers: _headersAutenticados);
+    final response = await _http.get(uri, headers: _headersAutenticados);
 
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body) as List<dynamic>;

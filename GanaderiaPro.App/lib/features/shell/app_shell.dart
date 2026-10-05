@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../../core/api_client.dart';
 import '../../core/app_theme.dart';
+import '../../core/cerrar_sesion.dart';
 import '../../core/formato.dart';
 import '../../core/sesion_actual.dart';
 
@@ -95,8 +97,40 @@ class _BarraSuperior extends StatelessWidget {
               style: tema.textTheme.titleSmall,
             ),
           ),
-          Tooltip(
-            message: sesion.nombreUsuario ?? '',
+          // HU-52: menú de perfil con el usuario, el rancho y "Cerrar sesión".
+          PopupMenuButton<String>(
+            tooltip: 'Perfil',
+            position: PopupMenuPosition.under,
+            offset: const Offset(0, 8),
+            onSelected: (opcion) {
+              if (opcion == 'cerrar') cerrarSesion(context);
+            },
+            itemBuilder: (context) => [
+              PopupMenuItem<String>(
+                enabled: false,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(sesion.nombreUsuario ?? '', style: tema.textTheme.titleSmall),
+                    Text(
+                      sesion.nombreRancho ?? '',
+                      style: tema.textTheme.bodySmall?.copyWith(color: tema.colorScheme.onSurfaceVariant),
+                    ),
+                  ],
+                ),
+              ),
+              const PopupMenuDivider(),
+              PopupMenuItem<String>(
+                value: 'cerrar',
+                child: Row(
+                  children: [
+                    Icon(Icons.logout, size: 20, color: tema.colorScheme.error),
+                    const SizedBox(width: 12),
+                    Text('Cerrar sesión', style: TextStyle(color: tema.colorScheme.error)),
+                  ],
+                ),
+              ),
+            ],
             child: CircleAvatar(
               radius: 18,
               backgroundColor: tema.colorScheme.primary,
@@ -127,11 +161,6 @@ class _MenuLateral extends StatelessWidget {
     Navigator.of(context).pushNamedAndRemoveUntil(ruta, (route) => false);
   }
 
-  void _cerrarSesion(BuildContext context) {
-    // Cierre del lado de la app; invalidar el token en el servidor es parte de HU-52.
-    SesionActual.instancia.cerrar();
-    Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -179,7 +208,7 @@ class _MenuLateral extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.all(12),
               child: TextButton.icon(
-                onPressed: () => _cerrarSesion(context),
+                onPressed: () => cerrarSesion(context),
                 style: TextButton.styleFrom(
                   foregroundColor: const Color(0xFFFF8A80),
                   alignment: Alignment.centerLeft,
@@ -235,4 +264,17 @@ class _OpcionMenu extends StatelessWidget {
       ),
     );
   }
+}
+
+// HU-52: cierra la sesión en el servidor (el token deja de servir) y vuelve
+// al login sin dejar pantallas protegidas detrás del botón "Atrás".
+Future<void> cerrarSesion(BuildContext context) async {
+  final cajon = Scaffold.maybeOf(context);
+  if (cajon?.isDrawerOpen ?? false) cajon!.closeDrawer();
+  try {
+    await ApiClient().cerrarSesion();
+  } catch (_) {
+    // Sin conexión: la sesión se cierra igual en este dispositivo.
+  }
+  irAlLoginSinSesion();
 }

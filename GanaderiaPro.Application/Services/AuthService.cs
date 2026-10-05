@@ -104,6 +104,28 @@ public class AuthService : IAuthService
         return new IniciarSesionResponse(token, usuario.Rancho?.Nombre ?? string.Empty, usuario.Nombre);
     }
 
+    // HU-52: invalida en el servidor todos los tokens emitidos hasta ahora
+    // para este usuario (en este y en cualquier otro dispositivo).
+    public async Task CerrarSesionAsync(Guid usuarioId)
+    {
+        var usuario = await _usuarioRepository.ObtenerPorIdAsync(usuarioId);
+        if (usuario is null)
+        {
+            return;
+        }
+
+        usuario.VersionSesion++;
+        await _unitOfWork.GuardarCambiosAsync();
+    }
+
+    // Un token sirve solo si su versión de sesión es la actual y el usuario
+    // sigue activo. Se revisa en cada pedido autenticado.
+    public async Task<bool> SesionVigenteAsync(Guid usuarioId, int versionDelToken)
+    {
+        var usuario = await _usuarioRepository.ObtenerPorIdAsync(usuarioId);
+        return usuario is { Activo: true } && usuario.VersionSesion == versionDelToken;
+    }
+
     private static bool EsContrasenaValida(string contrasena) =>
         contrasena.Length >= 8 && contrasena.Any(char.IsLetter) && contrasena.Any(char.IsDigit);
 }

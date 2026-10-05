@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using GanaderiaPro.Application.Interfaces;
 using Microsoft.AspNetCore.Http;
 
@@ -18,6 +19,20 @@ public class CurrentUserContext : ICurrentUserContext
         {
             var valor = _httpContextAccessor.HttpContext?.User.FindFirst("ranchoId")?.Value
                 ?? throw new InvalidOperationException("No hay un usuario autenticado con RanchoId.");
+
+            return Guid.Parse(valor);
+        }
+    }
+
+    public Guid UsuarioId
+    {
+        get
+        {
+            // El "sub" del token llega como NameIdentifier (mapeo de ASP.NET).
+            var usuario = _httpContextAccessor.HttpContext?.User;
+            var valor = usuario?.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                ?? usuario?.FindFirst("sub")?.Value
+                ?? throw new InvalidOperationException("No hay un usuario autenticado.");
 
             return Guid.Parse(valor);
         }

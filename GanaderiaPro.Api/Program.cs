@@ -1,5 +1,7 @@
+using System.Security.Claims;
 using System.Text;
 using System.Text.Json.Serialization;
+using GanaderiaPro.Application.Common;
 using GanaderiaPro.Application.Interfaces;
 using GanaderiaPro.Application.Services;
 using GanaderiaPro.Infrastructure;
@@ -60,6 +62,26 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidateIssuer = false,
             ValidateAudience = false,
             ValidateLifetime = true,
+        };
+
+        // HU-52: un token válido en firma y vencimiento igual se rechaza si
+        // el usuario ya cerró sesión (su versión de sesión cambió).
+        options.Events = new JwtBearerEvents
+        {
+            OnTokenValidated = async contexto =>
+            {
+                var usuario = contexto.Principal;
+                var id = usuario?.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? usuario?.FindFirst("sub")?.Value;
+                var version = usuario?.FindFirst(ClaimSesion.Version)?.Value ?? "0";
+                var authService = contexto.HttpContext.RequestServices.GetRequiredService<IAuthService>();
+
+                if (!Guid.TryParse(id, out var usuarioId) ||
+                    !int.TryParse(version, out var versionDelToken) ||
+                    !await authService.SesionVigenteAsync(usuarioId, versionDelToken))
+                {
+                    contexto.Fail("La sesión fue cerrada.");
+                }
+            },
         };
     });
 

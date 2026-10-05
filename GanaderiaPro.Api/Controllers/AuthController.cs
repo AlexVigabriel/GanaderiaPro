@@ -8,7 +8,6 @@ namespace GanaderiaPro.Api.Controllers;
 
 [ApiController]
 [Route("api/auth")]
-[AllowAnonymous]
 public class AuthController : ControllerBase
 {
     private readonly IAuthService _authService;
@@ -19,6 +18,7 @@ public class AuthController : ControllerBase
     }
 
     [HttpPost("registrar")]
+    [AllowAnonymous]
     public async Task<ActionResult<RegistrarCuentaResponse>> Registrar(RegistrarCuentaRequest request)
     {
         try
@@ -32,7 +32,18 @@ public class AuthController : ControllerBase
         }
     }
 
+    // HU-52: cierra la sesión en el servidor; el token deja de servir.
+    // Va sin [AllowAnonymous]: si estuviera en toda la clase anularía el [Authorize].
+    [HttpPost("cerrar-sesion")]
+    [Authorize]
+    public async Task<IActionResult> CerrarSesion([FromServices] ICurrentUserContext usuarioActual)
+    {
+        await _authService.CerrarSesionAsync(usuarioActual.UsuarioId);
+        return NoContent();
+    }
+
     [HttpPost("iniciar-sesion")]
+    [AllowAnonymous]
     public async Task<ActionResult<IniciarSesionResponse>> IniciarSesion(IniciarSesionRequest request)
     {
         try

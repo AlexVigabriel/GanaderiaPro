@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'core/app_theme.dart';
+import 'core/cerrar_sesion.dart';
 import 'core/route_observer.dart';
 import 'core/sesion_actual.dart';
 import 'features/auth/login_screen.dart';
@@ -33,6 +34,7 @@ class GanaderiaProApp extends StatelessWidget {
       // Fijo en claro por decisión del equipo; el interruptor para elegir
       // el modo oscuro y recordar la elección es la HU-72.
       themeMode: ThemeMode.light,
+      navigatorKey: navegadorRaiz,
       navigatorObservers: [routeObserver],
       initialRoute: '/login',
       // Por defecto, una ruta inicial como "/login" se trata como enlace
