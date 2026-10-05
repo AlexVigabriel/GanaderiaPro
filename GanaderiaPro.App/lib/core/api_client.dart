@@ -238,6 +238,25 @@ class ApiClient {
     throw ApiException(_extraerMensajeError(response.body) ?? 'No se pudieron cargar las vacunaciones.');
   }
 
+  // HU-27
+  Future<ResumenSanidad> obtenerResumenSanidad() async {
+    final response = await _http.get(Uri.parse('$baseUrl/api/sanidad/resumen'), headers: _headersAutenticados);
+    if (response.statusCode == 200) {
+      return ResumenSanidad.fromJson(jsonDecode(response.body) as Map<String, dynamic>);
+    }
+    throw ApiException('No se pudieron cargar los indicadores de sanidad.');
+  }
+
+  Future<List<Pendiente>> listarPendientes() async {
+    final response = await _http.get(Uri.parse('$baseUrl/api/vacunaciones/pendientes'), headers: _headersAutenticados);
+    if (response.statusCode == 200) {
+      return (jsonDecode(response.body) as List<dynamic>)
+          .map((json) => Pendiente.fromJson(json as Map<String, dynamic>))
+          .toList();
+    }
+    throw ApiException('No se pudieron cargar las vacunaciones pendientes.');
+  }
+
   Future<VerificacionVacunacion> verificarVacunacion(List<String> animalIds, DatosVacunacion datos) async {
     final response = await _http.post(
       Uri.parse('$baseUrl/api/vacunaciones/verificar'),

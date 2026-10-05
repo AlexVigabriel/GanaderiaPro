@@ -84,6 +84,67 @@ class VerificacionVacunacion {
   }
 }
 
+// HU-27: indicadores del módulo Sanidad (RN-09).
+class ResumenSanidad {
+  const ResumenSanidad({required this.vacunados, required this.pendientes, required this.vencidas});
+
+  final int vacunados;
+  final int pendientes;
+  final int vencidas;
+
+  factory ResumenSanidad.fromJson(Map<String, dynamic> json) => ResumenSanidad(
+    vacunados: json['vacunados'] as int,
+    pendientes: json['pendientes'] as int,
+    vencidas: json['vencidas'] as int,
+  );
+}
+
+// HU-27: una próxima dosis por aplicar.
+class Pendiente {
+  const Pendiente({
+    required this.animalId,
+    required this.arete,
+    this.nombreAnimal,
+    required this.vacunaId,
+    required this.vacuna,
+    required this.ultimaAplicacion,
+    required this.fechaProximaDosis,
+    required this.vencida,
+  });
+
+  final String animalId;
+  final String arete;
+  final String? nombreAnimal;
+  final String vacunaId;
+  final String vacuna;
+  final DateTime ultimaAplicacion;
+  final DateTime fechaProximaDosis;
+  final bool vencida;
+
+  String get animal => nombreAnimal == null ? arete : '$arete · $nombreAnimal';
+
+  factory Pendiente.fromJson(Map<String, dynamic> json) => Pendiente(
+    animalId: json['animalId'] as String,
+    arete: json['arete'] as String,
+    nombreAnimal: json['nombreAnimal'] as String?,
+    vacunaId: json['vacunaId'] as String,
+    vacuna: json['vacuna'] as String,
+    ultimaAplicacion: DateTime.parse(json['ultimaAplicacion'] as String),
+    fechaProximaDosis: DateTime.parse(json['fechaProximaDosis'] as String),
+    vencida: json['vencida'] as bool,
+  );
+}
+
+// Texto corto de cuándo vence una dosis pendiente, respecto de hoy.
+String describirVencimiento(DateTime fecha, DateTime hoy) {
+  final dias = DateTime(fecha.year, fecha.month, fecha.day).difference(hoy).inDays;
+  if (dias == 0) return 'Hoy';
+  if (dias == 1) return 'Mañana';
+  if (dias > 1) return 'En $dias días';
+  if (dias == -1) return 'Vencida ayer';
+  return 'Vencida hace ${-dias} días';
+}
+
 // Datos de una vacunación tal como se envían al registrarla o editarla.
 class DatosVacunacion {
   const DatosVacunacion({

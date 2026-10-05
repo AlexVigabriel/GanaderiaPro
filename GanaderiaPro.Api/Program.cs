@@ -43,6 +43,7 @@ builder.Services.AddScoped<IPesajeRepository, PesajeRepository>();
 builder.Services.AddScoped<IPesajeService, PesajeService>();
 builder.Services.AddScoped<IVacunacionRepository, VacunacionRepository>();
 builder.Services.AddScoped<IVacunacionService, VacunacionService>();
+builder.Services.AddScoped<ISanidadService, SanidadService>();
 builder.Services.AddScoped<IUsuarioRepository, UsuarioRepository>();
 builder.Services.AddScoped<IRanchoRepository, RanchoRepository>();
 builder.Services.AddScoped<IPasswordHasher, PasswordHasher>();
