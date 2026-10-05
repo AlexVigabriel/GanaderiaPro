@@ -97,20 +97,28 @@ class _BarraSuperior extends StatelessWidget {
           // HU-15: nombre del rancho actual.
           Icon(Icons.home_work_outlined, size: 20, color: tema.colorScheme.primary),
           const SizedBox(width: 8),
-          Flexible(
-            child: Text(
-              sesion.nombreRancho ?? 'GanaderíaPro',
-              overflow: TextOverflow.ellipsis,
-              style: tema.textTheme.titleSmall,
+          // Ocupa todo el ancho libre para que el perfil quede a la derecha;
+          // adentro, el nombre se recorta si no entra junto al rol.
+          Expanded(
+            child: Row(
+              children: [
+                Flexible(
+                  child: Text(
+                    sesion.nombreRancho ?? 'GanaderíaPro',
+                    overflow: TextOverflow.ellipsis,
+                    style: tema.textTheme.titleSmall,
+                  ),
+                ),
+                // HU-32: el rol de quien inició sesión, para saber siempre con
+                // qué cuenta se está trabajando.
+                if (sesion.rol != null) ...[
+                  const SizedBox(width: 10),
+                  Flexible(child: EtiquetaRol(rol: sesion.rol!)),
+                ],
+              ],
             ),
           ),
-          // HU-32: el rol de quien inició sesión, para saber siempre con qué
-          // cuenta se está trabajando.
-          if (sesion.rol != null) ...[
-            const SizedBox(width: 10),
-            EtiquetaRol(rol: sesion.rol!),
-          ],
-          const Spacer(),
+          const SizedBox(width: 12),
           // HU-52: menú de perfil con el usuario, el rancho y "Cerrar sesión".
           PopupMenuButton<String>(
             tooltip: 'Perfil',

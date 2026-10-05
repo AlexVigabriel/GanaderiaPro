@@ -77,6 +77,9 @@ void main() {
     );
 
     expect(find.text('Encargado de corrales'), findsOneWidget);
+    // El perfil queda pegado al borde derecho (antes se iba al centro).
+    final barra = tester.getRect(find.byType(AppShell));
+    expect(tester.getRect(find.byTooltip('Perfil')).right, greaterThan(barra.right - 40));
 
     await tester.tap(find.byTooltip('Perfil'));
     await tester.pumpAndSettle();
