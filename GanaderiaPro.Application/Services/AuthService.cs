@@ -3,6 +3,7 @@ using GanaderiaPro.Application.DTOs;
 using GanaderiaPro.Application.Exceptions;
 using GanaderiaPro.Application.Interfaces;
 using GanaderiaPro.Domain.Entities;
+using GanaderiaPro.Domain.Permisos;
 
 namespace GanaderiaPro.Application.Services;
 
@@ -115,7 +116,12 @@ public class AuthService : IAuthService
 
         var token = _tokenGenerator.GenerarToken(usuario);
 
-        return new IniciarSesionResponse(token, usuario.Rancho?.Nombre ?? string.Empty, usuario.Nombre, usuario.Rol);
+        return new IniciarSesionResponse(
+            token,
+            usuario.Rancho?.Nombre ?? string.Empty,
+            usuario.Nombre,
+            usuario.Rol,
+            MatrizPermisos.PermisosDe(usuario.Rol));
     }
 
     // HU-52: invalida en el servidor todos los tokens emitidos hasta ahora

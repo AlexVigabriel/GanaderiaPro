@@ -6,6 +6,8 @@ import '../../core/animal.dart';
 import '../../core/api_client.dart';
 import '../../core/catalogos.dart';
 import '../../core/formato.dart';
+import '../../core/permisos.dart';
+import '../../core/sesion_actual.dart';
 import '../../core/route_observer.dart';
 import '../../core/widgets/componentes.dart';
 import '../shell/app_shell.dart';
@@ -153,12 +155,14 @@ class _ListadoAnimalesScreenState extends State<ListadoAnimalesScreen> with Rout
             EncabezadoPantalla(
               titulo: 'Gestión de animales',
               subtitulo: 'Administrá tu ganado y registrá información detallada.',
+              soloConsulta: !_puedeEditar,
               acciones: [
-                FilledButton.icon(
-                  onPressed: _agregar,
-                  icon: const Icon(Icons.add),
-                  label: const Text('Agregar animales'),
-                ),
+                if (_puedeEditar)
+                  FilledButton.icon(
+                    onPressed: _agregar,
+                    icon: const Icon(Icons.add),
+                    label: const Text('Agregar animales'),
+                  ),
               ],
             ),
             const SizedBox(height: 24),
@@ -329,12 +333,14 @@ class _ListadoAnimalesScreenState extends State<ListadoAnimalesScreen> with Rout
           : _EstadoVacio(
               icono: Icons.pets_outlined,
               titulo: 'No hay animales registrados aún',
-              subtitulo: 'Cargá los primeros con «Agregar animales».',
-              accion: FilledButton.icon(
-                onPressed: _agregar,
-                icon: const Icon(Icons.add),
-                label: const Text('Agregar animales'),
-              ),
+              subtitulo: _puedeEditar ? 'Cargá los primeros con «Agregar animales».' : null,
+              accion: _puedeEditar
+                  ? FilledButton.icon(
+                      onPressed: _agregar,
+                      icon: const Icon(Icons.add),
+                      label: const Text('Agregar animales'),
+                    )
+                  : null,
             );
     }
 
@@ -461,7 +467,12 @@ class _ListadoAnimalesScreenState extends State<ListadoAnimalesScreen> with Rout
     );
   }
 
-  Widget _acciones(Animal animal) => Row(
+  // HU-34: alta, edición, baja y eliminación son del módulo Ganado.
+  bool get _puedeEditar => SesionActual.instancia.puedeEditar(Modulos.ganado);
+
+  Widget _acciones(Animal animal) => !_puedeEditar
+      ? const SizedBox.shrink()
+      : Row(
     mainAxisSize: MainAxisSize.min,
     children: [
       BotonAccion(icono: Icons.edit_outlined, tooltip: 'Editar', onPressed: () => _editar(animal)),

@@ -1,6 +1,7 @@
 using GanaderiaPro.Application.DTOs;
 using GanaderiaPro.Application.Exceptions;
 using GanaderiaPro.Application.Interfaces;
+using GanaderiaPro.Api.Permisos;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -36,6 +37,7 @@ public class AuthController : ControllerBase
     // Va sin [AllowAnonymous]: si estuviera en toda la clase anularía el [Authorize].
     [HttpPost("cerrar-sesion")]
     [Authorize]
+    [SinModulo]
     public async Task<IActionResult> CerrarSesion([FromServices] ICurrentUserContext usuarioActual)
     {
         await _authService.CerrarSesionAsync(usuarioActual.UsuarioId);

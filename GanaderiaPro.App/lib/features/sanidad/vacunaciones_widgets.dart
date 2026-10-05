@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../../core/animal.dart';
 import '../../core/api_client.dart';
 import '../../core/formato.dart';
+import '../../core/permisos.dart';
+import '../../core/sesion_actual.dart';
 import '../../core/sanidad.dart';
 import '../../core/widgets/componentes.dart';
 import 'registro_vacunacion_dialog.dart';
@@ -150,7 +152,8 @@ class _TarjetaHistorialSanitarioState extends State<TarjetaHistorialSanitario> {
   @override
   Widget build(BuildContext context) {
     final tema = Theme.of(context);
-    final activo = widget.animal.activo;
+    // Solo animales activos y roles con escritura en Sanidad (HU-34).
+    final activo = widget.animal.activo && SesionActual.instancia.puedeEditar(Modulos.sanidad);
 
     return Card(
       margin: EdgeInsets.zero,

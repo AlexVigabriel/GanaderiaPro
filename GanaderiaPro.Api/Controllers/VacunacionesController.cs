@@ -1,6 +1,8 @@
 using GanaderiaPro.Application.DTOs;
 using GanaderiaPro.Application.Exceptions;
 using GanaderiaPro.Application.Interfaces;
+using GanaderiaPro.Api.Permisos;
+using GanaderiaPro.Domain.Permisos;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -10,6 +12,7 @@ namespace GanaderiaPro.Api.Controllers;
 [ApiController]
 [Route("api")]
 [Authorize]
+[Modulo(Modulo.Sanidad)]
 public class VacunacionesController : ControllerBase
 {
     private readonly IVacunacionService _vacunacionService;

@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import '../../core/animal.dart';
 import '../../core/api_client.dart';
 import '../../core/formato.dart';
+import '../../core/permisos.dart';
+import '../../core/sesion_actual.dart';
 import '../../core/validaciones_animal.dart';
 import '../../core/widgets/componentes.dart';
 import 'baja_animal_dialog.dart';
@@ -25,6 +27,9 @@ class TarjetaPesajes extends StatefulWidget {
 class _TarjetaPesajesState extends State<TarjetaPesajes> {
   final _api = ApiClient();
   late Future<List<Pesaje>> _futuro = _api.listarPesajes(widget.animal.id);
+
+  // Solo animales activos y roles con escritura en Pesaje (HU-34).
+  bool get _puedeEditar => widget.animal.activo && SesionActual.instancia.puedeEditar(Modulos.pesaje);
 
   // pesaje == null registra uno nuevo; si no, lo edita.
   Future<void> _abrirFormulario([Pesaje? pesaje]) async {
@@ -96,7 +101,7 @@ class _TarjetaPesajesState extends State<TarjetaPesajes> {
               runSpacing: 12,
               children: [
                 Text('Historial de pesajes', style: tema.textTheme.titleMedium),
-                if (widget.animal.activo)
+                if (_puedeEditar)
                   FilledButton.icon(
                     onPressed: _abrirFormulario,
                     icon: const Icon(Icons.monitor_weight_outlined, size: 18),
@@ -141,8 +146,8 @@ class _TarjetaPesajesState extends State<TarjetaPesajes> {
                         pesaje: pesajes[i],
                         anterior: i + 1 < pesajes.length ? pesajes[i + 1] : null,
                         // Solo se corrigen pesajes de animales activos.
-                        onEditar: widget.animal.activo ? () => _abrirFormulario(pesajes[i]) : null,
-                        onEliminar: widget.animal.activo ? () => _eliminar(pesajes[i]) : null,
+                        onEditar: _puedeEditar ? () => _abrirFormulario(pesajes[i]) : null,
+                        onEliminar: _puedeEditar ? () => _eliminar(pesajes[i]) : null,
                       ),
                   ],
                 );

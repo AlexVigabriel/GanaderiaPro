@@ -3,6 +3,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'core/app_theme.dart';
 import 'core/cerrar_sesion.dart';
+import 'core/permisos.dart';
 import 'core/route_observer.dart';
 import 'core/sesion_actual.dart';
 import 'features/auth/login_screen.dart';
@@ -13,6 +14,7 @@ import 'features/corrales/corrales_screen.dart';
 import 'features/ganado/listado_animales_screen.dart';
 import 'features/sanidad/sanidad_screen.dart';
 import 'features/shell/home_screen.dart';
+import 'features/shell/sin_permiso_screen.dart';
 
 void main() {
   runApp(const GanaderiaProApp());
@@ -67,6 +69,12 @@ class GanaderiaProApp extends StatelessWidget {
   }
 
   Widget _pantallaParaRuta(String ruta, Map<String, String> parametros) {
+    // HU-34: con sesión pero sin permiso sobre el módulo de la ruta.
+    final modulo = moduloDeRuta[ruta];
+    if (modulo != null && SesionActual.instancia.estaAutenticado && !SesionActual.instancia.puedeVer(modulo)) {
+      return const SinPermisoScreen();
+    }
+
     switch (ruta) {
       case '/registro':
         // HU-05: el plan elegido en el sitio público llega en la ruta

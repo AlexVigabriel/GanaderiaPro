@@ -83,6 +83,7 @@ class ApiClient {
       nombreRancho: data['nombreRancho'] as String,
       nombreUsuario: data['nombreUsuario'] as String,
       rol: data['rol'] as String? ?? 'Propietario',
+      permisos: (data['permisos'] as Map<String, dynamic>?)?.map((modulo, nivel) => MapEntry(modulo, nivel as String)),
     );
   }
 

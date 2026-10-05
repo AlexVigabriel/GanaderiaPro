@@ -20,6 +20,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\GanaderiaPro.Api\GanaderiaPro.Api.csproj" />
     <ProjectReference Include="..\GanaderiaPro.Application\GanaderiaPro.Application.csproj" />
     <ProjectReference Include="..\GanaderiaPro.Domain\GanaderiaPro.Domain.csproj" />
   </ItemGroup>

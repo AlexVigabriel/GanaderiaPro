@@ -5,27 +5,26 @@ import '../../core/app_theme.dart';
 import '../../core/cerrar_sesion.dart';
 import '../../core/colaborador.dart';
 import '../../core/formato.dart';
+import '../../core/permisos.dart';
 import '../../core/sesion_actual.dart';
 
 class ModuloMenu {
-  const ModuloMenu({required this.titulo, required this.icono, required this.ruta, this.soloPropietario = false});
+  const ModuloMenu({required this.titulo, required this.icono, required this.ruta, required this.modulo});
 
   final String titulo;
   final IconData icono;
   final String ruta;
-  // HU-32: Colaboradores solo lo ve el propietario. La matriz completa de
-  // permisos por rol llega con HU-34.
-  final bool soloPropietario;
+  // HU-34: el menú muestra solo los módulos que el rol puede ver.
+  final String modulo;
 }
 
-// HU-14: lista fija de módulos disponibles. Cuando exista la matriz de
-// permisos por rol (HU-34), esto se filtra según el rol.
+// HU-14: módulos del menú; HU-34: se filtran según los permisos del rol.
 const modulosDisponibles = [
-  ModuloMenu(titulo: 'Tablero', icono: Icons.space_dashboard_outlined, ruta: '/'),
-  ModuloMenu(titulo: 'Animales', icono: Icons.pets_outlined, ruta: '/ganado'),
-  ModuloMenu(titulo: 'Corrales', icono: Icons.fence, ruta: '/corrales'),
-  ModuloMenu(titulo: 'Sanidad', icono: Icons.vaccines_outlined, ruta: '/sanidad'),
-  ModuloMenu(titulo: 'Colaboradores', icono: Icons.group_outlined, ruta: '/colaboradores', soloPropietario: true),
+  ModuloMenu(titulo: 'Tablero', icono: Icons.space_dashboard_outlined, ruta: '/', modulo: Modulos.tablero),
+  ModuloMenu(titulo: 'Animales', icono: Icons.pets_outlined, ruta: '/ganado', modulo: Modulos.ganado),
+  ModuloMenu(titulo: 'Corrales', icono: Icons.fence, ruta: '/corrales', modulo: Modulos.corrales),
+  ModuloMenu(titulo: 'Sanidad', icono: Icons.vaccines_outlined, ruta: '/sanidad', modulo: Modulos.sanidad),
+  ModuloMenu(titulo: 'Colaboradores', icono: Icons.group_outlined, ruta: '/colaboradores', modulo: Modulos.colaboradores),
 ];
 
 // Estructura común de las pantallas internas: menú lateral fijo en
@@ -223,7 +222,7 @@ class _MenuLateral extends StatelessWidget {
                 ],
               ),
             ),
-            for (final modulo in modulosDisponibles.where((m) => !m.soloPropietario || SesionActual.instancia.esPropietario))
+            for (final modulo in modulosDisponibles.where((m) => SesionActual.instancia.puedeVer(m.modulo)))
               _OpcionMenu(
                 modulo: modulo,
                 activa: seccionActiva == modulo.ruta,

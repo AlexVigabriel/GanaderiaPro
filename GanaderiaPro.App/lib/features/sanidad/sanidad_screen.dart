@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 
 import '../../core/api_client.dart';
 import '../../core/formato.dart';
+import '../../core/permisos.dart';
+
 import '../../core/sanidad.dart';
+import '../../core/sesion_actual.dart';
 import '../../core/validaciones_animal.dart';
 import '../../core/widgets/componentes.dart';
 import '../shell/app_shell.dart';
@@ -47,6 +50,8 @@ class _SanidadScreenState extends State<SanidadScreen> {
     }
   }
 
+  bool get _puedeEditar => SesionActual.instancia.puedeEditar(Modulos.sanidad);
+
   void _avisar(String mensaje) => ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(mensaje)));
 
   Future<void> _registrar() async {
@@ -83,12 +88,14 @@ class _SanidadScreenState extends State<SanidadScreen> {
             EncabezadoPantalla(
               titulo: 'Sanidad',
               subtitulo: 'Registrá vacunaciones y seguí el calendario sanitario del rancho.',
+              soloConsulta: !_puedeEditar,
               acciones: [
-                FilledButton.icon(
-                  onPressed: _registrar,
-                  icon: const Icon(Icons.vaccines_outlined),
-                  label: const Text('Registrar vacunación'),
-                ),
+                if (_puedeEditar)
+                  FilledButton.icon(
+                    onPressed: _registrar,
+                    icon: const Icon(Icons.vaccines_outlined),
+                    label: const Text('Registrar vacunación'),
+                  ),
               ],
             ),
             const SizedBox(height: 24),
@@ -147,8 +154,8 @@ class _SanidadScreenState extends State<SanidadScreen> {
                               FilaVacunacion(
                                 vacunacion: v,
                                 mostrarAnimal: true,
-                                onEditar: () => _editar(v),
-                                onEliminar: () => _eliminar(v),
+                                onEditar: _puedeEditar ? () => _editar(v) : null,
+                                onEliminar: _puedeEditar ? () => _eliminar(v) : null,
                               ),
                           ],
                         );
@@ -225,7 +232,7 @@ class _SanidadScreenState extends State<SanidadScreen> {
                 );
               }
               return Column(
-                children: [for (final p in pendientes) _FilaPendiente(pendiente: p, onAplicar: () => _aplicar(p))],
+                children: [for (final p in pendientes) _FilaPendiente(pendiente: p, onAplicar: _puedeEditar ? () => _aplicar(p) : null)],
               );
             },
           ),
@@ -239,7 +246,8 @@ class _FilaPendiente extends StatelessWidget {
   const _FilaPendiente({required this.pendiente, required this.onAplicar});
 
   final Pendiente pendiente;
-  final VoidCallback onAplicar;
+  // null: el rol no puede registrar vacunaciones (HU-34).
+  final VoidCallback? onAplicar;
 
   @override
   Widget build(BuildContext context) {
@@ -284,8 +292,10 @@ class _FilaPendiente extends StatelessWidget {
               style: tema.textTheme.labelMedium?.copyWith(color: color, fontWeight: FontWeight.w600),
             ),
           ),
-          const SizedBox(width: 12),
-          OutlinedButton(onPressed: onAplicar, child: const Text('Aplicar')),
+          if (onAplicar != null) ...[
+            const SizedBox(width: 12),
+            OutlinedButton(onPressed: onAplicar, child: const Text('Aplicar')),
+          ],
         ],
       ),
     );

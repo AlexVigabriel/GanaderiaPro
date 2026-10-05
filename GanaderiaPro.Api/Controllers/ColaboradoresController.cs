@@ -1,6 +1,8 @@
 using GanaderiaPro.Application.DTOs;
 using GanaderiaPro.Application.Exceptions;
 using GanaderiaPro.Application.Interfaces;
+using GanaderiaPro.Api.Permisos;
+using GanaderiaPro.Domain.Permisos;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -10,6 +12,7 @@ namespace GanaderiaPro.Api.Controllers;
 [ApiController]
 [Route("api/colaboradores")]
 [Authorize]
+[Modulo(Modulo.Colaboradores)]
 public class ColaboradoresController : ControllerBase
 {
     private readonly IColaboradorService _colaboradorService;

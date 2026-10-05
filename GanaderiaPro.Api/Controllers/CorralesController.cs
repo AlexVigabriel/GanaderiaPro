@@ -1,6 +1,8 @@
 using GanaderiaPro.Application.DTOs;
 using GanaderiaPro.Application.Exceptions;
 using GanaderiaPro.Application.Interfaces;
+using GanaderiaPro.Api.Permisos;
+using GanaderiaPro.Domain.Permisos;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -10,6 +12,7 @@ namespace GanaderiaPro.Api.Controllers;
 [ApiController]
 [Route("api/corrales")]
 [Authorize]
+[Modulo(Modulo.Corrales)]
 public class CorralesController : ControllerBase
 {
     private readonly ICorralService _corralService;
@@ -39,6 +42,8 @@ public class CorralesController : ControllerBase
     public Task<ActionResult> Activar(Guid id) =>
         Responder(async () => Ok(await _corralService.CambiarEstadoAsync(id, activo: true)));
 
+    // HU-34: mover un animal entre corrales es del módulo Corrales (lo hace el
+    // Encargado de corrales), aunque la ruta esté bajo /animales.
     [HttpPut("/api/animales/{animalId:guid}/corral")]
     public Task<ActionResult> AsignarAnimal(Guid animalId, AsignarCorralRequest request) =>
         Responder(async () =>
