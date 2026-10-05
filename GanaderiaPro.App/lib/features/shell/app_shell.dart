@@ -3,15 +3,19 @@ import 'package:flutter/material.dart';
 import '../../core/api_client.dart';
 import '../../core/app_theme.dart';
 import '../../core/cerrar_sesion.dart';
+import '../../core/colaborador.dart';
 import '../../core/formato.dart';
 import '../../core/sesion_actual.dart';
 
 class ModuloMenu {
-  const ModuloMenu({required this.titulo, required this.icono, required this.ruta});
+  const ModuloMenu({required this.titulo, required this.icono, required this.ruta, this.soloPropietario = false});
 
   final String titulo;
   final IconData icono;
   final String ruta;
+  // HU-32: Colaboradores solo lo ve el propietario. La matriz completa de
+  // permisos por rol llega con HU-34.
+  final bool soloPropietario;
 }
 
 // HU-14: lista fija de módulos disponibles. Cuando exista la matriz de
@@ -21,6 +25,7 @@ const modulosDisponibles = [
   ModuloMenu(titulo: 'Animales', icono: Icons.pets_outlined, ruta: '/ganado'),
   ModuloMenu(titulo: 'Corrales', icono: Icons.fence, ruta: '/corrales'),
   ModuloMenu(titulo: 'Sanidad', icono: Icons.vaccines_outlined, ruta: '/sanidad'),
+  ModuloMenu(titulo: 'Colaboradores', icono: Icons.group_outlined, ruta: '/colaboradores', soloPropietario: true),
 ];
 
 // Estructura común de las pantallas internas: menú lateral fijo en
@@ -92,13 +97,28 @@ class _BarraSuperior extends StatelessWidget {
           // HU-15: nombre del rancho actual.
           Icon(Icons.home_work_outlined, size: 20, color: tema.colorScheme.primary),
           const SizedBox(width: 8),
+          // Ocupa todo el ancho libre para que el perfil quede a la derecha;
+          // adentro, el nombre se recorta si no entra junto al rol.
           Expanded(
-            child: Text(
-              sesion.nombreRancho ?? 'GanaderíaPro',
-              overflow: TextOverflow.ellipsis,
-              style: tema.textTheme.titleSmall,
+            child: Row(
+              children: [
+                Flexible(
+                  child: Text(
+                    sesion.nombreRancho ?? 'GanaderíaPro',
+                    overflow: TextOverflow.ellipsis,
+                    style: tema.textTheme.titleSmall,
+                  ),
+                ),
+                // HU-32: el rol de quien inició sesión, para saber siempre con
+                // qué cuenta se está trabajando.
+                if (sesion.rol != null) ...[
+                  const SizedBox(width: 10),
+                  Flexible(child: EtiquetaRol(rol: sesion.rol!)),
+                ],
+              ],
             ),
           ),
+          const SizedBox(width: 12),
           // HU-52: menú de perfil con el usuario, el rancho y "Cerrar sesión".
           PopupMenuButton<String>(
             tooltip: 'Perfil',
@@ -114,6 +134,10 @@ class _BarraSuperior extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(sesion.nombreUsuario ?? '', style: tema.textTheme.titleSmall),
+                    Text(
+                      nombreDeRol(sesion.rol ?? ''),
+                      style: tema.textTheme.bodySmall?.copyWith(color: tema.colorScheme.primary, fontWeight: FontWeight.w600),
+                    ),
                     Text(
                       sesion.nombreRancho ?? '',
                       style: tema.textTheme.bodySmall?.copyWith(color: tema.colorScheme.onSurfaceVariant),
@@ -199,7 +223,7 @@ class _MenuLateral extends StatelessWidget {
                 ],
               ),
             ),
-            for (final modulo in modulosDisponibles)
+            for (final modulo in modulosDisponibles.where((m) => !m.soloPropietario || SesionActual.instancia.esPropietario))
               _OpcionMenu(
                 modulo: modulo,
                 activa: seccionActiva == modulo.ruta,
@@ -252,11 +276,15 @@ class _OpcionMenu extends StatelessWidget {
               children: [
                 Icon(modulo.icono, size: 20, color: activa ? AppTheme.verdeBrillante : color),
                 const SizedBox(width: 12),
-                Text(
-                  modulo.titulo,
-                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                    color: color,
-                    fontWeight: activa ? FontWeight.w600 : FontWeight.w400,
+                Flexible(
+                  child: Text(
+                    modulo.titulo,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                      color: color,
+                      fontWeight: activa ? FontWeight.w600 : FontWeight.w400,
+                    ),
                   ),
                 ),
               ],
@@ -279,4 +307,31 @@ Future<void> cerrarSesion(BuildContext context) async {
     // Sin conexión: la sesión se cierra igual en este dispositivo.
   }
   irAlLoginSinSesion();
+}
+
+// Rol del usuario en la barra superior.
+class EtiquetaRol extends StatelessWidget {
+  const EtiquetaRol({super.key, required this.rol});
+
+  final String rol;
+
+  @override
+  Widget build(BuildContext context) {
+    final colores = Theme.of(context).colorScheme;
+    final color = rol == 'Propietario' ? colores.primary : colores.tertiary;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: color.withValues(alpha: 0.35)),
+      ),
+      child: Text(
+        nombreDeRol(rol),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: Theme.of(context).textTheme.labelMedium?.copyWith(color: color, fontWeight: FontWeight.w600),
+      ),
+    );
+  }
 }

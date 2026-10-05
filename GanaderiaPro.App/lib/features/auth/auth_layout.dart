@@ -12,12 +12,14 @@ enum SeccionAuth { iniciarSesion, crearCuenta }
 class AuthLayout extends StatelessWidget {
   const AuthLayout({
     super.key,
-    required this.seccion,
+    this.seccion,
     required this.subtitulo,
     required this.formulario,
   });
 
-  final SeccionAuth seccion;
+  // null: sin las pestañas Iniciar sesión / Crear cuenta (por ejemplo, al
+  // aceptar una invitación).
+  final SeccionAuth? seccion;
   final String subtitulo;
   final Widget formulario;
 
@@ -110,6 +112,7 @@ class AuthLayout extends StatelessWidget {
                 style: textoSecundario,
               ),
               const SizedBox(height: 24),
+              if (seccion != null) ...[
               SegmentedButton<SeccionAuth>(
                 expandedInsets: EdgeInsets.zero,
                 showSelectedIcon: false,
@@ -125,10 +128,11 @@ class AuthLayout extends StatelessWidget {
                     icon: compacto ? null : const Icon(Icons.person_add_alt),
                   ),
                 ],
-                selected: {seccion},
+                selected: {seccion!},
                 onSelectionChanged: (seleccion) => _cambiarSeccion(context, seleccion.first),
               ),
               const SizedBox(height: 20),
+              ],
               Text(subtitulo, textAlign: TextAlign.center, style: textoSecundario),
               const SizedBox(height: 20),
               formulario,

@@ -7,5 +7,7 @@ public interface IUsuarioRepository
     Task<bool> ExisteEmailAsync(string email);
     Task<Usuario?> ObtenerPorEmailAsync(string email);
     Task<Usuario?> ObtenerPorIdAsync(Guid id);
+    Task<Usuario?> ObtenerDelRanchoAsync(Guid ranchoId, Guid id);
+    Task<IReadOnlyList<Usuario>> ListarColaboradoresAsync(Guid ranchoId);
     void Agregar(Usuario usuario);
 }
