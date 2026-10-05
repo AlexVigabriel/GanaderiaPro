@@ -1,3 +1,4 @@
+using GanaderiaPro.Application.Common;
 using GanaderiaPro.Application.DTOs;
 using GanaderiaPro.Application.Exceptions;
 using GanaderiaPro.Application.Interfaces;
@@ -14,7 +15,7 @@ public class AnimalServiceTests
 
     // La fecha de nacimiento es obligatoria: las pruebas que no la ponen a
     // prueba usan un animal de dos años.
-    private static readonly DateOnly HaceDosAnios = DateOnly.FromDateTime(DateTime.UtcNow).AddYears(-2);
+    private static readonly DateOnly HaceDosAnios = FechaRancho.Hoy().AddYears(-2);
 
     private static AnimalService CrearServicio(Mock<IAnimalRepository> repoMock)
     {
@@ -207,7 +208,7 @@ public class AnimalServiceTests
         // RN-14: no se registran fechas futuras.
         var repoMock = new Mock<IAnimalRepository>();
         var service = CrearServicio(repoMock);
-        var manana = DateOnly.FromDateTime(DateTime.UtcNow).AddDays(1);
+        var manana = FechaRancho.Hoy().AddDays(1);
         var request = new RegistrarAnimalRequest("A010", SexoAnimal.Hembra, "Nelore", null, FechaNacimiento: manana);
 
         var ex = await Assert.ThrowsAsync<ReglaDeNegocioException>(() => service.RegistrarAsync(request));
@@ -221,7 +222,7 @@ public class AnimalServiceTests
     {
         var repoMock = new Mock<IAnimalRepository>();
         var service = CrearServicio(repoMock);
-        var hace26Anios = DateOnly.FromDateTime(DateTime.UtcNow).AddYears(-26);
+        var hace26Anios = FechaRancho.Hoy().AddYears(-26);
         var request = new RegistrarAnimalRequest("A013", SexoAnimal.Hembra, "Nelore", null, FechaNacimiento: hace26Anios);
 
         var ex = await Assert.ThrowsAsync<ReglaDeNegocioException>(() => service.RegistrarAsync(request));
@@ -299,7 +300,7 @@ public class AnimalServiceTests
         var unitOfWorkMock = new Mock<IUnitOfWork>();
         var service = new AnimalService(repoMock.Object, currentUserMock.Object, unitOfWorkMock.Object);
 
-        var manana = DateOnly.FromDateTime(DateTime.UtcNow).AddDays(1);
+        var manana = FechaRancho.Hoy().AddDays(1);
         var filas = new List<RegistrarAnimalRequest>
         {
             new("B-01", SexoAnimal.Hembra, "Nelore", null, Nombre: "Rita", FechaNacimiento: HaceDosAnios),
@@ -325,7 +326,7 @@ public class AnimalServiceTests
         // HU-74: la castración solo aplica a machos.
         var repoMock = new Mock<IAnimalRepository>();
         var service = CrearServicio(repoMock);
-        var haceTresAnios = DateOnly.FromDateTime(DateTime.UtcNow).AddYears(-3);
+        var haceTresAnios = FechaRancho.Hoy().AddYears(-3);
         var request = new RegistrarAnimalRequest("A016", SexoAnimal.Hembra, "Nelore", null, FechaNacimiento: haceTresAnios, Castrado: true);
 
         var resultado = await service.RegistrarAsync(request);
@@ -338,7 +339,7 @@ public class AnimalServiceTests
     public async Task Buscar_PorCategoria_DevuelveSoloEsaCategoria()
     {
         // HU-74: el filtro usa la categoría calculada.
-        var hoy = DateOnly.FromDateTime(DateTime.UtcNow);
+        var hoy = FechaRancho.Hoy();
         var repoMock = new Mock<IAnimalRepository>();
         repoMock.Setup(r => r.BuscarAsync(RanchoIdDePrueba, null, EstadoAnimal.Activo, null, null))
             .ReturnsAsync(new List<Animal>
