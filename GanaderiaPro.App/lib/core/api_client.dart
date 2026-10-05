@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 
 import 'animal.dart';
 import 'cerrar_sesion.dart';
+import 'sanidad.dart';
 import 'sesion_actual.dart';
 
 class ApiException implements Exception {
@@ -212,6 +213,70 @@ class ApiClient {
 
     if (response.statusCode != 200) {
       throw ApiException(_extraerMensajeError(response.body) ?? 'No se pudo eliminar el pesaje.');
+    }
+  }
+
+  // ---- HU-26: Sanidad
+  Future<List<Vacuna>> listarVacunas() async {
+    final response = await _http.get(Uri.parse('$baseUrl/api/vacunas'), headers: _headersAutenticados);
+    if (response.statusCode == 200) {
+      return (jsonDecode(response.body) as List<dynamic>)
+          .map((json) => Vacuna.fromJson(json as Map<String, dynamic>))
+          .toList();
+    }
+    throw ApiException('No se pudo cargar la lista de vacunas.');
+  }
+
+  Future<List<Vacunacion>> listarVacunaciones({String? animalId}) async {
+    final ruta = animalId == null ? '$baseUrl/api/vacunaciones' : '$baseUrl/api/animales/$animalId/vacunaciones';
+    final response = await _http.get(Uri.parse(ruta), headers: _headersAutenticados);
+    if (response.statusCode == 200) {
+      return (jsonDecode(response.body) as List<dynamic>)
+          .map((json) => Vacunacion.fromJson(json as Map<String, dynamic>))
+          .toList();
+    }
+    throw ApiException(_extraerMensajeError(response.body) ?? 'No se pudieron cargar las vacunaciones.');
+  }
+
+  Future<VerificacionVacunacion> verificarVacunacion(List<String> animalIds, DatosVacunacion datos) async {
+    final response = await _http.post(
+      Uri.parse('$baseUrl/api/vacunaciones/verificar'),
+      headers: _headersAutenticados,
+      body: jsonEncode({'animalIds': animalIds, ...datos.toJson()}),
+    );
+    if (response.statusCode == 200) {
+      return VerificacionVacunacion.fromJson(jsonDecode(response.body) as Map<String, dynamic>);
+    }
+    throw ApiException(_extraerMensajeError(response.body) ?? 'No se pudo revisar la vacunación.');
+  }
+
+  // Una misma aplicación para uno o varios animales. [confirmado]: el usuario
+  // ya vio los avisos de vacunas programadas o recientes.
+  Future<int> registrarVacunacion(List<String> animalIds, DatosVacunacion datos, {bool confirmado = false}) async {
+    final response = await _http.post(
+      Uri.parse('$baseUrl/api/vacunaciones'),
+      headers: _headersAutenticados,
+      body: jsonEncode({'animalIds': animalIds, ...datos.toJson(), 'confirmado': confirmado}),
+    );
+    if (response.statusCode == 200) return (jsonDecode(response.body) as List<dynamic>).length;
+    throw ApiException(_extraerMensajeError(response.body) ?? 'No se pudo registrar la vacunación.');
+  }
+
+  Future<void> editarVacunacion(String id, DatosVacunacion datos) async {
+    final response = await _http.put(
+      Uri.parse('$baseUrl/api/vacunaciones/$id'),
+      headers: _headersAutenticados,
+      body: jsonEncode(datos.toJson()),
+    );
+    if (response.statusCode != 200) {
+      throw ApiException(_extraerMensajeError(response.body) ?? 'No se pudo editar la vacunación.');
+    }
+  }
+
+  Future<void> eliminarVacunacion(String id) async {
+    final response = await _http.delete(Uri.parse('$baseUrl/api/vacunaciones/$id'), headers: _headersAutenticados);
+    if (response.statusCode != 204) {
+      throw ApiException(_extraerMensajeError(response.body) ?? 'No se pudo eliminar la vacunación.');
     }
   }
 

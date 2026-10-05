@@ -79,26 +79,32 @@ class CampoFecha extends StatelessWidget {
     this.denso = false,
     this.titulo = 'Fecha de nacimiento',
     this.primeraFecha,
+    this.ultimaFecha,
   });
 
   final DateTime? valor;
   final String titulo;
   // Fecha más antigua que se puede elegir; por defecto, hace 25 años.
   final DateTime? primeraFecha;
+  // Fecha más reciente que se puede elegir; por defecto, hoy (RN-14). La
+  // próxima dosis de una vacuna sí puede ser futura.
+  final DateTime? ultimaFecha;
   final ValueChanged<DateTime?> onChanged;
   final String hint;
   final String? errorText;
   final bool denso;
 
   Future<void> _elegir(BuildContext context) async {
-    final hoy = DateTime.now();
+    final hoy = fechaDeHoy();
     final minima = primeraFecha ?? fechaNacimientoMinima();
-    final inicial = valor == null || valor!.isAfter(hoy) || valor!.isBefore(minima) ? hoy : valor!;
+    final maxima = ultimaFecha ?? hoy;
+    final sugerida = hoy.isAfter(maxima) ? maxima : (hoy.isBefore(minima) ? minima : hoy);
+    final inicial = valor == null || valor!.isAfter(maxima) || valor!.isBefore(minima) ? sugerida : valor!;
     final elegida = await showDatePicker(
       context: context,
       initialDate: inicial,
       firstDate: minima,
-      lastDate: hoy,
+      lastDate: maxima,
       helpText: titulo,
     );
     if (elegida != null) onChanged(elegida);

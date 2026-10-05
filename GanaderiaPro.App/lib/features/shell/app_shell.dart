@@ -19,6 +19,7 @@ class ModuloMenu {
 const modulosDisponibles = [
   ModuloMenu(titulo: 'Tablero', icono: Icons.space_dashboard_outlined, ruta: '/'),
   ModuloMenu(titulo: 'Animales', icono: Icons.pets_outlined, ruta: '/ganado'),
+  ModuloMenu(titulo: 'Sanidad', icono: Icons.vaccines_outlined, ruta: '/sanidad'),
 ];
 
 // Estructura común de las pantallas internas: menú lateral fijo en
