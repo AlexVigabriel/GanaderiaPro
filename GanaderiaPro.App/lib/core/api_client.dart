@@ -258,6 +258,18 @@ class ApiClient {
     'No se pudo cambiar el estado del corral.',
   );
 
+  // Cambia el corral del animal; null lo deja sin corral.
+  Future<void> asignarCorral(String animalId, String? corralId) async {
+    final response = await _http.put(
+      Uri.parse('$baseUrl/api/animales/$animalId/corral'),
+      headers: _headersAutenticados,
+      body: jsonEncode({'corralId': corralId}),
+    );
+    if (response.statusCode != 204) {
+      throw ApiException(_extraerMensajeError(response.body) ?? 'No se pudo cambiar el corral.');
+    }
+  }
+
   Future<Corral> _enviarCorral(Future<http.Response> pedido, String mensajeError) async {
     final response = await pedido;
     if (response.statusCode == 200) {

@@ -46,10 +46,9 @@ class _CorralesScreenState extends State<CorralesScreen> {
         context: context,
         builder: (context) => AlertDialog(
           title: Text('¿Desactivar «${corral.nombre}»?'),
-          content: Text(
-            corral.animalesActivos == 0
-                ? 'Deja de mostrarse en la vista de corrales. Podés volver a activarlo cuando quieras.'
-                : 'Sus ${corral.animalesActivos} animales quedan sin corral. Deja de mostrarse en la vista de corrales.',
+          content: const Text(
+            'Deja de mostrarse en la vista de corrales y no se le pueden asignar animales. '
+            'Su historial se conserva y podés volver a activarlo cuando quieras.',
           ),
           actions: [
             TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Cancelar')),
@@ -287,11 +286,18 @@ class _TarjetaCorral extends StatelessWidget {
                     BotonAccion(icono: Icons.edit_outlined, tooltip: 'Editar corral', onPressed: onEditar),
                     const SizedBox(width: 8),
                   ],
+                  // RN-08: un corral con animales no se puede desactivar.
                   BotonAccion(
                     icono: c.activo ? Icons.visibility_off_outlined : Icons.visibility_outlined,
-                    tooltip: c.activo ? 'Desactivar corral' : 'Activar corral',
+                    tooltip: !c.activo
+                        ? 'Activar corral'
+                        : (c.animalesActivos > 0
+                              ? (c.animalesActivos == 1
+                                    ? 'Tiene 1 animal: reasignalo antes de desactivarlo'
+                                    : 'Tiene ${c.animalesActivos} animales: reasignalos antes de desactivarlo')
+                              : 'Desactivar corral'),
                     peligro: c.activo,
-                    onPressed: onCambiarEstado,
+                    onPressed: c.activo && c.animalesActivos > 0 ? null : onCambiarEstado,
                   ),
                 ],
               ),
