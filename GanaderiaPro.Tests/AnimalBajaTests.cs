@@ -1,3 +1,4 @@
+using GanaderiaPro.Application.Common;
 using GanaderiaPro.Application.DTOs;
 using GanaderiaPro.Application.Exceptions;
 using GanaderiaPro.Application.Interfaces;
@@ -13,7 +14,7 @@ namespace GanaderiaPro.Tests;
 public class AnimalBajaTests
 {
     private static readonly Guid RanchoIdDePrueba = Guid.NewGuid();
-    private static readonly DateOnly Hoy = DateOnly.FromDateTime(DateTime.UtcNow);
+    private static readonly DateOnly Hoy = FechaRancho.Hoy();
 
     private readonly Mock<IAnimalRepository> _repoMock = new();
     private readonly Mock<IUnitOfWork> _unitOfWorkMock = new();

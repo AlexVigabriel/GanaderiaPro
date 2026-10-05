@@ -1,3 +1,4 @@
+using GanaderiaPro.Application.Common;
 using GanaderiaPro.Application.DTOs;
 using GanaderiaPro.Application.Exceptions;
 using GanaderiaPro.Application.Interfaces;
@@ -12,7 +13,7 @@ namespace GanaderiaPro.Tests;
 public class PesajeServiceTests
 {
     private static readonly Guid RanchoIdDePrueba = Guid.NewGuid();
-    private static readonly DateOnly Hoy = DateOnly.FromDateTime(DateTime.UtcNow);
+    private static readonly DateOnly Hoy = FechaRancho.Hoy();
 
     private readonly Mock<IPesajeRepository> _pesajeRepoMock = new();
     private readonly Mock<IAnimalRepository> _animalRepoMock = new();

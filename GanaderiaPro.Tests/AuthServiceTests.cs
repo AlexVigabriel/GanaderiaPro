@@ -168,4 +168,34 @@ public class AuthServiceTests
         Assert.Equal("Rancho de Ana", respuesta.NombreRancho);
         Assert.Equal("Ana", respuesta.NombreUsuario);
     }
+
+    [Fact]
+    public async Task CerrarSesion_IncrementaLaVersionYElTokenAnteriorDejaDeServir()
+    {
+        // HU-52: el token viejo (versión 0) ya no es válido después de cerrar sesión.
+        var usuario = new Usuario { Id = Guid.NewGuid(), Activo = true, VersionSesion = 0 };
+        var usuarioRepoMock = new Mock<IUsuarioRepository>();
+        usuarioRepoMock.Setup(r => r.ObtenerPorIdAsync(usuario.Id)).ReturnsAsync(usuario);
+        var service = CrearServicio(usuarioRepoMock);
+
+        Assert.True(await service.SesionVigenteAsync(usuario.Id, 0));
+
+        await service.CerrarSesionAsync(usuario.Id);
+
+        Assert.Equal(1, usuario.VersionSesion);
+        Assert.False(await service.SesionVigenteAsync(usuario.Id, 0));
+        Assert.True(await service.SesionVigenteAsync(usuario.Id, 1));
+    }
+
+    [Fact]
+    public async Task SesionVigente_DeUsuarioInactivoOInexistente_EsFalso()
+    {
+        var inactivo = new Usuario { Id = Guid.NewGuid(), Activo = false };
+        var usuarioRepoMock = new Mock<IUsuarioRepository>();
+        usuarioRepoMock.Setup(r => r.ObtenerPorIdAsync(inactivo.Id)).ReturnsAsync(inactivo);
+        var service = CrearServicio(usuarioRepoMock);
+
+        Assert.False(await service.SesionVigenteAsync(inactivo.Id, 0));
+        Assert.False(await service.SesionVigenteAsync(Guid.NewGuid(), 0));
+    }
 }
