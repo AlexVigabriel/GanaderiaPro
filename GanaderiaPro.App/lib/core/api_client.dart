@@ -6,6 +6,7 @@ import 'animal.dart';
 import 'cerrar_sesion.dart';
 import 'colaborador.dart';
 import 'corral.dart';
+import 'plan.dart';
 import 'sanidad.dart';
 import 'sesion_actual.dart';
 
@@ -218,6 +219,15 @@ class ApiClient {
     if (response.statusCode != 200) {
       throw ApiException(_extraerMensajeError(response.body) ?? 'No se pudo eliminar el pesaje.');
     }
+  }
+
+  // ---- HU-58: uso del plan (solo el propietario)
+  Future<UsoPlan> obtenerUsoPlan() async {
+    final response = await _http.get(Uri.parse('$baseUrl/api/plan/uso'), headers: _headersAutenticados);
+    if (response.statusCode == 200) {
+      return UsoPlan.fromJson(jsonDecode(response.body) as Map<String, dynamic>);
+    }
+    throw ApiException(_extraerMensajeError(response.body) ?? 'No se pudo cargar el uso del plan.');
   }
 
   // ---- HU-32: Colaboradores e invitaciones

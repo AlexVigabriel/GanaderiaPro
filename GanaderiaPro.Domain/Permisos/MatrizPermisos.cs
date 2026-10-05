@@ -10,7 +10,9 @@ public enum Modulo
     Corrales,
     Sanidad,
     Colaboradores,
-    Tablero
+    Tablero,
+    // HU-58: plan del rancho y su uso. Solo el propietario.
+    Configuracion
 }
 
 // Ninguno: no entra. Lectura: solo consulta. Escritura: consulta y modifica.
@@ -53,6 +55,7 @@ public static class MatrizPermisos
             [Modulo.Sanidad] = sanidad,
             [Modulo.Colaboradores] = colaboradores,
             [Modulo.Tablero] = L,
+            [Modulo.Configuracion] = colaboradores,
         };
 
     public static NivelAcceso Acceso(RolUsuario rol, Modulo modulo) =>

@@ -58,6 +58,9 @@ public class AnimalRepository : IAnimalRepository
             .ToListAsync();
     }
 
+    public Task<int> ContarActivosAsync(Guid ranchoId) =>
+        _dbContext.Animales.CountAsync(a => a.RanchoId == ranchoId && a.Estado == EstadoAnimal.Activo);
+
     public async Task<bool> TieneEventosAsync(Guid animalId) =>
         await _dbContext.Pesajes.AnyAsync(p => p.AnimalId == animalId) ||
         await _dbContext.Vacunaciones.AnyAsync(v => v.AnimalId == animalId);

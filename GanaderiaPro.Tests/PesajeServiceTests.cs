@@ -4,6 +4,7 @@ using GanaderiaPro.Application.Exceptions;
 using GanaderiaPro.Application.Interfaces;
 using GanaderiaPro.Application.Services;
 using GanaderiaPro.Domain.Entities;
+using GanaderiaPro.Domain.Planes;
 using Moq;
 using Xunit;
 
@@ -168,7 +169,7 @@ public class PesajeServiceTests
         _animalRepoMock.Setup(r => r.TieneEventosAsync(animal.Id)).ReturnsAsync(true);
         var currentUserMock = new Mock<ICurrentUserContext>();
         currentUserMock.Setup(c => c.RanchoId).Returns(RanchoIdDePrueba);
-        var animalService = new AnimalService(_animalRepoMock.Object, currentUserMock.Object, _unitOfWorkMock.Object);
+        var animalService = new AnimalService(_animalRepoMock.Object, currentUserMock.Object, _unitOfWorkMock.Object, SinLimites.Plan());
 
         var ex = await Assert.ThrowsAsync<ReglaDeNegocioException>(() => animalService.EliminarAsync(animal.Id));
 

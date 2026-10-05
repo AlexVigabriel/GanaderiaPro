@@ -8,6 +8,8 @@ abstract final class Modulos {
   static const sanidad = 'Sanidad';
   static const colaboradores = 'Colaboradores';
   static const tablero = 'Tablero';
+  // HU-58: plan del rancho. Solo el propietario.
+  static const configuracion = 'Configuracion';
 }
 
 // Módulo de cada ruta protegida (las que no están, como el tablero, las ve

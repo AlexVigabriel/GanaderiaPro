@@ -1,13 +1,27 @@
 import 'package:flutter/material.dart';
 
+import '../../core/api_client.dart';
+import '../../core/permisos.dart';
+import '../../core/plan.dart';
 import '../../core/sesion_actual.dart';
 import '../../core/widgets/componentes.dart';
+import '../../core/widgets/plan_widgets.dart';
 import 'app_shell.dart';
 
 // Los indicadores del tablero son HU-12/HU-13 (Sprint 3). Mientras tanto,
 // la pantalla da la bienvenida y lleva a los módulos que ya existen.
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  // HU-58: "Tu plan" solo para el propietario (módulo Configuración).
+  final Future<UsoPlan?>? _usoPlan = SesionActual.instancia.puedeVer(Modulos.configuracion)
+      ? ApiClient().obtenerUsoPlan().then<UsoPlan?>((u) => u).catchError((_) => null)
+      : null;
 
   @override
   Widget build(BuildContext context) {
@@ -66,6 +80,24 @@ class HomeScreen extends StatelessWidget {
                 ),
               ),
             ),
+            if (_usoPlan != null) ...[
+              const SizedBox(height: 16),
+              FutureBuilder<UsoPlan?>(
+                future: _usoPlan,
+                builder: (context, snapshot) {
+                  final uso = snapshot.data;
+                  if (uso == null) return const SizedBox.shrink();
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      AvisoLimitePlan(uso: uso, recurso: 'Animales'),
+                      AvisoLimitePlan(uso: uso, recurso: 'Colaboradores'),
+                      TarjetaPlan(uso: uso),
+                    ],
+                  );
+                },
+              ),
+            ],
           ],
         ),
       ),

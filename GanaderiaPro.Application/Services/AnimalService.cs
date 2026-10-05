@@ -4,6 +4,7 @@ using GanaderiaPro.Application.DTOs;
 using GanaderiaPro.Application.Exceptions;
 using GanaderiaPro.Application.Interfaces;
 using GanaderiaPro.Domain.Entities;
+using GanaderiaPro.Domain.Planes;
 
 namespace GanaderiaPro.Application.Services;
 
@@ -23,12 +24,18 @@ public class AnimalService : IAnimalService
     private readonly IAnimalRepository _animalRepository;
     private readonly ICurrentUserContext _currentUser;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IControlLimitesPlan _limitesPlan;
 
-    public AnimalService(IAnimalRepository animalRepository, ICurrentUserContext currentUser, IUnitOfWork unitOfWork)
+    public AnimalService(
+        IAnimalRepository animalRepository,
+        ICurrentUserContext currentUser,
+        IUnitOfWork unitOfWork,
+        IControlLimitesPlan limitesPlan)
     {
         _animalRepository = animalRepository;
         _currentUser = currentUser;
         _unitOfWork = unitOfWork;
+        _limitesPlan = limitesPlan;
     }
 
     public async Task<AnimalResponse> RegistrarAsync(RegistrarAnimalRequest request)
@@ -48,6 +55,9 @@ public class AnimalService : IAnimalService
         {
             throw new ReglaDeNegocioException($"Ya existe un animal con la identificación '{arete}' en este rancho.");
         }
+
+        // RN-11: límite de animales activos del plan.
+        await _limitesPlan.VerificarAsync(RecursoPlan.Animales);
 
         var animal = CrearAnimal(ranchoId, request);
         _animalRepository.Agregar(animal);
@@ -73,6 +83,11 @@ public class AnimalService : IAnimalService
         var ranchoId = _currentUser.RanchoId;
         var registrados = new List<Animal>();
         var rechazados = new List<FilaRechazada>();
+
+        // RN-11: se registran filas hasta completar el límite del plan; las
+        // demás se informan como rechazadas.
+        var lugaresLibres = await _limitesPlan.LugaresLibresAsync(RecursoPlan.Animales);
+        string? motivoLimite = null;
         var aretesDelLote = new HashSet<string>(StringComparer.Ordinal);
 
         for (var i = 0; i < filas.Count; i++)
@@ -90,6 +105,11 @@ public class AnimalService : IAnimalService
             if (error is null && await _animalRepository.ExisteAreteAsync(ranchoId, arete))
             {
                 error = $"Ya existe un animal con la identificación '{arete}' en este rancho.";
+            }
+
+            if (error is null && lugaresLibres is not null && registrados.Count >= lugaresLibres)
+            {
+                error = motivoLimite ??= await _limitesPlan.MensajeLimiteAsync(RecursoPlan.Animales);
             }
 
             if (error is not null)
@@ -223,6 +243,12 @@ public class AnimalService : IAnimalService
     {
         if (request.Estado == EstadoAnimal.Activo)
         {
+            // Volver a Activo un animal dado de baja vuelve a ocupar lugar (RN-11).
+            if (animal.Estado != EstadoAnimal.Activo)
+            {
+                await _limitesPlan.VerificarAsync(RecursoPlan.Animales);
+            }
+
             animal.Estado = EstadoAnimal.Activo;
             animal.FechaBaja = null;
             animal.ObservacionBaja = null;

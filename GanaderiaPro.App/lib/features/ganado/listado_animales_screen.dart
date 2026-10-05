@@ -7,9 +7,11 @@ import '../../core/api_client.dart';
 import '../../core/catalogos.dart';
 import '../../core/formato.dart';
 import '../../core/permisos.dart';
+import '../../core/plan.dart';
 import '../../core/sesion_actual.dart';
 import '../../core/route_observer.dart';
 import '../../core/widgets/componentes.dart';
+import '../../core/widgets/plan_widgets.dart';
 import '../shell/app_shell.dart';
 import 'baja_animal_dialog.dart';
 import 'carga_multiple_dialog.dart';
@@ -36,6 +38,8 @@ class _ListadoAnimalesScreenState extends State<ListadoAnimalesScreen> with Rout
 
   List<Animal>? _animales;
   ResumenAnimales? _resumen;
+  // HU-58: solo el propietario ve el uso del plan.
+  UsoPlan? _usoPlan;
   String? _error;
   bool _cargando = false;
 
@@ -85,6 +89,7 @@ class _ListadoAnimalesScreenState extends State<ListadoAnimalesScreen> with Rout
         _animales = resultados[0] as List<Animal>;
         _resumen = resultados[1] as ResumenAnimales;
       });
+      _cargarUsoPlan();
     } on ApiException catch (e) {
       if (mounted) setState(() => _error = e.mensaje);
     } catch (_) {
@@ -92,6 +97,15 @@ class _ListadoAnimalesScreenState extends State<ListadoAnimalesScreen> with Rout
     } finally {
       if (mounted) setState(() => _cargando = false);
     }
+  }
+
+  // Se actualiza junto con el listado; si falla, simplemente no hay aviso.
+  Future<void> _cargarUsoPlan() async {
+    if (!SesionActual.instancia.puedeVer(Modulos.configuracion)) return;
+    try {
+      final uso = await _api.obtenerUsoPlan();
+      if (mounted) setState(() => _usoPlan = uso);
+    } catch (_) {}
   }
 
   void _buscarConEspera(String _) {
@@ -166,6 +180,7 @@ class _ListadoAnimalesScreenState extends State<ListadoAnimalesScreen> with Rout
               ],
             ),
             const SizedBox(height: 24),
+            AvisoLimitePlan(uso: _usoPlan, recurso: 'Animales'),
             _tarjetasResumen(),
             const SizedBox(height: 24),
             Card(

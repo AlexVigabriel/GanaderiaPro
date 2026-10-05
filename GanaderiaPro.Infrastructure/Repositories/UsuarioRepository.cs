@@ -24,6 +24,14 @@ public class UsuarioRepository : IUsuarioRepository
     public Task<Usuario?> ObtenerDelRanchoAsync(Guid ranchoId, Guid id) =>
         _dbContext.Usuarios.FirstOrDefaultAsync(u => u.RanchoId == ranchoId && u.Id == id);
 
+    // Los Inactivos no cuentan: ya no usan el sistema.
+    public Task<int> ContarQueOcupanLugarAsync(Guid ranchoId, IReadOnlyCollection<RolUsuario> roles)
+    {
+        var lista = roles.ToArray();
+        return _dbContext.Usuarios.CountAsync(u =>
+            u.RanchoId == ranchoId && lista.Contains(u.Rol) && u.Estado != EstadoUsuario.Inactivo);
+    }
+
     public async Task<IReadOnlyList<Usuario>> ListarColaboradoresAsync(Guid ranchoId)
     {
         // Como arreglo, para que EF lo traduzca a "Rol IN (...)".

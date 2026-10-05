@@ -4,6 +4,7 @@ using GanaderiaPro.Application.Exceptions;
 using GanaderiaPro.Application.Interfaces;
 using GanaderiaPro.Application.Services;
 using GanaderiaPro.Domain.Entities;
+using GanaderiaPro.Domain.Planes;
 using Moq;
 using Xunit;
 
@@ -22,7 +23,7 @@ public class AnimalServiceTests
         var currentUserMock = new Mock<ICurrentUserContext>();
         currentUserMock.Setup(c => c.RanchoId).Returns(RanchoIdDePrueba);
         var unitOfWorkMock = new Mock<IUnitOfWork>();
-        return new AnimalService(repoMock.Object, currentUserMock.Object, unitOfWorkMock.Object);
+        return new AnimalService(repoMock.Object, currentUserMock.Object, unitOfWorkMock.Object, SinLimites.Plan());
     }
 
     [Fact]
@@ -298,7 +299,7 @@ public class AnimalServiceTests
         var currentUserMock = new Mock<ICurrentUserContext>();
         currentUserMock.Setup(c => c.RanchoId).Returns(RanchoIdDePrueba);
         var unitOfWorkMock = new Mock<IUnitOfWork>();
-        var service = new AnimalService(repoMock.Object, currentUserMock.Object, unitOfWorkMock.Object);
+        var service = new AnimalService(repoMock.Object, currentUserMock.Object, unitOfWorkMock.Object, SinLimites.Plan());
 
         var manana = FechaRancho.Hoy().AddDays(1);
         var filas = new List<RegistrarAnimalRequest>

@@ -4,7 +4,9 @@ import 'package:flutter/services.dart';
 import '../../core/api_client.dart';
 import '../../core/colaborador.dart';
 import '../../core/formato.dart';
+import '../../core/plan.dart';
 import '../../core/widgets/componentes.dart';
+import '../../core/widgets/plan_widgets.dart';
 import '../shell/app_shell.dart';
 
 // HU-32: colaboradores del rancho. Solo el propietario entra acá.
@@ -18,9 +20,20 @@ class ColaboradoresScreen extends StatefulWidget {
 class _ColaboradoresScreenState extends State<ColaboradoresScreen> {
   final _api = ApiClient();
   late Future<List<Colaborador>> _colaboradores = _api.listarColaboradores();
+  // HU-58: uso del plan para avisar al 90 % del límite de colaboradores.
+  late Future<UsoPlan?> _usoPlan = _cargarUsoPlan();
+
+  Future<UsoPlan?> _cargarUsoPlan() async {
+    try {
+      return await _api.obtenerUsoPlan();
+    } catch (_) {
+      return null;
+    }
+  }
 
   void _recargar() => setState(() {
     _colaboradores = _api.listarColaboradores();
+    _usoPlan = _cargarUsoPlan();
   });
 
   void _avisar(String mensaje) => ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(mensaje)));
@@ -118,6 +131,10 @@ class _ColaboradoresScreenState extends State<ColaboradoresScreen> {
               ],
             ),
             const SizedBox(height: 24),
+            FutureBuilder<UsoPlan?>(
+              future: _usoPlan,
+              builder: (context, snapshot) => AvisoLimitePlan(uso: snapshot.data, recurso: 'Colaboradores'),
+            ),
             Card(
               margin: EdgeInsets.zero,
               clipBehavior: Clip.antiAlias,
