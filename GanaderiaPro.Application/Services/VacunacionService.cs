@@ -12,6 +12,8 @@ public class VacunacionService : IVacunacionService
 {
     private const int MaximoAnimalesPorRegistro = 500;
     private const int CantidadRecientes = 50;
+    // Una misma vacuna aplicada hace menos de estos días pide confirmación.
+    private const int DiasAplicacionReciente = 30;
 
     private readonly IVacunacionRepository _vacunacionRepository;
     private readonly IAnimalRepository _animalRepository;
@@ -33,7 +35,35 @@ public class VacunacionService : IVacunacionService
     public async Task<IReadOnlyList<VacunaResponse>> ListarVacunasAsync() =>
         (await _vacunacionRepository.ListarVacunasAsync()).Select(v => new VacunaResponse(v.Id, v.Nombre)).ToList();
 
+    // Revisa, antes de guardar, si algún animal ya recibió esa vacuna el mismo
+    // día (bloqueo), la tiene programada a futuro o la recibió hace poco (avisos).
+    public async Task<VerificacionVacunacionResponse> VerificarAsync(RegistrarVacunacionRequest request)
+    {
+        var animales = await ValidarPedidoAsync(request);
+        return await VerificarRepetidasAsync(animales, request.VacunaId, request.FechaAplicacion);
+    }
+
     public async Task<IReadOnlyList<VacunacionResponse>> RegistrarAsync(RegistrarVacunacionRequest request)
+    {
+        var animales = await ValidarPedidoAsync(request);
+        var vacuna = (await _vacunacionRepository.ObtenerVacunaAsync(request.VacunaId))!;
+
+        var verificacion = await VerificarRepetidasAsync(animales, vacuna.Id, request.FechaAplicacion);
+        if (verificacion.Bloqueos.Count > 0)
+        {
+            throw new ReglaDeNegocioException(string.Join(" ", verificacion.Bloqueos.Select(b => b.Motivo)));
+        }
+
+        if (verificacion.Avisos.Count > 0 && !request.Confirmado)
+        {
+            throw new ReglaDeNegocioException(
+                "Hay animales con esta vacuna programada o aplicada hace poco. Confirmá antes de registrar.");
+        }
+
+        return await GuardarAsync(animales, vacuna, request);
+    }
+
+    private async Task<List<Animal>> ValidarPedidoAsync(RegistrarVacunacionRequest request)
     {
         var animalIds = request.AnimalIds?.Distinct().ToList() ?? [];
         if (animalIds.Count == 0)
@@ -46,7 +76,7 @@ public class VacunacionService : IVacunacionService
             throw new ReglaDeNegocioException($"Se pueden vacunar hasta {MaximoAnimalesPorRegistro} animales por registro.");
         }
 
-        var vacuna = await ObtenerVacunaAsync(request.VacunaId);
+        await ObtenerVacunaAsync(request.VacunaId);
         var error = ValidarDatos(request.Dosis, request.FechaAplicacion, request.FechaProximaDosis, request.Observacion);
         if (error is not null)
         {
@@ -64,6 +94,60 @@ public class VacunacionService : IVacunacionService
             animales.Add(animal);
         }
 
+        return animales;
+    }
+
+    private async Task<VerificacionVacunacionResponse> VerificarRepetidasAsync(
+        IReadOnlyList<Animal> animales, Guid vacunaId, DateOnly fecha)
+    {
+        var vacuna = await _vacunacionRepository.ObtenerVacunaAsync(vacunaId);
+        var nombre = vacuna?.Nombre ?? "esta vacuna";
+        var previas = await _vacunacionRepository.ListarPorAnimalesYVacunaAsync(animales.Select(a => a.Id).ToList(), vacunaId);
+        var bloqueos = new List<AvisoVacunacion>();
+        var avisos = new List<AvisoVacunacion>();
+
+        foreach (var animal in animales)
+        {
+            var delAnimal = previas.Where(v => v.AnimalId == animal.Id).ToList();
+
+            if (delAnimal.Any(v => v.FechaAplicacion == fecha))
+            {
+                bloqueos.Add(new(animal.Id, animal.Arete, $"{animal.Arete} ya recibió {nombre} el {fecha:dd/MM/yyyy}."));
+                continue;
+            }
+
+            var motivos = new List<string>();
+
+            // La aplicación más reciente anterior a esta fecha: si su próxima
+            // dosis todavía no llegó, esta aplicación la adelanta.
+            var ultima = delAnimal
+                .Where(v => v.FechaAplicacion < fecha)
+                .OrderByDescending(v => v.FechaAplicacion)
+                .FirstOrDefault();
+            if (ultima?.FechaProximaDosis is { } programada && programada > fecha)
+            {
+                motivos.Add($"tiene {nombre} programada para el {programada:dd/MM/yyyy}");
+            }
+
+            if (ultima is not null && fecha.DayNumber - ultima.FechaAplicacion.DayNumber < DiasAplicacionReciente)
+            {
+                var dias = fecha.DayNumber - ultima.FechaAplicacion.DayNumber;
+                var hace = $"hace {dias} {(dias == 1 ? "día" : "días")}";
+                motivos.Add(motivos.Count > 0 ? $"la recibió {hace}" : $"recibió {nombre} {hace}");
+            }
+
+            if (motivos.Count > 0)
+            {
+                avisos.Add(new(animal.Id, animal.Arete, $"{animal.Arete} {string.Join(" y ", motivos)}."));
+            }
+        }
+
+        return new VerificacionVacunacionResponse(bloqueos, avisos);
+    }
+
+    private async Task<IReadOnlyList<VacunacionResponse>> GuardarAsync(
+        IReadOnlyList<Animal> animales, Vacuna vacuna, RegistrarVacunacionRequest request)
+    {
         var vacunaciones = animales.Select(animal => new Vacunacion
         {
             Id = Guid.NewGuid(),
@@ -100,6 +184,14 @@ public class VacunacionService : IVacunacionService
         }
 
         ValidarAnimal(vacunacion.Animal!, request.FechaAplicacion);
+
+        var mismoDia = (await _vacunacionRepository.ListarPorAnimalesYVacunaAsync([vacunacion.AnimalId], vacuna.Id))
+            .Any(v => v.Id != vacunacion.Id && v.FechaAplicacion == request.FechaAplicacion);
+        if (mismoDia)
+        {
+            throw new ReglaDeNegocioException(
+                $"{vacunacion.Animal!.Arete} ya recibió {vacuna.Nombre} el {request.FechaAplicacion:dd/MM/yyyy}.");
+        }
 
         vacunacion.VacunaId = vacuna.Id;
         vacunacion.Vacuna = vacuna;

@@ -238,12 +238,25 @@ class ApiClient {
     throw ApiException(_extraerMensajeError(response.body) ?? 'No se pudieron cargar las vacunaciones.');
   }
 
-  // Una misma aplicación para uno o varios animales.
-  Future<int> registrarVacunacion(List<String> animalIds, DatosVacunacion datos) async {
+  Future<VerificacionVacunacion> verificarVacunacion(List<String> animalIds, DatosVacunacion datos) async {
+    final response = await _http.post(
+      Uri.parse('$baseUrl/api/vacunaciones/verificar'),
+      headers: _headersAutenticados,
+      body: jsonEncode({'animalIds': animalIds, ...datos.toJson()}),
+    );
+    if (response.statusCode == 200) {
+      return VerificacionVacunacion.fromJson(jsonDecode(response.body) as Map<String, dynamic>);
+    }
+    throw ApiException(_extraerMensajeError(response.body) ?? 'No se pudo revisar la vacunación.');
+  }
+
+  // Una misma aplicación para uno o varios animales. [confirmado]: el usuario
+  // ya vio los avisos de vacunas programadas o recientes.
+  Future<int> registrarVacunacion(List<String> animalIds, DatosVacunacion datos, {bool confirmado = false}) async {
     final response = await _http.post(
       Uri.parse('$baseUrl/api/vacunaciones'),
       headers: _headersAutenticados,
-      body: jsonEncode({'animalIds': animalIds, ...datos.toJson()}),
+      body: jsonEncode({'animalIds': animalIds, ...datos.toJson(), 'confirmado': confirmado}),
     );
     if (response.statusCode == 200) return (jsonDecode(response.body) as List<dynamic>).length;
     throw ApiException(_extraerMensajeError(response.body) ?? 'No se pudo registrar la vacunación.');

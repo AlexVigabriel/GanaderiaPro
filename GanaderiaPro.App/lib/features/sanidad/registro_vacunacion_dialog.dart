@@ -122,7 +122,29 @@ class _RegistroVacunacionState extends State<_RegistroVacunacion> {
         await _api.editarVacunacion(widget.editar!.id, datos);
         if (mounted) Navigator.of(context).pop(1);
       } else {
-        final cantidad = await _api.registrarVacunacion([for (final a in _elegidos) a.id], datos);
+        var ids = [for (final a in _elegidos) a.id];
+        var confirmado = false;
+
+        // Antes de guardar: ¿alguno ya la recibió hoy, la tiene programada o
+        // la recibió hace poco?
+        final verificacion = await _api.verificarVacunacion(ids, datos);
+        if (!verificacion.vacia) {
+          if (!mounted) return;
+          // Sin el indicador de carga mientras el usuario decide.
+          setState(() => _guardando = false);
+          final decision = await _mostrarAvisos(verificacion, ids.length);
+          if (decision == null || decision == _Decision.revisar || !mounted) return;
+          setState(() => _guardando = true);
+          final excluir = {
+            for (final b in verificacion.bloqueos) b.animalId,
+            if (decision == _Decision.omitir)
+              for (final a in verificacion.avisos) a.animalId,
+          };
+          ids = ids.where((id) => !excluir.contains(id)).toList();
+          confirmado = decision == _Decision.vacunarIgual;
+        }
+
+        final cantidad = await _api.registrarVacunacion(ids, datos, confirmado: confirmado);
         if (mounted) Navigator.of(context).pop(cantidad);
       }
     } on ApiException catch (e) {
@@ -302,12 +324,81 @@ class _RegistroVacunacionState extends State<_RegistroVacunacion> {
     );
   }
 
+  // Muestra en un solo cuadro los animales bloqueados y los que conviene
+  // revisar, con las opciones posibles según cuántos quedarían.
+  Future<_Decision?> _mostrarAvisos(VerificacionVacunacion v, int total) {
+    final tema = Theme.of(context);
+    final listados = v.bloqueos.length + v.avisos.length;
+    final quedanSinListados = total - listados;
+    final quedanVacunandoIgual = total - v.bloqueos.length;
+
+    Widget seccion(String titulo, List<AvisoVacunacion> avisos, Color color, IconData icono) => Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(titulo, style: tema.textTheme.titleSmall?.copyWith(color: color)),
+        const SizedBox(height: 6),
+        for (final a in avisos)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 6),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(icono, size: 18, color: color),
+                const SizedBox(width: 8),
+                Expanded(child: Text(a.motivo)),
+              ],
+            ),
+          ),
+      ],
+    );
+
+    return showDialog<_Decision>(
+      context: context,
+      builder: (context) => AlertDialog(
+        icon: Icon(Icons.warning_amber_rounded, color: tema.colorScheme.tertiary, size: 32),
+        title: const Text('Revisá antes de vacunar'),
+        content: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 460, maxHeight: 360),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (v.bloqueos.isNotEmpty) ...[
+                  seccion('No se pueden vacunar', v.bloqueos, tema.colorScheme.error, Icons.block),
+                  const SizedBox(height: 8),
+                ],
+                if (v.avisos.isNotEmpty)
+                  seccion('Ya tienen esta vacuna', v.avisos, tema.colorScheme.tertiary, Icons.event_repeat),
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(context).pop(_Decision.revisar), child: const Text('Revisar')),
+          if (quedanSinListados > 0)
+            OutlinedButton(
+              onPressed: () => Navigator.of(context).pop(_Decision.omitir),
+              child: Text('Omitir esos animales ($quedanSinListados)'),
+            ),
+          if (v.avisos.isNotEmpty && quedanVacunandoIgual > 0)
+            FilledButton(
+              onPressed: () => Navigator.of(context).pop(_Decision.vacunarIgual),
+              child: Text(quedanVacunandoIgual == 1 ? 'Vacunar igual' : 'Vacunar igual ($quedanVacunandoIgual)'),
+            ),
+        ],
+      ),
+    );
+  }
+
   String get _textoBoton {
     if (_editando) return 'Guardar cambios';
     if (_animalFijo || _elegidos.length <= 1) return 'Registrar vacunación';
     return 'Vacunar ${_elegidos.length} animales';
   }
 }
+
+enum _Decision { revisar, omitir, vacunarIgual }
 
 String _textoAnimal(Animal animal) => animal.nombre == null ? animal.arete : '${animal.arete} · ${animal.nombre}';
 

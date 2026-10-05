@@ -31,6 +31,11 @@ public class VacunacionesController : ControllerBase
     public Task<ActionResult> ListarPorAnimal(Guid animalId) =>
         Responder(async () => Ok(await _vacunacionService.ListarPorAnimalAsync(animalId)));
 
+    // Revisa repetidas antes de registrar (bloqueos y avisos a confirmar).
+    [HttpPost("vacunaciones/verificar")]
+    public Task<ActionResult> Verificar(RegistrarVacunacionRequest request) =>
+        Responder(async () => Ok(await _vacunacionService.VerificarAsync(request)));
+
     [HttpPost("vacunaciones")]
     public Task<ActionResult> Registrar(RegistrarVacunacionRequest request) =>
         Responder(async () => Ok(await _vacunacionService.RegistrarAsync(request)));

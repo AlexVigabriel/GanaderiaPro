@@ -45,5 +45,10 @@ public class VacunacionRepository : IVacunacionRepository
     public async Task<IReadOnlyList<Vacuna>> ListarVacunasAsync() =>
         await _dbContext.Vacunas.OrderBy(v => v.Nombre).ToListAsync();
 
+    public async Task<IReadOnlyList<Vacunacion>> ListarPorAnimalesYVacunaAsync(IReadOnlyList<Guid> animalIds, Guid vacunaId) =>
+        await _dbContext.Vacunaciones
+            .Where(v => v.VacunaId == vacunaId && animalIds.Contains(v.AnimalId))
+            .ToListAsync();
+
     public Task<Vacuna?> ObtenerVacunaAsync(Guid id) => _dbContext.Vacunas.FirstOrDefaultAsync(v => v.Id == id);
 }

@@ -11,4 +11,5 @@ public interface IVacunacionRepository
     Task<IReadOnlyList<Vacunacion>> ListarRecientesAsync(Guid ranchoId, int cantidad);
     Task<IReadOnlyList<Vacuna>> ListarVacunasAsync();
     Task<Vacuna?> ObtenerVacunaAsync(Guid id);
+    Task<IReadOnlyList<Vacunacion>> ListarPorAnimalesYVacunaAsync(IReadOnlyList<Guid> animalIds, Guid vacunaId);
 }

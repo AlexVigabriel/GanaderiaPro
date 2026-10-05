@@ -5,6 +5,7 @@ namespace GanaderiaPro.Application.Interfaces;
 public interface IVacunacionService
 {
     Task<IReadOnlyList<VacunaResponse>> ListarVacunasAsync();
+    Task<VerificacionVacunacionResponse> VerificarAsync(RegistrarVacunacionRequest request);
     Task<IReadOnlyList<VacunacionResponse>> RegistrarAsync(RegistrarVacunacionRequest request);
     Task<VacunacionResponse> EditarAsync(Guid id, EditarVacunacionRequest request);
     Task EliminarAsync(Guid id);

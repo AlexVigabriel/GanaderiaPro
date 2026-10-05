@@ -24,6 +24,10 @@ public class VacunacionServiceTests
     public VacunacionServiceTests()
     {
         _vacunacionRepoMock.Setup(r => r.ObtenerVacunaAsync(Aftosa.Id)).ReturnsAsync(Aftosa);
+        // Por defecto, sin vacunaciones previas.
+        _vacunacionRepoMock
+            .Setup(r => r.ListarPorAnimalesYVacunaAsync(It.IsAny<IReadOnlyList<Guid>>(), It.IsAny<Guid>()))
+            .ReturnsAsync(new List<Vacunacion>());
     }
 
     private VacunacionService CrearServicio()
@@ -169,5 +173,80 @@ public class VacunacionServiceTests
 
         await Assert.ThrowsAsync<ReglaDeNegocioException>(() => service.EliminarAsync(vacunacion.Id));
         _vacunacionRepoMock.Verify(r => r.Eliminar(It.IsAny<Vacunacion>()), Times.Never);
+    }
+
+    private void HistorialDe(params Vacunacion[] previas) =>
+        _vacunacionRepoMock
+            .Setup(r => r.ListarPorAnimalesYVacunaAsync(It.IsAny<IReadOnlyList<Guid>>(), Aftosa.Id))
+            .ReturnsAsync(previas.ToList());
+
+    private static Vacunacion Previa(Animal animal, DateOnly aplicacion, DateOnly? proxima = null) =>
+        new() { Id = Guid.NewGuid(), AnimalId = animal.Id, VacunaId = Aftosa.Id, FechaAplicacion = aplicacion, FechaProximaDosis = proxima };
+
+    [Fact]
+    public async Task Verificar_LaMismaVacunaElMismoDia_EsUnBloqueo()
+    {
+        var animal = AnimalDelRancho("R-01");
+        HistorialDe(Previa(animal, Hoy));
+        var service = CrearServicio();
+
+        var resultado = await service.VerificarAsync(Pedido([animal]));
+
+        Assert.Single(resultado.Bloqueos);
+        Assert.Contains("ya recibió", resultado.Bloqueos[0].Motivo);
+        await Assert.ThrowsAsync<ReglaDeNegocioException>(() => service.RegistrarAsync(Pedido([animal]) with { Confirmado = true }));
+    }
+
+    [Fact]
+    public async Task Verificar_ConDosisProgramadaAFuturo_AvisaLaFecha()
+    {
+        var animal = AnimalDelRancho("R-02");
+        HistorialDe(Previa(animal, Hoy.AddMonths(-5), proxima: Hoy.AddMonths(1)));
+        var service = CrearServicio();
+
+        var resultado = await service.VerificarAsync(Pedido([animal]));
+
+        Assert.Empty(resultado.Bloqueos);
+        Assert.Contains("programada", Assert.Single(resultado.Avisos).Motivo);
+    }
+
+    [Fact]
+    public async Task Verificar_AplicadaHaceMenosDe30Dias_AvisaLosDias()
+    {
+        var animal = AnimalDelRancho("R-03");
+        HistorialDe(Previa(animal, Hoy.AddDays(-15)));
+        var service = CrearServicio();
+
+        var resultado = await service.VerificarAsync(Pedido([animal]));
+
+        Assert.Contains("hace 15 días", Assert.Single(resultado.Avisos).Motivo);
+    }
+
+    [Fact]
+    public async Task Verificar_AplicadaHaceMasDe30DiasYSinPendiente_NoAvisa()
+    {
+        var animal = AnimalDelRancho("R-04");
+        HistorialDe(Previa(animal, Hoy.AddDays(-40), proxima: Hoy.AddDays(-5)));
+        var service = CrearServicio();
+
+        var resultado = await service.VerificarAsync(Pedido([animal]));
+
+        Assert.Empty(resultado.Bloqueos);
+        Assert.Empty(resultado.Avisos);
+    }
+
+    [Fact]
+    public async Task Registrar_ConAvisosSinConfirmar_NoRegistraYConConfirmacionSi()
+    {
+        var animal = AnimalDelRancho("R-05");
+        HistorialDe(Previa(animal, Hoy.AddDays(-10)));
+        var service = CrearServicio();
+
+        await Assert.ThrowsAsync<ReglaDeNegocioException>(() => service.RegistrarAsync(Pedido([animal])));
+        _vacunacionRepoMock.Verify(r => r.Agregar(It.IsAny<Vacunacion>()), Times.Never);
+
+        var resultado = await service.RegistrarAsync(Pedido([animal]) with { Confirmado = true });
+
+        Assert.Single(resultado);
     }
 }

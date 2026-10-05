@@ -10,7 +10,17 @@ public record RegistrarVacunacionRequest(
     string Dosis,
     DateOnly FechaAplicacion,
     DateOnly? FechaProximaDosis = null,
-    string? Observacion = null);
+    string? Observacion = null,
+    // true cuando el usuario ya vio los avisos (vacuna programada o reciente)
+    // y decidió vacunar igual.
+    bool Confirmado = false);
+
+// Un animal que no se puede vacunar (bloqueo) o que conviene revisar (aviso).
+public record AvisoVacunacion(Guid AnimalId, string Arete, string Motivo);
+
+public record VerificacionVacunacionResponse(
+    IReadOnlyList<AvisoVacunacion> Bloqueos,
+    IReadOnlyList<AvisoVacunacion> Avisos);
 
 public record EditarVacunacionRequest(
     Guid VacunaId,

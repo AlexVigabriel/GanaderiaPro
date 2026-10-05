@@ -56,6 +56,34 @@ class Vacunacion {
   }
 }
 
+// Resultado de revisar repetidas antes de vacunar: bloqueos (la misma
+// vacuna el mismo día) y avisos para confirmar (programada o reciente).
+class AvisoVacunacion {
+  const AvisoVacunacion({required this.animalId, required this.motivo});
+
+  final String animalId;
+  final String motivo;
+
+  factory AvisoVacunacion.fromJson(Map<String, dynamic> json) =>
+      AvisoVacunacion(animalId: json['animalId'] as String, motivo: json['motivo'] as String);
+}
+
+class VerificacionVacunacion {
+  const VerificacionVacunacion({required this.bloqueos, required this.avisos});
+
+  final List<AvisoVacunacion> bloqueos;
+  final List<AvisoVacunacion> avisos;
+
+  bool get vacia => bloqueos.isEmpty && avisos.isEmpty;
+
+  factory VerificacionVacunacion.fromJson(Map<String, dynamic> json) {
+    List<AvisoVacunacion> leer(String clave) => (json[clave] as List<dynamic>)
+        .map((a) => AvisoVacunacion.fromJson(a as Map<String, dynamic>))
+        .toList();
+    return VerificacionVacunacion(bloqueos: leer('bloqueos'), avisos: leer('avisos'));
+  }
+}
+
 // Datos de una vacunación tal como se envían al registrarla o editarla.
 class DatosVacunacion {
   const DatosVacunacion({
