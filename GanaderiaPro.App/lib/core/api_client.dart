@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 
 import 'animal.dart';
 import 'cerrar_sesion.dart';
+import 'corral.dart';
 import 'sanidad.dart';
 import 'sesion_actual.dart';
 
@@ -214,6 +215,55 @@ class ApiClient {
     if (response.statusCode != 200) {
       throw ApiException(_extraerMensajeError(response.body) ?? 'No se pudo eliminar el pesaje.');
     }
+  }
+
+  // ---- HU-23 / HU-24: Corrales
+  Future<List<Corral>> listarCorrales({bool incluirInactivos = false}) async {
+    final uri = Uri.parse('$baseUrl/api/corrales').replace(
+      queryParameters: incluirInactivos ? {'incluirInactivos': 'true'} : null,
+    );
+    final response = await _http.get(uri, headers: _headersAutenticados);
+    if (response.statusCode == 200) {
+      return (jsonDecode(response.body) as List<dynamic>)
+          .map((json) => Corral.fromJson(json as Map<String, dynamic>))
+          .toList();
+    }
+    throw ApiException('No se pudieron cargar los corrales.');
+  }
+
+  Future<Corral> crearCorral({required String nombre, required int capacidad, List<String> animalIds = const []}) =>
+      _enviarCorral(
+        _http.post(
+          Uri.parse('$baseUrl/api/corrales'),
+          headers: _headersAutenticados,
+          body: jsonEncode({'nombre': nombre, 'capacidad': capacidad, 'animalIds': animalIds}),
+        ),
+        'No se pudo crear el corral.',
+      );
+
+  Future<Corral> editarCorral(String id, {required String nombre, required int capacidad}) => _enviarCorral(
+    _http.put(
+      Uri.parse('$baseUrl/api/corrales/$id'),
+      headers: _headersAutenticados,
+      body: jsonEncode({'nombre': nombre, 'capacidad': capacidad}),
+    ),
+    'No se pudo editar el corral.',
+  );
+
+  Future<Corral> cambiarEstadoCorral(String id, {required bool activo}) => _enviarCorral(
+    _http.post(
+      Uri.parse('$baseUrl/api/corrales/$id/${activo ? 'activar' : 'desactivar'}'),
+      headers: _headersAutenticados,
+    ),
+    'No se pudo cambiar el estado del corral.',
+  );
+
+  Future<Corral> _enviarCorral(Future<http.Response> pedido, String mensajeError) async {
+    final response = await pedido;
+    if (response.statusCode == 200) {
+      return Corral.fromJson(jsonDecode(response.body) as Map<String, dynamic>);
+    }
+    throw ApiException(_extraerMensajeError(response.body) ?? mensajeError);
   }
 
   // ---- HU-26: Sanidad

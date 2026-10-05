@@ -430,5 +430,7 @@ public class AnimalService : IAnimalService
             animal.FechaBaja,
             animal.ObservacionBaja,
             animal.CausaMuerte,
-            animal.DetalleCausaMuerte);
+            animal.DetalleCausaMuerte,
+            animal.CorralId,
+            animal.Corral?.Nombre);
 }

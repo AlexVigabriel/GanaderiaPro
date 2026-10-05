@@ -20,6 +20,8 @@ class Animal {
     this.observacionBaja,
     this.causaMuerte,
     this.detalleCausaMuerte,
+    this.corralId,
+    this.corral,
   });
 
   final String id;
@@ -42,6 +44,9 @@ class Animal {
   final String? observacionBaja;
   final String? causaMuerte;
   final String? detalleCausaMuerte;
+  // HU-23: corral donde está (null si no está en ninguno).
+  final String? corralId;
+  final String? corral;
 
   // Texto de la causa para mostrar: el detalle escrito si fue "Otra".
   String? get textoCausaMuerte =>
@@ -71,6 +76,8 @@ class Animal {
       observacionBaja: json['observacionBaja'] as String?,
       causaMuerte: json['causaMuerte'] as String?,
       detalleCausaMuerte: json['detalleCausaMuerte'] as String?,
+      corralId: json['corralId'] as String?,
+      corral: json['corral'] as String?,
     );
   }
 }

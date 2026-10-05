@@ -198,6 +198,7 @@ class _FichaAnimalScreenState extends State<FichaAnimalScreen> {
                             ('Sexo', animal.sexo),
                             if (animal.sexo == 'Macho') ('Castrado', animal.castrado ? 'Sí' : 'No'),
                             ('Raza', animal.raza),
+                            ('Corral', animal.corral ?? 'Sin corral'),
                             ('Color', animal.color ?? '—'),
                             (
                               'Fecha de nacimiento',
