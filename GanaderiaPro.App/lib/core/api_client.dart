@@ -7,6 +7,7 @@ import 'cerrar_sesion.dart';
 import 'colaborador.dart';
 import 'conexion.dart';
 import 'corral.dart';
+import 'pendientes.dart';
 import 'plan.dart';
 import 'sanidad.dart';
 import 'sesion_actual.dart';
@@ -87,6 +88,8 @@ class ApiClient {
       rol: data['rol'] as String? ?? 'Propietario',
       permisos: (data['permisos'] as Map<String, dynamic>?)?.map((modulo, nivel) => MapEntry(modulo, nivel as String)),
     );
+    // HU-45.1: los pendientes que este dispositivo guardó para el rancho.
+    await RegistrosPendientes.instancia.cargar();
   }
 
   // HU-66: carga múltiple. Las filas rechazadas vuelven con su número

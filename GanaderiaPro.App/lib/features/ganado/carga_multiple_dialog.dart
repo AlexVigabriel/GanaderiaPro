@@ -5,14 +5,20 @@ import 'package:flutter/material.dart';
 import '../../core/animal.dart';
 import '../../core/api_client.dart';
 import '../../core/catalogos.dart';
+import '../../core/conexion.dart';
+import '../../core/pendientes.dart';
 import '../../core/validaciones_animal.dart';
 import '../../core/widgets/componentes.dart';
 
-// HU-66: abre la carga múltiple de animales. Devuelve cuántos animales se
-// registraron, o null si no se registró ninguno.
-Future<int?> abrirCargaMultiple(BuildContext context) {
+// Cuántos animales llegaron al servidor y cuántos quedaron guardados en el
+// dispositivo por falta de conexión (HU-45.1).
+typedef AltaAnimales = ({int registrados, int sinConexion});
+
+// HU-66: abre la carga múltiple de animales. Devuelve null si no se
+// registró ni guardó ninguno.
+Future<AltaAnimales?> abrirCargaMultiple(BuildContext context) {
   final angosto = MediaQuery.sizeOf(context).width < 720;
-  return showDialog<int>(
+  return showDialog<AltaAnimales>(
     context: context,
     barrierDismissible: false,
     builder: (_) => angosto
@@ -100,6 +106,7 @@ class _CargaMultipleAnimalesState extends State<CargaMultipleAnimales> {
   String? _aviso;
   bool _enviando = false;
   int _registradosTotal = 0;
+  int _sinConexionTotal = 0;
 
   @override
   void dispose() {
@@ -111,7 +118,9 @@ class _CargaMultipleAnimalesState extends State<CargaMultipleAnimales> {
 
   int get _aCargar => _filas.where((f) => !f.vacia).length;
 
-  void _cerrar() => Navigator.of(context).pop(_registradosTotal > 0 ? _registradosTotal : null);
+  void _cerrar() => Navigator.of(context).pop(
+    _registradosTotal + _sinConexionTotal > 0 ? (registrados: _registradosTotal, sinConexion: _sinConexionTotal) : null,
+  );
 
   void _agregarFila() => setState(
     () => _filas.add(_FilaCarga(sexo: _sexoDefecto, raza: _razaDefecto, nacimiento: _nacimientoDefecto)),
@@ -172,6 +181,11 @@ class _CargaMultipleAnimalesState extends State<CargaMultipleAnimales> {
       if (!errores.containsKey('arete') && (aretes[normalizarIdentificacion(fila.arete.text)] ?? 0) > 1) {
         errores['arete'] = 'Repetido en la tabla';
       }
+      // RN-01: tampoco puede repetir uno que espera sincronizarse.
+      if (!errores.containsKey('arete') &&
+          RegistrosPendientes.instancia.contieneArete(normalizarIdentificacion(fila.arete.text))) {
+        errores['arete'] = 'Ya está pendiente de sincronizar';
+      }
       // Si el error está en un campo del detalle, se abre para que se vea.
       if (errores.containsKey('peso') || errores.containsKey('observaciones')) fila.detalleAbierto = true;
 
@@ -192,6 +206,12 @@ class _CargaMultipleAnimalesState extends State<CargaMultipleAnimales> {
 
     final enviadas = _filas.where((f) => !f.vacia).toList();
     setState(() => _enviando = true);
+
+    // HU-45.1: sin conexión, el alta se guarda en el dispositivo.
+    if (!EstadoConexion.instancia.enLinea) {
+      await _guardarSinConexion(enviadas);
+      return;
+    }
 
     try {
       final resultado = await _api.registrarLote(enviadas.map((f) => f.aDatos()).toList());
@@ -226,9 +246,25 @@ class _CargaMultipleAnimalesState extends State<CargaMultipleAnimales> {
     } on ApiException catch (e) {
       if (mounted) setState(() => _resumenErrores = [e.mensaje]);
     } catch (_) {
-      if (mounted) setState(() => _resumenErrores = ['No se pudo conectar con el servidor.']);
+      // Se cortó la conexión justo al enviar.
+      if (mounted) await _guardarSinConexion(enviadas);
     } finally {
       if (mounted) setState(() => _enviando = false);
+    }
+  }
+
+  Future<void> _guardarSinConexion(List<_FilaCarga> filas) async {
+    try {
+      await RegistrosPendientes.instancia.guardar(filas.map((f) => f.aDatos()).toList());
+      _sinConexionTotal += filas.length;
+      if (mounted) _cerrar();
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _resumenErrores = ['No hay conexión y no se pudo guardar en este dispositivo.'];
+          _enviando = false;
+        });
+      }
     }
   }
 
@@ -270,6 +306,17 @@ class _CargaMultipleAnimalesState extends State<CargaMultipleAnimales> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  // HU-45.1: avisa antes de cargar que se guardará en el dispositivo.
+                  ListenableBuilder(
+                    listenable: EstadoConexion.instancia,
+                    builder: (context, _) => EstadoConexion.instancia.enLinea
+                        ? const SizedBox.shrink()
+                        : const _Mensaje(
+                            texto:
+                                'Sin conexión: los animales se guardarán en este dispositivo y se enviarán al volver la conexión.',
+                            tipo: _TipoMensaje.sinConexion,
+                          ),
+                  ),
                   _valoresPorDefecto(tema),
                   const SizedBox(height: 16),
                   if (_aviso != null) _Mensaje(texto: _aviso!, tipo: _TipoMensaje.exito),
@@ -671,7 +718,7 @@ class _FilaWidget extends StatelessWidget {
   );
 }
 
-enum _TipoMensaje { exito, error }
+enum _TipoMensaje { exito, error, sinConexion }
 
 class _Mensaje extends StatelessWidget {
   const _Mensaje({this.texto, this.textos = const [], required this.tipo});
@@ -686,7 +733,11 @@ class _Mensaje extends StatelessWidget {
   Widget build(BuildContext context) {
     final tema = Theme.of(context);
     final error = tipo == _TipoMensaje.error;
-    final color = error ? tema.colorScheme.error : tema.colorScheme.primary;
+    final color = switch (tipo) {
+      _TipoMensaje.error => tema.colorScheme.error,
+      _TipoMensaje.sinConexion => const Color(0xFFB7791F),
+      _TipoMensaje.exito => tema.colorScheme.primary,
+    };
     final lineas = texto != null ? [texto!] : textos;
     final visibles = lineas.take(_maximoVisibles).toList();
 
@@ -701,7 +752,15 @@ class _Mensaje extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(error ? Icons.error_outline : Icons.check_circle_outline, color: color, size: 20),
+          Icon(
+            switch (tipo) {
+              _TipoMensaje.error => Icons.error_outline,
+              _TipoMensaje.sinConexion => Icons.cloud_off_rounded,
+              _TipoMensaje.exito => Icons.check_circle_outline,
+            },
+            color: color,
+            size: 20,
+          ),
           const SizedBox(width: 10),
           Expanded(
             child: Column(

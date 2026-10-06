@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
 import 'conexion.dart';
+import 'pendientes.dart';
 import 'sesion_actual.dart';
 
 // Navegador principal de la app: permite volver al login desde cualquier
@@ -12,6 +13,8 @@ final navegadorRaiz = GlobalKey<NavigatorState>();
 // pantallas, para que "Atrás" no muestre ninguna pantalla protegida.
 void irAlLoginSinSesion({String? mensaje}) {
   SesionActual.instancia.cerrar();
+  // Los pendientes quedan guardados, pero sin sesión no se cuentan.
+  RegistrosPendientes.instancia.cargar();
   navegadorRaiz.currentState?.pushNamedAndRemoveUntil('/login', (route) => false, arguments: mensaje);
 }
 
