@@ -20,6 +20,11 @@ public class AnimalConfiguration : IEntityTypeConfiguration<Animal>
         builder.HasIndex(a => new { a.RanchoId, a.Arete })
             .IsUnique();
 
+        // HU-47: un mismo registro del dispositivo no se crea dos veces.
+        builder.HasIndex(a => new { a.RanchoId, a.IdCliente })
+            .IsUnique()
+            .HasFilter("\"IdCliente\" IS NOT NULL");
+
         builder.Property(a => a.Raza)
             .IsRequired()
             .HasMaxLength(100);

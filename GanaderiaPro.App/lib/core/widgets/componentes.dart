@@ -198,6 +198,45 @@ class EtiquetaPendiente extends StatelessWidget {
   }
 }
 
+// HU-47: el servidor rechazó un registro hecho sin conexión; el motivo se
+// ve al pasar el mouse.
+class EtiquetaConflicto extends StatelessWidget {
+  const EtiquetaConflicto({super.key, required this.motivo});
+
+  final String motivo;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = Theme.of(context).colorScheme.error;
+    return Tooltip(
+      message: motivo,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.10),
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(color: color.withValues(alpha: 0.35)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.sync_problem_rounded, size: 14, color: color),
+            const SizedBox(width: 6),
+            Flexible(
+              child: Text(
+                'Conflicto',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.labelMedium?.copyWith(color: color, fontWeight: FontWeight.w600),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 // HU-54: calavera para registrar la baja de un animal. Material no trae
 // este ícono, así que se dibuja con trazos en una grilla de 24 x 24.
 class IconoCalavera extends StatelessWidget {

@@ -11,6 +11,7 @@ import '../../core/formato.dart';
 import '../../core/pendientes.dart';
 import '../../core/permisos.dart';
 import '../../core/plan.dart';
+import '../../core/validaciones_animal.dart';
 import '../../core/sesion_actual.dart';
 import '../../core/route_observer.dart';
 import '../../core/widgets/componentes.dart';
@@ -55,9 +56,77 @@ class _ListadoAnimalesScreenState extends State<ListadoAnimalesScreen> with Rout
     _cargar();
   }
 
+  int _cantidadPendientes = RegistrosPendientes.instancia.animales.length;
+
   void _refrescar() {
-    if (mounted) setState(() {});
+    if (!mounted) return;
+    // HU-47: si bajó la cantidad, algunos llegaron al servidor: se recarga.
+    final cantidad = RegistrosPendientes.instancia.animales.length;
+    final sincronizados = cantidad < _cantidadPendientes;
+    _cantidadPendientes = cantidad;
+    setState(() {});
+    if (sincronizados && _enLinea) _cargar();
   }
+
+  // HU-47: corregir la identificación de un registro en conflicto y reenviarlo.
+  Future<void> _corregir(AnimalPendiente p) async {
+    final nueva = await showDialog<String>(context: context, builder: (_) => _CorregirConflicto(pendiente: p));
+    if (nueva == null || !mounted) return;
+    final d = p.datos;
+    await RegistrosPendientes.instancia.corregir(
+      p,
+      DatosAnimal(
+        arete: nueva,
+        sexo: d.sexo,
+        raza: d.raza,
+        nombre: d.nombre,
+        fechaNacimiento: d.fechaNacimiento,
+        pesoNacimiento: d.pesoNacimiento,
+        peso: d.peso,
+        color: d.color,
+        observaciones: d.observaciones,
+        castrado: d.castrado,
+      ),
+    );
+    if (mounted) _avisar(_enLinea ? 'Se reenvía $nueva.' : '$nueva se enviará al volver la conexión.');
+  }
+
+  Future<void> _descartar(AnimalPendiente p) async {
+    final confirmado = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('¿Descartar ${p.datos.arete}?'),
+        content: const Text('Se borra de este dispositivo y no se envía al servidor. No se puede deshacer.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Cancelar')),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Theme.of(context).colorScheme.error),
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Descartar'),
+          ),
+        ],
+      ),
+    );
+    if (confirmado != true || !mounted) return;
+    await RegistrosPendientes.instancia.descartar(p);
+    if (mounted) _avisar('${p.datos.arete} descartado.');
+  }
+
+  Widget _accionesConflicto(AnimalPendiente p) => !_puedeEditar
+      ? const SizedBox.shrink()
+      : Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            BotonAccion(icono: Icons.edit_outlined, tooltip: 'Corregir y reenviar', onPressed: () => _corregir(p)),
+            const SizedBox(width: 8),
+            BotonAccion(
+              icono: Icons.delete_outline,
+              tooltip: 'Descartar',
+              peligro: true,
+              onPressed: () => _descartar(p),
+            ),
+          ],
+        );
 
   // Al volver la conexión se recarga el listado del servidor.
   void _cambioConexion() {
@@ -484,22 +553,31 @@ class _ListadoAnimalesScreenState extends State<ListadoAnimalesScreen> with Rout
                   child: Text(p.datos.fechaNacimiento == null ? '—' : formatearFecha(p.datos.fechaNacimiento!)),
                 ),
                 Expanded(flex: 2, child: Text(formatearPeso(p.datos.peso))),
-                // La etiqueta ocupa también el lugar de las acciones, que
-                // un pendiente no tiene.
-                const Expanded(
-                  flex: 2,
-                  child: Stack(
-                    clipBehavior: Clip.none,
-                    children: [
-                      SizedBox(height: 24),
-                      Positioned(left: 0, top: 0, child: EtiquetaPendiente()),
-                    ],
+                if (p.enConflicto) ...[
+                  Expanded(
+                    flex: 2,
+                    child: Align(alignment: Alignment.centerLeft, child: EtiquetaConflicto(motivo: p.motivo ?? '')),
                   ),
-                ),
-                const SizedBox(width: 128),
+                  SizedBox(width: 128, child: _accionesConflicto(p)),
+                ] else ...[
+                  // La etiqueta ocupa también el lugar de las acciones, que
+                  // un pendiente no tiene.
+                  const Expanded(
+                    flex: 2,
+                    child: Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        SizedBox(height: 24),
+                        Positioned(left: 0, top: 0, child: EtiquetaPendiente()),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 128),
+                ],
               ],
             ),
           ),
+          if (p.enConflicto) _MotivoConflicto(motivo: p.motivo ?? ''),
           const Divider(height: 1),
         ],
         for (final animal in animales) ...[
@@ -557,10 +635,20 @@ class _ListadoAnimalesScreenState extends State<ListadoAnimalesScreen> with Rout
                 style: tema.textTheme.bodySmall?.copyWith(color: tema.colorScheme.onSurfaceVariant),
               ),
               const SizedBox(height: 8),
-              const EtiquetaPendiente(),
+              if (p.enConflicto)
+                Row(
+                  children: [
+                    EtiquetaConflicto(motivo: p.motivo ?? ''),
+                    const Spacer(),
+                    _accionesConflicto(p),
+                  ],
+                )
+              else
+                const EtiquetaPendiente(),
             ],
           ),
         ),
+        if (p.enConflicto) _MotivoConflicto(motivo: p.motivo ?? ''),
         const Divider(height: 1),
       ],
     );
@@ -641,6 +729,97 @@ class _ListadoAnimalesScreenState extends State<ListadoAnimalesScreen> with Rout
           peligro: true,
           onPressed: siHayConexion(() => _eliminar(animal)),
         ),
+      ],
+    );
+  }
+}
+
+class _MotivoConflicto extends StatelessWidget {
+  const _MotivoConflicto({required this.motivo});
+
+  final String motivo;
+
+  @override
+  Widget build(BuildContext context) {
+    final tema = Theme.of(context);
+    return Container(
+      width: double.infinity,
+      color: tema.colorScheme.error.withValues(alpha: 0.05),
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+      child: Row(
+        children: [
+          Icon(Icons.info_outline, size: 16, color: tema.colorScheme.error),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Text(
+              '$motivo Corregí la identificación o descartalo.',
+              style: tema.textTheme.bodySmall?.copyWith(color: tema.colorScheme.error),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// HU-47: pide la identificación nueva de un registro en conflicto.
+class _CorregirConflicto extends StatefulWidget {
+  const _CorregirConflicto({required this.pendiente});
+
+  final AnimalPendiente pendiente;
+
+  @override
+  State<_CorregirConflicto> createState() => _CorregirConflictoState();
+}
+
+class _CorregirConflictoState extends State<_CorregirConflicto> {
+  late final _arete = TextEditingController(text: widget.pendiente.datos.arete);
+  String? _error;
+
+  @override
+  void dispose() {
+    _arete.dispose();
+    super.dispose();
+  }
+
+  void _guardar() {
+    final arete = normalizarIdentificacion(_arete.text);
+    final error = validarArete(_arete.text) ??
+        (RegistrosPendientes.instancia.contieneArete(arete, excepto: widget.pendiente.idLocal)
+            ? 'Ya está pendiente de sincronizar'
+            : null);
+    if (error != null) {
+      setState(() => _error = error);
+      return;
+    }
+    Navigator.of(context).pop(arete);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Corregir identificación'),
+      content: SizedBox(
+        width: 380,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(widget.pendiente.motivo ?? ''),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _arete,
+              autofocus: true,
+              inputFormatters: formatoIdentificacion,
+              decoration: InputDecoration(labelText: 'Identificación', errorText: _error),
+              onSubmitted: (_) => _guardar(),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancelar')),
+        FilledButton(onPressed: _guardar, child: const Text('Guardar y reenviar')),
       ],
     );
   }

@@ -24,6 +24,9 @@ public class AnimalRepository : IAnimalRepository
     public Task<Animal?> ObtenerPorIdAsync(Guid ranchoId, Guid id) =>
         _dbContext.Animales.Include(a => a.Corral).FirstOrDefaultAsync(a => a.RanchoId == ranchoId && a.Id == id);
 
+    public Task<Animal?> ObtenerPorIdClienteAsync(Guid ranchoId, Guid idCliente) =>
+        _dbContext.Animales.Include(a => a.Corral).FirstOrDefaultAsync(a => a.RanchoId == ranchoId && a.IdCliente == idCliente);
+
     public void Agregar(Animal animal) => _dbContext.Animales.Add(animal);
 
     public void Eliminar(Animal animal) => _dbContext.Animales.Remove(animal);
