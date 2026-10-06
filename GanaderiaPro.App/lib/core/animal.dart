@@ -122,6 +122,23 @@ class DatosAnimal {
     'castrado': sexo == 'Macho' && castrado,
   };
 
+  // HU-45.1: para leer los animales guardados en el dispositivo.
+  factory DatosAnimal.fromJson(Map<String, dynamic> json) {
+    final nacimiento = json['fechaNacimiento'] as String?;
+    return DatosAnimal(
+      arete: json['arete'] as String,
+      sexo: json['sexo'] as String,
+      raza: json['raza'] as String,
+      nombre: json['nombre'] as String?,
+      fechaNacimiento: nacimiento == null ? null : DateTime.parse(nacimiento),
+      pesoNacimiento: (json['pesoNacimiento'] as num?)?.toDouble(),
+      peso: (json['peso'] as num?)?.toDouble(),
+      color: json['color'] as String?,
+      observaciones: json['observaciones'] as String?,
+      castrado: json['castrado'] as bool? ?? false,
+    );
+  }
+
   static String fechaIso(DateTime fecha) =>
       '${fecha.year.toString().padLeft(4, '0')}-${fecha.month.toString().padLeft(2, '0')}-${fecha.day.toString().padLeft(2, '0')}';
 }

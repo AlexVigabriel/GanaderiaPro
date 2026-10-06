@@ -3,9 +3,12 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../../core/animal.dart';
+import '../../core/almacen_local.dart';
 import '../../core/api_client.dart';
 import '../../core/catalogos.dart';
+import '../../core/conexion.dart';
 import '../../core/formato.dart';
+import '../../core/pendientes.dart';
 import '../../core/permisos.dart';
 import '../../core/plan.dart';
 import '../../core/sesion_actual.dart';
@@ -42,11 +45,26 @@ class _ListadoAnimalesScreenState extends State<ListadoAnimalesScreen> with Rout
   UsoPlan? _usoPlan;
   String? _error;
   bool _cargando = false;
+  bool _enLinea = EstadoConexion.instancia.enLinea;
 
   @override
   void initState() {
     super.initState();
+    EstadoConexion.instancia.addListener(_cambioConexion);
+    RegistrosPendientes.instancia.addListener(_refrescar);
     _cargar();
+  }
+
+  void _refrescar() {
+    if (mounted) setState(() {});
+  }
+
+  // Al volver la conexión se recarga el listado del servidor.
+  void _cambioConexion() {
+    final volvio = !_enLinea && EstadoConexion.instancia.enLinea;
+    _enLinea = EstadoConexion.instancia.enLinea;
+    _refrescar();
+    if (volvio && mounted) _cargar();
   }
 
   @override
@@ -58,6 +76,8 @@ class _ListadoAnimalesScreenState extends State<ListadoAnimalesScreen> with Rout
   @override
   void dispose() {
     routeObserver.unsubscribe(this);
+    EstadoConexion.instancia.removeListener(_cambioConexion);
+    RegistrosPendientes.instancia.removeListener(_refrescar);
     _espera?.cancel();
     _busqueda.dispose();
     super.dispose();
@@ -116,9 +136,19 @@ class _ListadoAnimalesScreenState extends State<ListadoAnimalesScreen> with Rout
   void _avisar(String mensaje) => ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(mensaje)));
 
   Future<void> _agregar() async {
-    final registrados = await abrirCargaMultiple(context);
-    if (registrados == null || !mounted) return;
-    _avisar(registrados == 1 ? 'Se registró 1 animal.' : 'Se registraron $registrados animales.');
+    final alta = await abrirCargaMultiple(context);
+    if (alta == null || !mounted) return;
+    if (alta.sinConexion > 0) {
+      final n = alta.sinConexion;
+      _avisar(
+        n == 1
+            ? 'Sin conexión: 1 animal quedó guardado en este dispositivo y se enviará al volver la conexión.'
+            : 'Sin conexión: $n animales quedaron guardados en este dispositivo y se enviarán al volver la conexión.',
+      );
+    } else {
+      final n = alta.registrados;
+      _avisar(n == 1 ? 'Se registró 1 animal.' : 'Se registraron $n animales.');
+    }
     _cargar();
   }
 
@@ -324,8 +354,40 @@ class _ListadoAnimalesScreenState extends State<ListadoAnimalesScreen> with Rout
     );
   }
 
+  // Los pendientes son altas: solo entran en el listado de Activos.
+  List<AnimalPendiente> get _pendientes {
+    if (_estado != 'Activo' || _sexo != null || _raza != null || _categoria != null) return const [];
+    final texto = _busqueda.text.trim().toUpperCase();
+    return RegistrosPendientes.instancia.animales
+        .where(
+          (p) =>
+              texto.isEmpty ||
+              p.datos.arete.contains(texto) ||
+              (p.datos.nombre?.toUpperCase().contains(texto) ?? false) ||
+              p.datos.raza.toUpperCase().contains(texto),
+        )
+        .toList();
+  }
+
   Widget _contenido() {
     final animales = _animales;
+    final pendientes = _pendientes;
+
+    // HU-45.1: sin conexión y sin el listado del servidor, se ven los
+    // registros guardados en el dispositivo.
+    if (_error != null && animales == null && !_enLinea && pendientes.isNotEmpty) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const _AvisoSoloPendientes(),
+          LayoutBuilder(
+            builder: (context, restricciones) => restricciones.maxWidth >= 820
+                ? _tabla(const [], pendientes)
+                : Column(children: [for (final p in pendientes) _tarjetaPendiente(p)]),
+          ),
+        ],
+      );
+    }
 
     if (_error != null && animales == null) {
       return _EstadoVacio(
@@ -342,7 +404,7 @@ class _ListadoAnimalesScreenState extends State<ListadoAnimalesScreen> with Rout
       );
     }
 
-    if (animales.isEmpty) {
+    if (animales.isEmpty && pendientes.isEmpty) {
       return _hayFiltros
           ? const _EstadoVacio(icono: Icons.search_off, titulo: 'No hay animales que coincidan con la búsqueda.')
           : _EstadoVacio(
@@ -363,15 +425,20 @@ class _ListadoAnimalesScreenState extends State<ListadoAnimalesScreen> with Rout
       children: [
         LayoutBuilder(
           builder: (context, restricciones) => restricciones.maxWidth >= 820
-              ? _tabla(animales)
-              : Column(children: [for (final a in animales) _tarjetaAnimal(a)]),
+              ? _tabla(animales, pendientes)
+              : Column(
+                  children: [
+                    for (final p in pendientes) _tarjetaPendiente(p),
+                    for (final a in animales) _tarjetaAnimal(a),
+                  ],
+                ),
         ),
         if (_cargando) const Positioned(left: 0, right: 0, top: 0, child: LinearProgressIndicator(minHeight: 2)),
       ],
     );
   }
 
-  Widget _tabla(List<Animal> animales) {
+  Widget _tabla(List<Animal> animales, List<AnimalPendiente> pendientes) {
     final tema = Theme.of(context);
     final estiloEncabezado = tema.textTheme.labelMedium?.copyWith(
       letterSpacing: 1,
@@ -401,6 +468,40 @@ class _ListadoAnimalesScreenState extends State<ListadoAnimalesScreen> with Rout
             ],
           ),
         ),
+        for (final p in pendientes) ...[
+          Container(
+            color: EtiquetaPendiente.color.withValues(alpha: 0.04),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            child: Row(
+              children: [
+                Expanded(flex: 3, child: Text(p.datos.arete, style: tema.textTheme.titleSmall)),
+                Expanded(flex: 3, child: Text(p.datos.nombre ?? '—', overflow: TextOverflow.ellipsis)),
+                // La categoría la calcula el servidor al sincronizar.
+                const Expanded(flex: 2, child: Text('—')),
+                Expanded(flex: 2, child: Text(p.datos.raza, overflow: TextOverflow.ellipsis)),
+                Expanded(
+                  flex: 2,
+                  child: Text(p.datos.fechaNacimiento == null ? '—' : formatearFecha(p.datos.fechaNacimiento!)),
+                ),
+                Expanded(flex: 2, child: Text(formatearPeso(p.datos.peso))),
+                // La etiqueta ocupa también el lugar de las acciones, que
+                // un pendiente no tiene.
+                const Expanded(
+                  flex: 2,
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      SizedBox(height: 24),
+                      Positioned(left: 0, top: 0, child: EtiquetaPendiente()),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 128),
+              ],
+            ),
+          ),
+          const Divider(height: 1),
+        ],
         for (final animal in animales) ...[
           InkWell(
             onTap: () => _verFicha(animal),
@@ -431,6 +532,36 @@ class _ListadoAnimalesScreenState extends State<ListadoAnimalesScreen> with Rout
           ),
           const Divider(height: 1),
         ],
+      ],
+    );
+  }
+
+  Widget _tarjetaPendiente(AnimalPendiente p) {
+    final tema = Theme.of(context);
+    return Column(
+      children: [
+        Container(
+          width: double.infinity,
+          color: EtiquetaPendiente.color.withValues(alpha: 0.04),
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                p.datos.nombre == null ? p.datos.arete : '${p.datos.arete}  ${p.datos.nombre}',
+                style: tema.textTheme.titleSmall,
+              ),
+              const SizedBox(height: 4),
+              Text(
+                '${p.datos.raza} · ${p.datos.sexo} · ${formatearPeso(p.datos.peso)}',
+                style: tema.textTheme.bodySmall?.copyWith(color: tema.colorScheme.onSurfaceVariant),
+              ),
+              const SizedBox(height: 8),
+              const EtiquetaPendiente(),
+            ],
+          ),
+        ),
+        const Divider(height: 1),
       ],
     );
   }
@@ -485,25 +616,64 @@ class _ListadoAnimalesScreenState extends State<ListadoAnimalesScreen> with Rout
   // HU-34: alta, edición, baja y eliminación son del módulo Ganado.
   bool get _puedeEditar => SesionActual.instancia.puedeEditar(Modulos.ganado);
 
-  Widget _acciones(Animal animal) => !_puedeEditar
-      ? const SizedBox.shrink()
-      : Row(
-    mainAxisSize: MainAxisSize.min,
-    children: [
-      BotonAccion(icono: Icons.edit_outlined, tooltip: 'Editar', onPressed: () => _editar(animal)),
-      const SizedBox(width: 8),
-      if (animal.activo) ...[
-        BotonAccion(
-          tooltip: 'Registrar baja',
-          peligro: true,
-          dibujo: (color) => IconoCalavera(color: color),
-          onPressed: () => _darDeBaja(animal),
-        ),
+  // RN-13: sin conexión solo se pueden dar altas; el resto se deshabilita.
+  Widget _acciones(Animal animal) {
+    if (!_puedeEditar) return const SizedBox.shrink();
+    String ayuda(String accion) => _enLinea ? accion : '$accion · Requiere conexión';
+    VoidCallback? siHayConexion(VoidCallback accion) => _enLinea ? accion : null;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        BotonAccion(icono: Icons.edit_outlined, tooltip: ayuda('Editar'), onPressed: siHayConexion(() => _editar(animal))),
         const SizedBox(width: 8),
+        if (animal.activo) ...[
+          BotonAccion(
+            tooltip: ayuda('Registrar baja'),
+            peligro: true,
+            dibujo: (color) => IconoCalavera(color: color),
+            onPressed: siHayConexion(() => _darDeBaja(animal)),
+          ),
+          const SizedBox(width: 8),
+        ],
+        BotonAccion(
+          icono: Icons.delete_outline,
+          tooltip: ayuda('Eliminar'),
+          peligro: true,
+          onPressed: siHayConexion(() => _eliminar(animal)),
+        ),
       ],
-      BotonAccion(icono: Icons.delete_outline, tooltip: 'Eliminar', peligro: true, onPressed: () => _eliminar(animal)),
-    ],
-  );
+    );
+  }
+}
+
+class _AvisoSoloPendientes extends StatelessWidget {
+  const _AvisoSoloPendientes();
+
+  @override
+  Widget build(BuildContext context) {
+    const color = EtiquetaPendiente.color;
+    return Container(
+      margin: const EdgeInsets.fromLTRB(20, 16, 20, 16),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withValues(alpha: 0.4)),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.cloud_off_rounded, color: color, size: 20),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              'Sin conexión: se muestran solo los registros pendientes.',
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _EstadoVacio extends StatelessWidget {

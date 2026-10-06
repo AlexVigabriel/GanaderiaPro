@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/animal.dart';
 import '../../core/api_client.dart';
+import '../../core/conexion.dart';
 import '../../core/formato.dart';
 import '../../core/permisos.dart';
 import '../../core/sesion_actual.dart';
@@ -33,7 +34,23 @@ class _FichaAnimalScreenState extends State<FichaAnimalScreen> {
   void initState() {
     super.initState();
     _futuroAnimal = _api.obtenerAnimal(widget.animalId);
+    EstadoConexion.instancia.addListener(_cambioConexion);
   }
+
+  @override
+  void dispose() {
+    EstadoConexion.instancia.removeListener(_cambioConexion);
+    super.dispose();
+  }
+
+  void _cambioConexion() {
+    if (mounted) setState(() {});
+  }
+
+  // RN-13: sin conexión no se edita, ni se da de baja, ni se elimina.
+  bool get _enLinea => EstadoConexion.instancia.enLinea;
+  String _ayuda(String accion) => _enLinea ? accion : '$accion · Requiere conexión';
+  VoidCallback? _accion(VoidCallback accion) => _eliminando || !_enLinea ? null : accion;
 
   // Con llaves: si setState recibe "() => x = futuro", devuelve ese Future y
   // Flutter corta la recarga (la pantalla quedaba sin actualizar).
@@ -171,8 +188,8 @@ class _FichaAnimalScreenState extends State<FichaAnimalScreen> {
                   if (_puede(Modulos.ganado)) ...[
                     BotonAccion(
                       icono: Icons.edit_outlined,
-                      tooltip: 'Editar',
-                      onPressed: _eliminando ? null : () => _editar(animal),
+                      tooltip: _ayuda('Editar'),
+                      onPressed: _accion(() => _editar(animal)),
                     ),
                     const SizedBox(width: 8),
                   ],
@@ -180,26 +197,26 @@ class _FichaAnimalScreenState extends State<FichaAnimalScreen> {
                   if (animal.activo && _puede(Modulos.corrales)) ...[
                     BotonAccion(
                       icono: Icons.fence,
-                      tooltip: 'Cambiar corral',
-                      onPressed: _eliminando ? null : () => _cambiarCorral(animal),
+                      tooltip: _ayuda('Cambiar corral'),
+                      onPressed: _accion(() => _cambiarCorral(animal)),
                     ),
                     const SizedBox(width: 8),
                   ],
                   if (animal.activo && _puede(Modulos.ganado)) ...[
                     BotonAccion(
-                      tooltip: 'Registrar baja',
+                      tooltip: _ayuda('Registrar baja'),
                       peligro: true,
                       dibujo: (color) => IconoCalavera(color: color),
-                      onPressed: _eliminando ? null : () => _darDeBaja(animal),
+                      onPressed: _accion(() => _darDeBaja(animal)),
                     ),
                     const SizedBox(width: 8),
                   ],
                   if (_puede(Modulos.ganado))
                     BotonAccion(
                       icono: Icons.delete_outline,
-                      tooltip: 'Eliminar',
+                      tooltip: _ayuda('Eliminar'),
                       peligro: true,
-                      onPressed: _eliminando ? null : () => _eliminar(animal),
+                      onPressed: _accion(() => _eliminar(animal)),
                     ),
                 ],
               ),

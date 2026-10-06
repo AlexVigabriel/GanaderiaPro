@@ -168,6 +168,36 @@ class EtiquetaEstado extends StatelessWidget {
   }
 }
 
+// HU-45.1: alta guardada en el dispositivo que todavía no llegó al servidor.
+class EtiquetaPendiente extends StatelessWidget {
+  const EtiquetaPendiente({super.key});
+
+  static const color = Color(0xFFC2410C);
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: color.withValues(alpha: 0.35)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.cloud_upload_outlined, size: 14, color: color),
+          const SizedBox(width: 6),
+          Text(
+            'Pendiente de sincronizar',
+            style: Theme.of(context).textTheme.labelMedium?.copyWith(color: color, fontWeight: FontWeight.w600),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 // HU-54: calavera para registrar la baja de un animal. Material no trae
 // este ícono, así que se dibuja con trazos en una grilla de 24 x 24.
 class IconoCalavera extends StatelessWidget {

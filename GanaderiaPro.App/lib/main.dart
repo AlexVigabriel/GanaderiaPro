@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'core/app_theme.dart';
+import 'core/boveda_sesion.dart';
 import 'core/cerrar_sesion.dart';
 import 'core/conexion.dart';
+import 'core/pendientes.dart';
 import 'core/permisos.dart';
 import 'core/route_observer.dart';
 import 'core/sesion_actual.dart';
@@ -17,7 +19,13 @@ import 'features/sanidad/sanidad_screen.dart';
 import 'features/shell/home_screen.dart';
 import 'features/shell/sin_permiso_screen.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  // HU-45.1: la sesión y los registros pendientes quedan en el dispositivo,
+  // así la app se abre aunque no haya conexión.
+  SesionActual.instancia.boveda = BovedaSegura();
+  await SesionActual.instancia.restaurar();
+  await RegistrosPendientes.instancia.cargar();
   // HU-46: vigila si el servidor responde mientras la app está abierta.
   EstadoConexion.instancia.iniciar();
   runApp(const GanaderiaProApp());
@@ -45,7 +53,7 @@ class GanaderiaProApp extends StatelessWidget {
       themeMode: ThemeMode.light,
       navigatorKey: navegadorRaiz,
       navigatorObservers: [routeObserver],
-      initialRoute: '/login',
+      initialRoute: SesionActual.instancia.estaAutenticado ? '/' : '/login',
       // Por defecto, una ruta inicial como "/login" se trata como enlace
       // profundo y Flutter apila "/" (el Inicio) debajo: el botón "Atrás"
       // llevaba al Inicio sin haber iniciado sesión. Se arranca solo con
@@ -64,6 +72,9 @@ class GanaderiaProApp extends StatelessWidget {
     var ruta = uri.path;
     if (_rutasProtegidas.contains(ruta) && !SesionActual.instancia.estaAutenticado) {
       ruta = '/login';
+    } else if (ruta == '/login' && SesionActual.instancia.estaAutenticado) {
+      // Con la sesión recordada, el login lleva directo al tablero.
+      ruta = '/';
     }
     return MaterialPageRoute(
       settings: RouteSettings(name: ruta, arguments: settings.arguments),
