@@ -3,6 +3,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'core/app_theme.dart';
 import 'core/cerrar_sesion.dart';
+import 'core/conexion.dart';
 import 'core/permisos.dart';
 import 'core/route_observer.dart';
 import 'core/sesion_actual.dart';
@@ -17,6 +18,8 @@ import 'features/shell/home_screen.dart';
 import 'features/shell/sin_permiso_screen.dart';
 
 void main() {
+  // HU-46: vigila si el servidor responde mientras la app está abierta.
+  EstadoConexion.instancia.iniciar();
   runApp(const GanaderiaProApp());
 }
 

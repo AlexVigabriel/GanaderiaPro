@@ -4,6 +4,7 @@ import '../../core/api_client.dart';
 import '../../core/app_theme.dart';
 import '../../core/cerrar_sesion.dart';
 import '../../core/colaborador.dart';
+import '../../core/conexion.dart';
 import '../../core/formato.dart';
 import '../../core/permisos.dart';
 import '../../core/sesion_actual.dart';
@@ -117,6 +118,8 @@ class _BarraSuperior extends StatelessWidget {
               ],
             ),
           ),
+          // HU-46: aparece solo cuando el servidor no responde.
+          IndicadorConexion(estado: EstadoConexion.instancia),
           const SizedBox(width: 12),
           // HU-52: menú de perfil con el usuario, el rancho y "Cerrar sesión".
           PopupMenuButton<String>(
@@ -331,6 +334,69 @@ class EtiquetaRol extends StatelessWidget {
         overflow: TextOverflow.ellipsis,
         style: Theme.of(context).textTheme.labelMedium?.copyWith(color: color, fontWeight: FontWeight.w600),
       ),
+    );
+  }
+}
+
+// HU-46: aviso "Sin conexión" con la cantidad de registros que esperan
+// sincronizarse. Desaparece solo cuando el servidor vuelve a responder.
+class IndicadorConexion extends StatelessWidget {
+  const IndicadorConexion({super.key, required this.estado});
+
+  final EstadoConexion estado;
+
+  static const _ambar = Color(0xFFE8A317);
+
+  @override
+  Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: estado,
+      builder: (context, _) {
+        if (estado.enLinea) return const SizedBox.shrink();
+        final n = estado.pendientes;
+        final pendientes = n == 1 ? '1 pendiente' : '$n pendientes';
+        final textos = Theme.of(context).textTheme;
+        // En celular solo entra el ícono con la cantidad.
+        final compacto = MediaQuery.sizeOf(context).width < 600;
+        return ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 260),
+          child: Tooltip(
+            message: 'Sin conexión · $pendientes. Lo que registres se guarda en este dispositivo y se envía al volver la conexión.',
+            child: Container(
+              margin: const EdgeInsets.only(left: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: _ambar.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(999),
+                border: Border.all(color: _ambar.withValues(alpha: 0.6)),
+                boxShadow: [BoxShadow(color: _ambar.withValues(alpha: 0.25), blurRadius: 12)],
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.cloud_off_rounded, size: 18, color: _ambar),
+                  const SizedBox(width: 8),
+                  Flexible(
+                    child: Text.rich(
+                      TextSpan(
+                        children: compacto
+                            ? [TextSpan(text: '$n', style: const TextStyle(fontWeight: FontWeight.w700))]
+                            : [
+                                const TextSpan(text: 'Sin conexión', style: TextStyle(fontWeight: FontWeight.w700)),
+                                TextSpan(text: ' · $pendientes'),
+                              ],
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: textos.labelMedium?.copyWith(color: const Color(0xFF8A5A00)),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }

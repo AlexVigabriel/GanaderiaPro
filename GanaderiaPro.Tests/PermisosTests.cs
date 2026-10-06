@@ -183,7 +183,8 @@ public class RedDeSeguridadPermisosTests
             .ToList();
 
         Assert.Equal(
-            new[] { "AuthController.IniciarSesion", "AuthController.Registrar", "InvitacionesController.Aceptar", "InvitacionesController.Obtener" },
+            new[] { "AuthController.IniciarSesion", "AuthController.Registrar", "InvitacionesController.Aceptar", "InvitacionesController.Obtener",
+                "SaludController.Verificar" },
             publicos);
     }
 }

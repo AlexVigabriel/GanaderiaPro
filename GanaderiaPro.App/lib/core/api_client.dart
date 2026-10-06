@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import 'animal.dart';
 import 'cerrar_sesion.dart';
 import 'colaborador.dart';
+import 'conexion.dart';
 import 'corral.dart';
 import 'plan.dart';
 import 'sanidad.dart';
@@ -20,7 +21,7 @@ class ApiException implements Exception {
 }
 
 class ApiClient {
-  ApiClient({this.baseUrl = 'http://localhost:5199'});
+  ApiClient({this.baseUrl = urlServidor});
 
   final String baseUrl;
   final _http = ClienteConSesion();
