@@ -4,6 +4,7 @@ using GanaderiaPro.Application.Exceptions;
 using GanaderiaPro.Application.Interfaces;
 using GanaderiaPro.Application.Services;
 using GanaderiaPro.Domain.Entities;
+using GanaderiaPro.Domain.Planes;
 using Moq;
 using Xunit;
 
@@ -23,7 +24,7 @@ public class AnimalBajaTests
     {
         var currentUserMock = new Mock<ICurrentUserContext>();
         currentUserMock.Setup(c => c.RanchoId).Returns(RanchoIdDePrueba);
-        return new AnimalService(_repoMock.Object, currentUserMock.Object, _unitOfWorkMock.Object);
+        return new AnimalService(_repoMock.Object, currentUserMock.Object, _unitOfWorkMock.Object, SinLimites.Plan());
     }
 
     private Animal AnimalDelRancho(EstadoAnimal estado = EstadoAnimal.Activo)

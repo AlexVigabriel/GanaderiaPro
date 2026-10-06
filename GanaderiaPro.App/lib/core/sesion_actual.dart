@@ -51,5 +51,6 @@ class SesionActual {
     Modulos.sanidad: 'Escritura',
     Modulos.colaboradores: 'Escritura',
     Modulos.tablero: 'Lectura',
+    Modulos.configuracion: 'Escritura',
   };
 }

@@ -4,6 +4,7 @@ using GanaderiaPro.Application.Exceptions;
 using GanaderiaPro.Application.Interfaces;
 using GanaderiaPro.Application.Services;
 using GanaderiaPro.Domain.Entities;
+using GanaderiaPro.Domain.Planes;
 using Moq;
 using Xunit;
 
@@ -32,7 +33,7 @@ public class ColaboradorServiceTests
         var currentUserMock = new Mock<ICurrentUserContext>();
         currentUserMock.Setup(c => c.RanchoId).Returns(RanchoIdDePrueba);
         currentUserMock.Setup(c => c.Rol).Returns(rolDelUsuarioActual);
-        return new ColaboradorService(_usuarioRepoMock.Object, _invitacionRepoMock.Object, currentUserMock.Object, _unitOfWorkMock.Object);
+        return new ColaboradorService(_usuarioRepoMock.Object, _invitacionRepoMock.Object, currentUserMock.Object, _unitOfWorkMock.Object, SinLimites.Plan());
     }
 
     private Usuario Colaborador(EstadoUsuario estado, RolUsuario rol = RolUsuario.Veterinario, string passwordHash = "hash")

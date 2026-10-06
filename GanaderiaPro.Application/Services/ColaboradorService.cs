@@ -3,6 +3,7 @@ using GanaderiaPro.Application.DTOs;
 using GanaderiaPro.Application.Exceptions;
 using GanaderiaPro.Application.Interfaces;
 using GanaderiaPro.Domain.Entities;
+using GanaderiaPro.Domain.Planes;
 
 namespace GanaderiaPro.Application.Services;
 
@@ -16,17 +17,20 @@ public class ColaboradorService : IColaboradorService
     private readonly IInvitacionRepository _invitacionRepository;
     private readonly ICurrentUserContext _currentUser;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IControlLimitesPlan _limitesPlan;
 
     public ColaboradorService(
         IUsuarioRepository usuarioRepository,
         IInvitacionRepository invitacionRepository,
         ICurrentUserContext currentUser,
-        IUnitOfWork unitOfWork)
+        IUnitOfWork unitOfWork,
+        IControlLimitesPlan limitesPlan)
     {
         _usuarioRepository = usuarioRepository;
         _invitacionRepository = invitacionRepository;
         _currentUser = currentUser;
         _unitOfWork = unitOfWork;
+        _limitesPlan = limitesPlan;
     }
 
     public async Task<IReadOnlyList<ColaboradorResponse>> ListarAsync()
@@ -64,6 +68,9 @@ public class ColaboradorService : IColaboradorService
         {
             throw new ReglaDeNegocioException("Ya existe una cuenta registrada con ese correo.");
         }
+
+        // RN-11: límite de colaboradores del plan (Pendientes y Activos).
+        await _limitesPlan.VerificarAsync(RecursoPlan.Colaboradores);
 
         var colaborador = new Usuario
         {
@@ -133,6 +140,8 @@ public class ColaboradorService : IColaboradorService
         }
         else if (colaborador.Estado == EstadoUsuario.Inactivo)
         {
+            // Al reactivarlo vuelve a ocupar un lugar del plan (RN-11).
+            await _limitesPlan.VerificarAsync(RecursoPlan.Colaboradores);
             colaborador.Estado = string.IsNullOrEmpty(colaborador.PasswordHash) ? EstadoUsuario.Pendiente : EstadoUsuario.Activo;
         }
 
