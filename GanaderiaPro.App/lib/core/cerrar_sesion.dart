@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
+import 'conexion.dart';
 import 'sesion_actual.dart';
 
 // Navegador principal de la app: permite volver al login desde cualquier
@@ -23,7 +24,15 @@ class ClienteConSesion extends http.BaseClient {
 
   @override
   Future<http.StreamedResponse> send(http.BaseRequest request) async {
-    final respuesta = await _interno.send(request);
+    final http.StreamedResponse respuesta;
+    try {
+      respuesta = await _interno.send(request);
+    } catch (_) {
+      // HU-46: el servidor no respondió.
+      EstadoConexion.instancia.informar(enLinea: false);
+      rethrow;
+    }
+    EstadoConexion.instancia.informar(enLinea: true);
     if (respuesta.statusCode == 401 && SesionActual.instancia.estaAutenticado) {
       irAlLoginSinSesion(mensaje: 'Tu sesión se cerró. Iniciá sesión de nuevo.');
     }
