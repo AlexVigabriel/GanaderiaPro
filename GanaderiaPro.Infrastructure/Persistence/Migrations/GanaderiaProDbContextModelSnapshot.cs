@@ -33,15 +33,58 @@ namespace GanaderiaPro.Infrastructure.Persistence.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
 
+                    b.Property<bool>("Castrado")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("CausaMuerte")
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<string>("Color")
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
+
+                    b.Property<Guid?>("CorralId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("DetalleCausaMuerte")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
                     b.Property<string>("Estado")
                         .IsRequired()
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)");
 
+                    b.Property<DateOnly?>("FechaBaja")
+                        .HasColumnType("date");
+
+                    b.Property<DateOnly?>("FechaNacimiento")
+                        .HasColumnType("date");
+
                     b.Property<DateTime>("FechaRegistro")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<Guid?>("IdCliente")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Nombre")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("ObservacionBaja")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("Observaciones")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
                     b.Property<decimal?>("Peso")
+                        .HasPrecision(7, 2)
+                        .HasColumnType("numeric(7,2)");
+
+                    b.Property<decimal?>("PesoNacimiento")
                         .HasPrecision(7, 2)
                         .HasColumnType("numeric(7,2)");
 
@@ -60,10 +103,110 @@ namespace GanaderiaPro.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("CorralId");
+
                     b.HasIndex("RanchoId", "Arete")
                         .IsUnique();
 
+                    b.HasIndex("RanchoId", "IdCliente")
+                        .IsUnique()
+                        .HasFilter("\"IdCliente\" IS NOT NULL");
+
                     b.ToTable("Animales", (string)null);
+                });
+
+            modelBuilder.Entity("GanaderiaPro.Domain.Entities.Corral", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("Activo")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("Capacidad")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("FechaCreacion")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Nombre")
+                        .IsRequired()
+                        .HasMaxLength(60)
+                        .HasColumnType("character varying(60)");
+
+                    b.Property<Guid>("RanchoId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RanchoId", "Nombre")
+                        .IsUnique();
+
+                    b.ToTable("Corrales", (string)null);
+                });
+
+            modelBuilder.Entity("GanaderiaPro.Domain.Entities.Invitacion", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("CodigoHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<DateTime>("FechaCreacion")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("FechaUso")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("FechaVencimiento")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UsuarioId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CodigoHash")
+                        .IsUnique();
+
+                    b.HasIndex("UsuarioId");
+
+                    b.ToTable("Invitaciones", (string)null);
+                });
+
+            modelBuilder.Entity("GanaderiaPro.Domain.Entities.Pesaje", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("AnimalId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateOnly>("Fecha")
+                        .HasColumnType("date");
+
+                    b.Property<DateTime>("FechaRegistro")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Observacion")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<decimal>("Peso")
+                        .HasPrecision(7, 2)
+                        .HasColumnType("numeric(7,2)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AnimalId", "Fecha");
+
+                    b.ToTable("Pesajes", (string)null);
                 });
 
             modelBuilder.Entity("GanaderiaPro.Domain.Entities.Rancho", b =>
@@ -99,13 +242,15 @@ namespace GanaderiaPro.Infrastructure.Persistence.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<bool>("Activo")
-                        .HasColumnType("boolean");
-
                     b.Property<string>("Email")
                         .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
+
+                    b.Property<string>("Estado")
+                        .IsRequired()
+                        .HasMaxLength(15)
+                        .HasColumnType("character varying(15)");
 
                     b.Property<DateTime>("FechaRegistro")
                         .HasColumnType("timestamp with time zone");
@@ -127,6 +272,12 @@ namespace GanaderiaPro.Infrastructure.Persistence.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)");
 
+                    b.Property<DateTime?>("UltimoAcceso")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("VersionSesion")
+                        .HasColumnType("integer");
+
                     b.HasKey("Id");
 
                     b.HasIndex("Email")
@@ -137,15 +288,167 @@ namespace GanaderiaPro.Infrastructure.Persistence.Migrations
                     b.ToTable("Usuarios", (string)null);
                 });
 
+            modelBuilder.Entity("GanaderiaPro.Domain.Entities.Vacuna", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Nombre")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Nombre")
+                        .IsUnique();
+
+                    b.ToTable("Vacunas", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            Id = new Guid("8f1a2b01-0000-4000-8000-000000000001"),
+                            Nombre = "Fiebre aftosa"
+                        },
+                        new
+                        {
+                            Id = new Guid("8f1a2b01-0000-4000-8000-000000000002"),
+                            Nombre = "Rabia bovina"
+                        },
+                        new
+                        {
+                            Id = new Guid("8f1a2b01-0000-4000-8000-000000000003"),
+                            Nombre = "Brucelosis"
+                        },
+                        new
+                        {
+                            Id = new Guid("8f1a2b01-0000-4000-8000-000000000004"),
+                            Nombre = "Carbunclo sintomático (mancha)"
+                        },
+                        new
+                        {
+                            Id = new Guid("8f1a2b01-0000-4000-8000-000000000005"),
+                            Nombre = "Clostridiosis polivalente"
+                        },
+                        new
+                        {
+                            Id = new Guid("8f1a2b01-0000-4000-8000-000000000006"),
+                            Nombre = "Leptospirosis"
+                        },
+                        new
+                        {
+                            Id = new Guid("8f1a2b01-0000-4000-8000-000000000007"),
+                            Nombre = "IBR-DVB (reproductiva)"
+                        },
+                        new
+                        {
+                            Id = new Guid("8f1a2b01-0000-4000-8000-000000000008"),
+                            Nombre = "Pasteurelosis"
+                        },
+                        new
+                        {
+                            Id = new Guid("8f1a2b01-0000-4000-8000-000000000009"),
+                            Nombre = "Carbunclo bacteridiano (ántrax)"
+                        });
+                });
+
+            modelBuilder.Entity("GanaderiaPro.Domain.Entities.Vacunacion", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("AnimalId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Dosis")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<DateOnly>("FechaAplicacion")
+                        .HasColumnType("date");
+
+                    b.Property<DateOnly?>("FechaProximaDosis")
+                        .HasColumnType("date");
+
+                    b.Property<DateTime>("FechaRegistro")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Observacion")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<Guid>("VacunaId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("VeterinarioId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FechaProximaDosis");
+
+                    b.HasIndex("VacunaId");
+
+                    b.HasIndex("VeterinarioId");
+
+                    b.HasIndex("AnimalId", "FechaAplicacion");
+
+                    b.ToTable("Vacunaciones", (string)null);
+                });
+
             modelBuilder.Entity("GanaderiaPro.Domain.Entities.Animal", b =>
                 {
+                    b.HasOne("GanaderiaPro.Domain.Entities.Corral", "Corral")
+                        .WithMany()
+                        .HasForeignKey("CorralId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.HasOne("GanaderiaPro.Domain.Entities.Rancho", "Rancho")
                         .WithMany("Animales")
                         .HasForeignKey("RanchoId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.Navigation("Corral");
+
                     b.Navigation("Rancho");
+                });
+
+            modelBuilder.Entity("GanaderiaPro.Domain.Entities.Corral", b =>
+                {
+                    b.HasOne("GanaderiaPro.Domain.Entities.Rancho", "Rancho")
+                        .WithMany()
+                        .HasForeignKey("RanchoId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Rancho");
+                });
+
+            modelBuilder.Entity("GanaderiaPro.Domain.Entities.Invitacion", b =>
+                {
+                    b.HasOne("GanaderiaPro.Domain.Entities.Usuario", "Usuario")
+                        .WithMany()
+                        .HasForeignKey("UsuarioId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Usuario");
+                });
+
+            modelBuilder.Entity("GanaderiaPro.Domain.Entities.Pesaje", b =>
+                {
+                    b.HasOne("GanaderiaPro.Domain.Entities.Animal", "Animal")
+                        .WithMany()
+                        .HasForeignKey("AnimalId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Animal");
                 });
 
             modelBuilder.Entity("GanaderiaPro.Domain.Entities.Usuario", b =>
@@ -157,6 +460,33 @@ namespace GanaderiaPro.Infrastructure.Persistence.Migrations
                         .IsRequired();
 
                     b.Navigation("Rancho");
+                });
+
+            modelBuilder.Entity("GanaderiaPro.Domain.Entities.Vacunacion", b =>
+                {
+                    b.HasOne("GanaderiaPro.Domain.Entities.Animal", "Animal")
+                        .WithMany()
+                        .HasForeignKey("AnimalId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("GanaderiaPro.Domain.Entities.Vacuna", "Vacuna")
+                        .WithMany()
+                        .HasForeignKey("VacunaId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("GanaderiaPro.Domain.Entities.Usuario", "Veterinario")
+                        .WithMany()
+                        .HasForeignKey("VeterinarioId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Animal");
+
+                    b.Navigation("Vacuna");
+
+                    b.Navigation("Veterinario");
                 });
 
             modelBuilder.Entity("GanaderiaPro.Domain.Entities.Rancho", b =>

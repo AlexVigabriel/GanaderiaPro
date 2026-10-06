@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
 
 import '../../core/api_client.dart';
+import 'auth_layout.dart';
 
 class RegistroScreen extends StatefulWidget {
-  const RegistroScreen({super.key});
+  const RegistroScreen({super.key, this.planInicial});
+
+  // HU-05: plan elegido en el sitio público, si se llegó desde ahí.
+  final String? planInicial;
 
   @override
   State<RegistroScreen> createState() => _RegistroScreenState();
@@ -18,15 +22,12 @@ class _RegistroScreenState extends State<RegistroScreen> {
   final _contrasenaController = TextEditingController();
   final _confirmarController = TextEditingController();
   final _nombreRanchoController = TextEditingController();
-  // HU-05: si se llega acá desde el sitio público con un plan elegido
-  // (ej. "?plan=Intermedio"), se usa como selección inicial.
-  late String _plan = _planDesdeUrl();
+  late String _plan = _planValido(widget.planInicial);
   bool _guardando = false;
 
-  static String _planDesdeUrl() {
+  static String _planValido(String? plan) {
     const planesValidos = {'Basico', 'Intermedio', 'Superior'};
-    final planUrl = Uri.base.queryParameters['plan'];
-    return planesValidos.contains(planUrl) ? planUrl! : 'Basico';
+    return planesValidos.contains(plan) ? plan! : 'Basico';
   }
 
   @override
@@ -62,7 +63,7 @@ class _RegistroScreenState extends State<RegistroScreen> {
       // acá, justo antes de navegar, no llega a verse.
       Navigator.of(context).pushReplacementNamed(
         '/login',
-        arguments: 'Cuenta creada. Iniciá sesión con tus datos.',
+        arguments: 'Registro exitoso. Tu prueba gratuita de 10 días ya empezó: iniciá sesión con tus datos.',
       );
     } on ApiException catch (e) {
       if (!mounted) return;
@@ -79,31 +80,68 @@ class _RegistroScreenState extends State<RegistroScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Crear cuenta')),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Form(
-          key: _formKey,
-          child: ListView(
-            children: [
-              TextFormField(
+    return AuthLayout(
+      seccion: SeccionAuth.crearCuenta,
+      subtitulo: 'Registrate y empezá tu prueba gratuita de 10 días',
+      formulario: Form(
+        key: _formKey,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            CampoConEtiqueta(
+              etiqueta: 'Nombre del rancho',
+              child: TextFormField(
+                controller: _nombreRanchoController,
+                decoration: const InputDecoration(
+                  hintText: 'Estancia La Esperanza',
+                  prefixIcon: Icon(Icons.agriculture_outlined),
+                ),
+                validator: (v) =>
+                    (v == null || v.trim().isEmpty) ? 'El nombre del rancho es obligatorio' : null,
+              ),
+            ),
+            CampoConEtiqueta(
+              etiqueta: 'Tu nombre',
+              child: TextFormField(
                 controller: _nombreController,
-                decoration: const InputDecoration(labelText: 'Nombre *'),
+                decoration: const InputDecoration(
+                  hintText: 'Juan Pérez',
+                  prefixIcon: Icon(Icons.person_outline),
+                ),
                 validator: (v) => (v == null || v.trim().isEmpty) ? 'El nombre es obligatorio' : null,
               ),
-              const SizedBox(height: 12),
-              TextFormField(
+            ),
+            CampoConEtiqueta(
+              etiqueta: 'Correo electrónico',
+              child: TextFormField(
                 controller: _emailController,
-                decoration: const InputDecoration(labelText: 'Correo *'),
+                decoration: const InputDecoration(
+                  hintText: 'tu@correo.com',
+                  prefixIcon: Icon(Icons.mail_outline),
+                ),
                 keyboardType: TextInputType.emailAddress,
                 validator: (v) => (v == null || v.trim().isEmpty) ? 'El correo es obligatorio' : null,
               ),
-              const SizedBox(height: 12),
-              TextFormField(
+            ),
+            CampoConEtiqueta(
+              etiqueta: 'Plan',
+              child: DropdownButtonFormField<String>(
+                initialValue: _plan,
+                decoration: const InputDecoration(prefixIcon: Icon(Icons.workspace_premium_outlined)),
+                items: const [
+                  DropdownMenuItem(value: 'Basico', child: Text('Básico')),
+                  DropdownMenuItem(value: 'Intermedio', child: Text('Intermedio')),
+                  DropdownMenuItem(value: 'Superior', child: Text('Superior')),
+                ],
+                onChanged: (value) => setState(() => _plan = value ?? 'Basico'),
+              ),
+            ),
+            CampoConEtiqueta(
+              etiqueta: 'Contraseña',
+              child: CampoContrasena(
                 controller: _contrasenaController,
-                decoration: const InputDecoration(labelText: 'Contraseña *'),
-                obscureText: true,
+                hintText: 'Tu contraseña',
+                helperText: 'Mínimo 8 caracteres, con letra y número',
                 validator: (v) {
                   if (v == null || v.isEmpty) return 'La contraseña es obligatoria';
                   final tieneLetra = v.contains(RegExp(r'[A-Za-z]'));
@@ -114,46 +152,29 @@ class _RegistroScreenState extends State<RegistroScreen> {
                   return null;
                 },
               ),
-              const SizedBox(height: 12),
-              TextFormField(
+            ),
+            CampoConEtiqueta(
+              etiqueta: 'Confirmar contraseña',
+              child: CampoContrasena(
                 controller: _confirmarController,
-                decoration: const InputDecoration(labelText: 'Confirmar contraseña *'),
-                obscureText: true,
+                hintText: 'Repetí tu contraseña',
                 // HU-08: confirmación debe coincidir con la contraseña.
                 validator: (v) =>
                     (v != _contrasenaController.text) ? 'Las contraseñas no coinciden' : null,
               ),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: _nombreRanchoController,
-                decoration: const InputDecoration(labelText: 'Nombre del rancho *'),
-                validator: (v) =>
-                    (v == null || v.trim().isEmpty) ? 'El nombre del rancho es obligatorio' : null,
-              ),
-              const SizedBox(height: 12),
-              DropdownButtonFormField<String>(
-                initialValue: _plan,
-                decoration: const InputDecoration(labelText: 'Plan *'),
-                items: const [
-                  DropdownMenuItem(value: 'Basico', child: Text('Básico')),
-                  DropdownMenuItem(value: 'Intermedio', child: Text('Intermedio')),
-                  DropdownMenuItem(value: 'Superior', child: Text('Superior')),
-                ],
-                onChanged: (value) => setState(() => _plan = value ?? 'Basico'),
-              ),
-              const SizedBox(height: 24),
-              FilledButton(
-                onPressed: _guardando ? null : _registrar,
-                child: _guardando
-                    ? const SizedBox(
-                        height: 18,
-                        width: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Text('Crear cuenta'),
-              ),
-            ],
-          ),
+            ),
+            const SizedBox(height: 8),
+            FilledButton(
+              onPressed: _guardando ? null : _registrar,
+              child: _guardando
+                  ? const SizedBox(
+                      height: 18,
+                      width: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Text('Crear cuenta'),
+            ),
+          ],
         ),
       ),
     );

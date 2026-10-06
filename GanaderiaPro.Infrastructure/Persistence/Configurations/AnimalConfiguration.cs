@@ -20,12 +20,39 @@ public class AnimalConfiguration : IEntityTypeConfiguration<Animal>
         builder.HasIndex(a => new { a.RanchoId, a.Arete })
             .IsUnique();
 
+        // HU-47: un mismo registro del dispositivo no se crea dos veces.
+        builder.HasIndex(a => new { a.RanchoId, a.IdCliente })
+            .IsUnique()
+            .HasFilter("\"IdCliente\" IS NOT NULL");
+
         builder.Property(a => a.Raza)
             .IsRequired()
             .HasMaxLength(100);
 
         builder.Property(a => a.Peso)
             .HasPrecision(7, 2);
+
+        builder.Property(a => a.Nombre)
+            .HasMaxLength(100);
+
+        builder.Property(a => a.PesoNacimiento)
+            .HasPrecision(7, 2);
+
+        builder.Property(a => a.Color)
+            .HasMaxLength(40);
+
+        builder.Property(a => a.Observaciones)
+            .HasMaxLength(500);
+
+        builder.Property(a => a.ObservacionBaja)
+            .HasMaxLength(500);
+
+        builder.Property(a => a.CausaMuerte)
+            .HasConversion<string>()
+            .HasMaxLength(30);
+
+        builder.Property(a => a.DetalleCausaMuerte)
+            .HasMaxLength(100);
 
         builder.Property(a => a.Sexo)
             .HasConversion<string>()
@@ -36,6 +63,12 @@ public class AnimalConfiguration : IEntityTypeConfiguration<Animal>
             .HasConversion<string>()
             .HasMaxLength(20)
             .IsRequired();
+
+        // HU-23: si se borra el corral, el animal queda sin corral.
+        builder.HasOne(a => a.Corral)
+            .WithMany()
+            .HasForeignKey(a => a.CorralId)
+            .OnDelete(DeleteBehavior.SetNull);
 
         builder.HasOne(a => a.Rancho)
             .WithMany(r => r.Animales)

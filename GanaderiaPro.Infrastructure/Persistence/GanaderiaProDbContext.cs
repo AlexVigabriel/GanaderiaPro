@@ -12,6 +12,11 @@ public class GanaderiaProDbContext : DbContext
     public DbSet<Rancho> Ranchos => Set<Rancho>();
     public DbSet<Usuario> Usuarios => Set<Usuario>();
     public DbSet<Animal> Animales => Set<Animal>();
+    public DbSet<Pesaje> Pesajes => Set<Pesaje>();
+    public DbSet<Vacuna> Vacunas => Set<Vacuna>();
+    public DbSet<Vacunacion> Vacunaciones => Set<Vacunacion>();
+    public DbSet<Corral> Corrales => Set<Corral>();
+    public DbSet<Invitacion> Invitaciones => Set<Invitacion>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

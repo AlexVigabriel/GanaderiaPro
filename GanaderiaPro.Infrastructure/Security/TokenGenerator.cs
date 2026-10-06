@@ -1,6 +1,7 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using GanaderiaPro.Application.Common;
 using GanaderiaPro.Application.Interfaces;
 using GanaderiaPro.Domain.Entities;
 using Microsoft.Extensions.Configuration;
@@ -32,6 +33,7 @@ public class TokenGenerator : ITokenGenerator
             new Claim("ranchoId", usuario.RanchoId.ToString()),
             new Claim("rol", usuario.Rol.ToString()),
             new Claim(JwtRegisteredClaimNames.Email, usuario.Email),
+            new Claim(ClaimSesion.Version, usuario.VersionSesion.ToString()),
         };
 
         var token = new JwtSecurityToken(
