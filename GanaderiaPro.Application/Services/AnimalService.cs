@@ -49,6 +49,13 @@ public class AnimalService : IAnimalService
         var ranchoId = _currentUser.RanchoId;
         var arete = NormalizarIdentificacion(request.Arete);
 
+        // HU-47: un reintento del mismo registro devuelve el ya creado.
+        var yaRegistrado = await BuscarReintentoAsync(ranchoId, request);
+        if (yaRegistrado is not null)
+        {
+            return ToResponse(yaRegistrado);
+        }
+
         // RN-01: el arete es único dentro del rancho, incluso entre animales dados de baja.
         var existeArete = await _animalRepository.ExisteAreteAsync(ranchoId, arete);
         if (existeArete)
@@ -82,6 +89,9 @@ public class AnimalService : IAnimalService
 
         var ranchoId = _currentUser.RanchoId;
         var registrados = new List<Animal>();
+        // HU-47: reintentos de registros que ya habían llegado. Se informan
+        // como registrados, pero no se vuelven a crear ni ocupan lugar del plan.
+        var yaRegistrados = new List<Animal>();
         var rechazados = new List<FilaRechazada>();
 
         // RN-11: se registran filas hasta completar el límite del plan; las
@@ -94,6 +104,14 @@ public class AnimalService : IAnimalService
         {
             var fila = filas[i];
             var arete = NormalizarIdentificacion(fila.Arete);
+
+            var reintento = await BuscarReintentoAsync(ranchoId, fila);
+            if (reintento is not null)
+            {
+                yaRegistrados.Add(reintento);
+                continue;
+            }
+
             var error = ValidarDatos(fila);
 
             // RN-01 también dentro de la misma carga, no solo contra la base.
@@ -128,7 +146,7 @@ public class AnimalService : IAnimalService
             await _unitOfWork.GuardarCambiosAsync();
         }
 
-        return new RegistrarLoteResponse(registrados.Select(ToResponse).ToList(), rechazados);
+        return new RegistrarLoteResponse(registrados.Concat(yaRegistrados).Select(ToResponse).ToList(), rechazados);
     }
 
     public async Task<IReadOnlyList<AnimalResponse>> BuscarAsync(
@@ -398,12 +416,18 @@ public class AnimalService : IAnimalService
     private static string NormalizarIdentificacion(string? identificacion) =>
         (identificacion ?? string.Empty).Trim().ToUpperInvariant();
 
+    private async Task<Animal?> BuscarReintentoAsync(Guid ranchoId, RegistrarAnimalRequest request) =>
+        request.IdCliente is { } idCliente
+            ? await _animalRepository.ObtenerPorIdClienteAsync(ranchoId, idCliente)
+            : null;
+
     private static Animal CrearAnimal(Guid ranchoId, RegistrarAnimalRequest request)
     {
         var animal = new Animal
         {
             Id = Guid.NewGuid(),
             RanchoId = ranchoId,
+            IdCliente = request.IdCliente,
             // RN-04: todo animal nace Activo; las ventas y muertes se registran como baja (HU-54).
             Estado = EstadoAnimal.Activo,
             FechaRegistro = DateTime.UtcNow,

@@ -21,11 +21,20 @@ class EstadoConexion extends ChangeNotifier {
 
   bool _enLinea = true;
   int _pendientes = 0;
+  bool _sincronizando = false;
   Timer? _temporizador;
   bool _verificando = false;
 
   bool get enLinea => _enLinea;
   int get pendientes => _pendientes;
+  // HU-47: mientras se envían los pendientes, el aviso sigue visible.
+  bool get sincronizando => _sincronizando;
+
+  set sincronizando(bool valor) {
+    if (valor == _sincronizando) return;
+    _sincronizando = valor;
+    notifyListeners();
+  }
 
   set pendientes(int cantidad) {
     if (cantidad == _pendientes) return;

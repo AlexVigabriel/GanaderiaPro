@@ -75,6 +75,10 @@ public class Animal
     // Detalle escrito a mano cuando la causa es "Otra".
     public string? DetalleCausaMuerte { get; set; }
 
+    // HU-47: código que le puso el dispositivo al registrarlo sin conexión.
+    // Si el envío se reintenta, el servidor lo reconoce y no lo duplica.
+    public Guid? IdCliente { get; set; }
+
     // La categoría no se guarda: cambia sola con la edad, así que se calcula
     // a la fecha pedida. Sin fecha de nacimiento no se puede calcular.
     public CategoriaAnimal? CategoriaAl(DateOnly hoy)

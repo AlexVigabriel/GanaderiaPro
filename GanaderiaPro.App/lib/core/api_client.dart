@@ -94,11 +94,14 @@ class ApiClient {
 
   // HU-66: carga múltiple. Las filas rechazadas vuelven con su número
   // (empezando en 1, en el mismo orden en que se enviaron) y el motivo.
-  Future<ResultadoCarga> registrarLote(List<DatosAnimal> filas) async {
+  // HU-47: [idsCliente] (uno por fila) evita duplicar si se reintenta.
+  Future<ResultadoCarga> registrarLote(List<DatosAnimal> filas, {List<String>? idsCliente}) async {
     final response = await _http.post(
       Uri.parse('$baseUrl/api/animales/lote'),
       headers: _headersAutenticados,
-      body: jsonEncode(filas.map((f) => f.toJson()).toList()),
+      body: jsonEncode([
+        for (var i = 0; i < filas.length; i++) {...filas[i].toJson(), 'idCliente': ?idsCliente?[i]},
+      ]),
     );
 
     if (response.statusCode != 200) {

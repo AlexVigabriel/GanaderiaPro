@@ -352,29 +352,35 @@ class IndicadorConexion extends StatelessWidget {
     return ListenableBuilder(
       listenable: estado,
       builder: (context, _) {
-        if (estado.enLinea) return const SizedBox.shrink();
+        // HU-47: con conexión, solo se ve mientras se envían los pendientes.
+        final enviando = estado.enLinea && estado.sincronizando;
+        if (estado.enLinea && !enviando) return const SizedBox.shrink();
         final n = estado.pendientes;
         final pendientes = n == 1 ? '1 pendiente' : '$n pendientes';
+        final titulo = enviando ? 'Sincronizando' : 'Sin conexión';
+        final color = enviando ? AppTheme.verdePrincipal : _ambar;
         final textos = Theme.of(context).textTheme;
         // En celular solo entra el ícono con la cantidad.
         final compacto = MediaQuery.sizeOf(context).width < 600;
         return ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 260),
           child: Tooltip(
-            message: 'Sin conexión · $pendientes. Lo que registres se guarda en este dispositivo y se envía al volver la conexión.',
+            message: enviando
+                ? 'Enviando al servidor lo registrado sin conexión ($pendientes).'
+                : 'Sin conexión · $pendientes. Lo que registres se guarda en este dispositivo y se envía al volver la conexión.',
             child: Container(
               margin: const EdgeInsets.only(left: 12),
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                color: _ambar.withValues(alpha: 0.12),
+                color: color.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(999),
-                border: Border.all(color: _ambar.withValues(alpha: 0.6)),
-                boxShadow: [BoxShadow(color: _ambar.withValues(alpha: 0.25), blurRadius: 12)],
+                border: Border.all(color: color.withValues(alpha: 0.6)),
+                boxShadow: [BoxShadow(color: color.withValues(alpha: 0.25), blurRadius: 12)],
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(Icons.cloud_off_rounded, size: 18, color: _ambar),
+                  Icon(enviando ? Icons.cloud_sync_rounded : Icons.cloud_off_rounded, size: 18, color: color),
                   const SizedBox(width: 8),
                   Flexible(
                     child: Text.rich(
@@ -382,13 +388,15 @@ class IndicadorConexion extends StatelessWidget {
                         children: compacto
                             ? [TextSpan(text: '$n', style: const TextStyle(fontWeight: FontWeight.w700))]
                             : [
-                                const TextSpan(text: 'Sin conexión', style: TextStyle(fontWeight: FontWeight.w700)),
+                                TextSpan(text: titulo, style: const TextStyle(fontWeight: FontWeight.w700)),
                                 TextSpan(text: ' · $pendientes'),
                               ],
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: textos.labelMedium?.copyWith(color: const Color(0xFF8A5A00)),
+                      style: textos.labelMedium?.copyWith(
+                        color: enviando ? AppTheme.verdePrincipal : const Color(0xFF8A5A00),
+                      ),
                     ),
                   ),
                 ],

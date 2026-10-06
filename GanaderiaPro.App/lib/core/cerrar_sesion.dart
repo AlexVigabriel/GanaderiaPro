@@ -9,6 +9,10 @@ import 'sesion_actual.dart';
 // lugar (por ejemplo, cuando el servidor rechaza un token ya cerrado).
 final navegadorRaiz = GlobalKey<NavigatorState>();
 
+// Para mostrar avisos desde fuera de una pantalla (por ejemplo, al terminar
+// de sincronizar los registros pendientes, HU-47).
+final mensajeroRaiz = GlobalKey<ScaffoldMessengerState>();
+
 // HU-52: borra la sesión de la app y vuelve al login vaciando la pila de
 // pantallas, para que "Atrás" no muestre ninguna pantalla protegida.
 void irAlLoginSinSesion({String? mensaje}) {

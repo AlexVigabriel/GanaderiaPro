@@ -12,7 +12,9 @@ public record RegistrarAnimalRequest(
     decimal? PesoNacimiento = null,
     string? Color = null,
     string? Observaciones = null,
-    bool Castrado = false);
+    bool Castrado = false,
+    // HU-47: lo manda la app al sincronizar lo registrado sin conexión.
+    Guid? IdCliente = null);
 
 public record AnimalResponse(
     Guid Id,

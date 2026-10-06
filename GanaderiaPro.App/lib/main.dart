@@ -28,6 +28,10 @@ Future<void> main() async {
   await RegistrosPendientes.instancia.cargar();
   // HU-46: vigila si el servidor responde mientras la app está abierta.
   EstadoConexion.instancia.iniciar();
+  // HU-47: envía solos los pendientes cuando hay conexión.
+  RegistrosPendientes.instancia.avisar = (mensaje) =>
+      mensajeroRaiz.currentState?.showSnackBar(SnackBar(content: Text(mensaje)));
+  RegistrosPendientes.instancia.iniciarSincronizacion();
   runApp(const GanaderiaProApp());
 }
 
@@ -52,6 +56,7 @@ class GanaderiaProApp extends StatelessWidget {
       // el modo oscuro y recordar la elección es la HU-72.
       themeMode: ThemeMode.light,
       navigatorKey: navegadorRaiz,
+      scaffoldMessengerKey: mensajeroRaiz,
       navigatorObservers: [routeObserver],
       initialRoute: SesionActual.instancia.estaAutenticado ? '/' : '/login',
       // Por defecto, una ruta inicial como "/login" se trata como enlace
