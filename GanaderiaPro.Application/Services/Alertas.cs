@@ -1,4 +1,6 @@
 using GanaderiaPro.Application.Common;
+using GanaderiaPro.Application.DTOs;
+using GanaderiaPro.Application.Exceptions;
 using GanaderiaPro.Application.Interfaces;
 using GanaderiaPro.Domain.Entities;
 using GanaderiaPro.Domain.Eventos;
@@ -172,26 +174,69 @@ public class RevisorAlertas : IRevisorAlertas
     }
 }
 
-// HU-40: notificaciones del usuario actual.
+// HU-40 y HU-41: notificaciones del usuario actual. Cada uno ve y marca
+// solo las suyas.
 public class NotificacionService : INotificacionService
 {
+    // Las más recientes; las anteriores quedan guardadas pero no se listan.
+    public const int MaximoListado = 100;
+
     private readonly INotificacionRepository _notificacionRepository;
     private readonly IRevisorAlertas _revisor;
     private readonly ICurrentUserContext _currentUser;
+    private readonly IUnitOfWork _unitOfWork;
 
     public NotificacionService(
         INotificacionRepository notificacionRepository,
         IRevisorAlertas revisor,
-        ICurrentUserContext currentUser)
+        ICurrentUserContext currentUser,
+        IUnitOfWork unitOfWork)
     {
         _notificacionRepository = notificacionRepository;
         _revisor = revisor;
         _currentUser = currentUser;
+        _unitOfWork = unitOfWork;
     }
 
     public async Task<int> ContarNoLeidasAsync()
     {
         await _revisor.RevisarAsync(_currentUser.RanchoId);
         return await _notificacionRepository.ContarNoLeidasAsync(_currentUser.UsuarioId);
+    }
+
+    // De la más reciente a la más antigua.
+    public async Task<IReadOnlyList<NotificacionResponse>> ListarAsync()
+    {
+        var notificaciones = await _notificacionRepository.ListarAsync(_currentUser.UsuarioId, MaximoListado);
+        return notificaciones
+            .Select(n => new NotificacionResponse(n.Id, n.Tipo, n.Mensaje, n.ReferenciaTipo, n.ReferenciaId, n.Leida, n.Fecha))
+            .ToList();
+    }
+
+    public async Task MarcarLeidaAsync(Guid id)
+    {
+        // Una notificación de otro usuario no se encuentra.
+        var notificacion = await _notificacionRepository.ObtenerAsync(_currentUser.UsuarioId, id)
+            ?? throw new RecursoNoEncontradoException("No se encontró la notificación.");
+
+        if (!notificacion.Leida)
+        {
+            notificacion.Leida = true;
+            await _unitOfWork.GuardarCambiosAsync();
+        }
+    }
+
+    public async Task MarcarTodasLeidasAsync()
+    {
+        var noLeidas = await _notificacionRepository.ListarNoLeidasAsync(_currentUser.UsuarioId);
+        foreach (var n in noLeidas)
+        {
+            n.Leida = true;
+        }
+
+        if (noLeidas.Count > 0)
+        {
+            await _unitOfWork.GuardarCambiosAsync();
+        }
     }
 }

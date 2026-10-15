@@ -8,6 +8,7 @@ import '../../core/cerrar_sesion.dart';
 import '../../core/colaborador.dart';
 import '../../core/conexion.dart';
 import '../../core/formato.dart';
+import '../../core/notificaciones.dart';
 import '../../core/permisos.dart';
 import '../../core/sesion_actual.dart';
 
@@ -428,7 +429,6 @@ class CampanaNotificaciones extends StatefulWidget {
 class _CampanaNotificacionesState extends State<CampanaNotificaciones> {
   final _api = ApiClient();
   Timer? _temporizador;
-  int _cantidad = 0;
 
   @override
   void initState() {
@@ -447,26 +447,37 @@ class _CampanaNotificacionesState extends State<CampanaNotificaciones> {
   Future<void> _actualizar() async {
     try {
       final cantidad = await _api.contarNotificacionesNoLeidas();
-      if (mounted) setState(() => _cantidad = cantidad);
+      if (mounted) notificacionesNoLeidas.value = cantidad;
     } catch (_) {}
+  }
+
+  // HU-41: abre el centro de notificaciones (salvo que ya se esté ahí).
+  void _abrir() {
+    if (ModalRoute.of(context)?.settings.name == '/notificaciones') return;
+    Navigator.of(context).pushNamed('/notificaciones');
   }
 
   @override
   Widget build(BuildContext context) {
     final tema = Theme.of(context);
-    final texto = _cantidad > 99 ? '99+' : '$_cantidad';
-    return IconButton(
-      tooltip: _cantidad == 0 ? 'Notificaciones' : 'Notificaciones: $texto sin leer',
-      onPressed: null,
-      icon: Badge(
-        isLabelVisible: _cantidad > 0,
-        label: Text(texto),
-        backgroundColor: tema.colorScheme.error,
-        child: Icon(
-          _cantidad > 0 ? Icons.notifications_active_outlined : Icons.notifications_none_outlined,
-          color: tema.colorScheme.onSurface,
-        ),
-      ),
+    return ValueListenableBuilder<int>(
+      valueListenable: notificacionesNoLeidas,
+      builder: (context, cantidad, _) {
+        final texto = cantidad > 99 ? '99+' : '$cantidad';
+        return IconButton(
+          tooltip: cantidad == 0 ? 'Notificaciones' : 'Notificaciones: $texto sin leer',
+          onPressed: _abrir,
+          icon: Badge(
+            isLabelVisible: cantidad > 0,
+            label: Text(texto),
+            backgroundColor: tema.colorScheme.error,
+            child: Icon(
+              cantidad > 0 ? Icons.notifications_active_outlined : Icons.notifications_none_outlined,
+              color: tema.colorScheme.onSurface,
+            ),
+          ),
+        );
+      },
     );
   }
 }

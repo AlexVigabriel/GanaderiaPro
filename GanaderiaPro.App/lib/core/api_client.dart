@@ -7,6 +7,7 @@ import 'cerrar_sesion.dart';
 import 'colaborador.dart';
 import 'conexion.dart';
 import 'corral.dart';
+import 'notificaciones.dart';
 import 'pendientes.dart';
 import 'plan.dart';
 import 'reproduccion.dart';
@@ -231,6 +232,35 @@ class ApiClient {
     }
 
     throw ApiException('No se pudieron consultar las notificaciones.');
+  }
+
+  // HU-41: notificaciones del usuario, de la más reciente a la más antigua.
+  Future<List<Notificacion>> listarNotificaciones() async {
+    final response = await _http.get(Uri.parse('$baseUrl/api/notificaciones'), headers: _headersAutenticados);
+
+    if (response.statusCode == 200) {
+      return (jsonDecode(response.body) as List<dynamic>)
+          .map((json) => Notificacion.fromJson(json as Map<String, dynamic>))
+          .toList();
+    }
+
+    throw ApiException('No se pudieron cargar las notificaciones.');
+  }
+
+  Future<void> marcarNotificacionLeida(String id) async {
+    final response = await _http.post(Uri.parse('$baseUrl/api/notificaciones/$id/leida'), headers: _headersAutenticados);
+
+    if (response.statusCode != 204) {
+      throw ApiException(_extraerMensajeError(response.body) ?? 'No se pudo marcar la notificación.');
+    }
+  }
+
+  Future<void> marcarTodasLeidas() async {
+    final response = await _http.post(Uri.parse('$baseUrl/api/notificaciones/leidas'), headers: _headersAutenticados);
+
+    if (response.statusCode != 204) {
+      throw ApiException('No se pudieron marcar las notificaciones.');
+    }
   }
 
   // HU-56: preñeces de una hembra, de la más reciente a la más antigua.

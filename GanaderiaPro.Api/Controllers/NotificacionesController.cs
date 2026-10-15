@@ -1,3 +1,5 @@
+using GanaderiaPro.Application.DTOs;
+using GanaderiaPro.Application.Exceptions;
 using GanaderiaPro.Application.Interfaces;
 using GanaderiaPro.Api.Permisos;
 using Microsoft.AspNetCore.Authorization;
@@ -16,6 +18,35 @@ public class NotificacionesController : ControllerBase
     public NotificacionesController(INotificacionService notificacionService)
     {
         _notificacionService = notificacionService;
+    }
+
+    // HU-41: de la más reciente a la más antigua.
+    [HttpGet]
+    [SinModulo]
+    public async Task<ActionResult<IReadOnlyList<NotificacionResponse>>> Listar() =>
+        Ok(await _notificacionService.ListarAsync());
+
+    [HttpPost("{id:guid}/leida")]
+    [SinModulo]
+    public async Task<IActionResult> MarcarLeida(Guid id)
+    {
+        try
+        {
+            await _notificacionService.MarcarLeidaAsync(id);
+            return NoContent();
+        }
+        catch (RecursoNoEncontradoException ex)
+        {
+            return NotFound(new { mensaje = ex.Message });
+        }
+    }
+
+    [HttpPost("leidas")]
+    [SinModulo]
+    public async Task<IActionResult> MarcarTodasLeidas()
+    {
+        await _notificacionService.MarcarTodasLeidasAsync();
+        return NoContent();
     }
 
     [HttpGet("no-leidas/cantidad")]

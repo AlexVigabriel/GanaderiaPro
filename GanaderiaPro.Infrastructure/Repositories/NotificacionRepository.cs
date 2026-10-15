@@ -24,4 +24,18 @@ public class NotificacionRepository : INotificacionRepository
 
     public Task<int> ContarNoLeidasAsync(Guid usuarioId) =>
         _dbContext.Notificaciones.CountAsync(n => n.UsuarioId == usuarioId && !n.Leida);
+
+    // De la más reciente a la más antigua.
+    public async Task<IReadOnlyList<Notificacion>> ListarAsync(Guid usuarioId, int maximo) =>
+        await _dbContext.Notificaciones
+            .Where(n => n.UsuarioId == usuarioId)
+            .OrderByDescending(n => n.Fecha)
+            .Take(maximo)
+            .ToListAsync();
+
+    public Task<Notificacion?> ObtenerAsync(Guid usuarioId, Guid id) =>
+        _dbContext.Notificaciones.FirstOrDefaultAsync(n => n.UsuarioId == usuarioId && n.Id == id);
+
+    public async Task<IReadOnlyList<Notificacion>> ListarNoLeidasAsync(Guid usuarioId) =>
+        await _dbContext.Notificaciones.Where(n => n.UsuarioId == usuarioId && !n.Leida).ToListAsync();
 }
