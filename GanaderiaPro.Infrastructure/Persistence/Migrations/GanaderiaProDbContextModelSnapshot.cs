@@ -209,6 +209,40 @@ namespace GanaderiaPro.Infrastructure.Persistence.Migrations
                     b.ToTable("Pesajes", (string)null);
                 });
 
+            modelBuilder.Entity("GanaderiaPro.Domain.Entities.Prenez", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("AnimalId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateOnly?>("FechaParto")
+                        .HasColumnType("date");
+
+                    b.Property<DateOnly>("FechaProbableParto")
+                        .HasColumnType("date");
+
+                    b.Property<DateTime>("FechaRegistro")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateOnly>("FechaServicio")
+                        .HasColumnType("date");
+
+                    b.Property<string>("Observacion")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FechaProbableParto");
+
+                    b.HasIndex("AnimalId", "FechaServicio");
+
+                    b.ToTable("Preneces", (string)null);
+                });
+
             modelBuilder.Entity("GanaderiaPro.Domain.Entities.Rancho", b =>
                 {
                     b.Property<Guid>("Id")
@@ -441,6 +475,17 @@ namespace GanaderiaPro.Infrastructure.Persistence.Migrations
                 });
 
             modelBuilder.Entity("GanaderiaPro.Domain.Entities.Pesaje", b =>
+                {
+                    b.HasOne("GanaderiaPro.Domain.Entities.Animal", "Animal")
+                        .WithMany()
+                        .HasForeignKey("AnimalId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Animal");
+                });
+
+            modelBuilder.Entity("GanaderiaPro.Domain.Entities.Prenez", b =>
                 {
                     b.HasOne("GanaderiaPro.Domain.Entities.Animal", "Animal")
                         .WithMany()

@@ -6,6 +6,8 @@ abstract final class Modulos {
   static const pesaje = 'Pesaje';
   static const corrales = 'Corrales';
   static const sanidad = 'Sanidad';
+  // HU-56: preñez y parto.
+  static const reproduccion = 'Reproduccion';
   static const colaboradores = 'Colaboradores';
   static const tablero = 'Tablero';
   // HU-58: plan del rancho. Solo el propietario.
