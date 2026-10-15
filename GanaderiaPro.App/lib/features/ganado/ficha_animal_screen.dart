@@ -14,6 +14,7 @@ import 'listado_animales_screen.dart';
 import '../corrales/cambiar_corral_dialog.dart';
 import '../sanidad/vacunaciones_widgets.dart';
 import 'pesajes_animal.dart';
+import 'reproduccion_animal.dart';
 
 // HU-19: ficha completa del animal.
 class FichaAnimalScreen extends StatefulWidget {
@@ -267,6 +268,11 @@ class _FichaAnimalScreenState extends State<FichaAnimalScreen> {
               TarjetaPesajes(animal: animal, onPesoActualizado: _recargar),
               const SizedBox(height: 16),
               TarjetaHistorialSanitario(animal: animal),
+              // HU-56: solo hembras, y solo si el rol puede ver Reproducción.
+              if (animal.sexo == 'Hembra' && SesionActual.instancia.puedeVer(Modulos.reproduccion)) ...[
+                const SizedBox(height: 16),
+                TarjetaReproduccion(animal: animal),
+              ],
               if (!animal.activo) ...[
                 const SizedBox(height: 16),
                 _tarjetaBaja(animal, tema),

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../core/api_client.dart';
@@ -120,7 +122,10 @@ class _BarraSuperior extends StatelessWidget {
           ),
           // HU-46: aparece solo cuando el servidor no responde.
           IndicadorConexion(estado: EstadoConexion.instancia),
-          const SizedBox(width: 12),
+          const SizedBox(width: 8),
+          // HU-40: alertas sin leer.
+          const CampanaNotificaciones(),
+          const SizedBox(width: 8),
           // HU-52: menú de perfil con el usuario, el rancho y "Cerrar sesión".
           PopupMenuButton<String>(
             tooltip: 'Perfil',
@@ -405,6 +410,63 @@ class IndicadorConexion extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+}
+
+// HU-40: campana con la cantidad de notificaciones sin leer. Se actualiza al
+// abrir cada pantalla y cada minuto.
+class CampanaNotificaciones extends StatefulWidget {
+  const CampanaNotificaciones({super.key});
+
+  static const intervalo = Duration(minutes: 1);
+
+  @override
+  State<CampanaNotificaciones> createState() => _CampanaNotificacionesState();
+}
+
+class _CampanaNotificacionesState extends State<CampanaNotificaciones> {
+  final _api = ApiClient();
+  Timer? _temporizador;
+  int _cantidad = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _actualizar();
+    _temporizador = Timer.periodic(CampanaNotificaciones.intervalo, (_) => _actualizar());
+  }
+
+  @override
+  void dispose() {
+    _temporizador?.cancel();
+    super.dispose();
+  }
+
+  // Sin conexión o con error se conserva la última cantidad conocida.
+  Future<void> _actualizar() async {
+    try {
+      final cantidad = await _api.contarNotificacionesNoLeidas();
+      if (mounted) setState(() => _cantidad = cantidad);
+    } catch (_) {}
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final tema = Theme.of(context);
+    final texto = _cantidad > 99 ? '99+' : '$_cantidad';
+    return IconButton(
+      tooltip: _cantidad == 0 ? 'Notificaciones' : 'Notificaciones: $texto sin leer',
+      onPressed: null,
+      icon: Badge(
+        isLabelVisible: _cantidad > 0,
+        label: Text(texto),
+        backgroundColor: tema.colorScheme.error,
+        child: Icon(
+          _cantidad > 0 ? Icons.notifications_active_outlined : Icons.notifications_none_outlined,
+          color: tema.colorScheme.onSurface,
+        ),
+      ),
     );
   }
 }

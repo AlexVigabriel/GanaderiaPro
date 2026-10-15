@@ -9,6 +9,7 @@ import 'conexion.dart';
 import 'corral.dart';
 import 'pendientes.dart';
 import 'plan.dart';
+import 'reproduccion.dart';
 import 'sanidad.dart';
 import 'sesion_actual.dart';
 
@@ -217,6 +218,58 @@ class ApiClient {
     }
   }
 
+  // HU-40: cantidad de notificaciones sin leer del usuario. El servidor
+  // aprovecha el pedido para revisar si hay alertas nuevas.
+  Future<int> contarNotificacionesNoLeidas() async {
+    final response = await _http.get(
+      Uri.parse('$baseUrl/api/notificaciones/no-leidas/cantidad'),
+      headers: _headersAutenticados,
+    );
+
+    if (response.statusCode == 200) {
+      return (jsonDecode(response.body) as Map<String, dynamic>)['cantidad'] as int;
+    }
+
+    throw ApiException('No se pudieron consultar las notificaciones.');
+  }
+
+  // HU-56: preñeces de una hembra, de la más reciente a la más antigua.
+  Future<List<Prenez>> listarPreneces(String animalId) async {
+    final response = await _http.get(Uri.parse('$baseUrl/api/animales/$animalId/preneces'), headers: _headersAutenticados);
+
+    if (response.statusCode == 200) {
+      return (jsonDecode(response.body) as List<dynamic>)
+          .map((json) => Prenez.fromJson(json as Map<String, dynamic>))
+          .toList();
+    }
+
+    throw ApiException(_extraerMensajeError(response.body) ?? 'No se pudo cargar la reproducción.');
+  }
+
+  Future<void> registrarServicio(String animalId, {required DateTime fecha, String? observacion}) async {
+    final response = await _http.post(
+      Uri.parse('$baseUrl/api/animales/$animalId/preneces'),
+      headers: _headersAutenticados,
+      body: jsonEncode({'fechaServicio': DatosAnimal.fechaIso(fecha), 'observacion': observacion}),
+    );
+
+    if (response.statusCode != 200) {
+      throw ApiException(_extraerMensajeError(response.body) ?? 'No se pudo registrar el servicio.');
+    }
+  }
+
+  Future<void> registrarParto(String animalId, String prenezId, {required DateTime fecha}) async {
+    final response = await _http.post(
+      Uri.parse('$baseUrl/api/animales/$animalId/preneces/$prenezId/parto'),
+      headers: _headersAutenticados,
+      body: jsonEncode({'fechaParto': DatosAnimal.fechaIso(fecha)}),
+    );
+
+    if (response.statusCode != 200) {
+      throw ApiException(_extraerMensajeError(response.body) ?? 'No se pudo registrar el parto.');
+    }
+  }
+
   Future<void> eliminarPesaje(String animalId, String pesajeId) async {
     final response = await _http.delete(
       Uri.parse('$baseUrl/api/animales/$animalId/pesajes/$pesajeId'),
@@ -381,6 +434,38 @@ class ApiClient {
           .toList();
     }
     throw ApiException('No se pudo cargar la lista de vacunas.');
+  }
+
+  // HU-57: tratamientos de un animal, del más reciente al más antiguo.
+  Future<List<Tratamiento>> listarTratamientos(String animalId) async {
+    final response = await _http.get(Uri.parse('$baseUrl/api/animales/$animalId/tratamientos'), headers: _headersAutenticados);
+
+    if (response.statusCode == 200) {
+      return (jsonDecode(response.body) as List<dynamic>)
+          .map((json) => Tratamiento.fromJson(json as Map<String, dynamic>))
+          .toList();
+    }
+
+    throw ApiException(_extraerMensajeError(response.body) ?? 'No se pudieron cargar los tratamientos.');
+  }
+
+  Future<void> registrarTratamiento(String animalId, DatosTratamiento datos) async {
+    final response = await _http.post(
+      Uri.parse('$baseUrl/api/animales/$animalId/tratamientos'),
+      headers: _headersAutenticados,
+      body: jsonEncode({
+        'motivo': datos.motivo,
+        'medicamento': datos.medicamento,
+        'dosis': datos.dosis,
+        'fechaInicio': DatosAnimal.fechaIso(datos.fechaInicio),
+        'duracionDias': datos.duracionDias,
+        'observacion': datos.observacion,
+      }),
+    );
+
+    if (response.statusCode != 200) {
+      throw ApiException(_extraerMensajeError(response.body) ?? 'No se pudo registrar el tratamiento.');
+    }
   }
 
   Future<List<Vacunacion>> listarVacunaciones({String? animalId}) async {
