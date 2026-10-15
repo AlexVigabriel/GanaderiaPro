@@ -67,7 +67,8 @@ public class AnimalRepository : IAnimalRepository
     public async Task<bool> TieneEventosAsync(Guid animalId) =>
         await _dbContext.Pesajes.AnyAsync(p => p.AnimalId == animalId) ||
         await _dbContext.Vacunaciones.AnyAsync(v => v.AnimalId == animalId) ||
-        await _dbContext.Preneces.AnyAsync(p => p.AnimalId == animalId);
+        await _dbContext.Preneces.AnyAsync(p => p.AnimalId == animalId) ||
+        await _dbContext.Tratamientos.AnyAsync(t => t.AnimalId == animalId);
 
     public async Task<IReadOnlyList<ConteoAnimales>> ContarPorEstadoYSexoAsync(Guid ranchoId) =>
         await _dbContext.Animales

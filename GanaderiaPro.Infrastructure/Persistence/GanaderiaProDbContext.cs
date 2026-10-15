@@ -16,6 +16,7 @@ public class GanaderiaProDbContext : DbContext
     public DbSet<Prenez> Preneces => Set<Prenez>();
     public DbSet<Vacuna> Vacunas => Set<Vacuna>();
     public DbSet<Vacunacion> Vacunaciones => Set<Vacunacion>();
+    public DbSet<Tratamiento> Tratamientos => Set<Tratamiento>();
     public DbSet<Corral> Corrales => Set<Corral>();
     public DbSet<Invitacion> Invitaciones => Set<Invitacion>();
 

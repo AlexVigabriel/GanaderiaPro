@@ -48,6 +48,8 @@ builder.Services.AddScoped<IPrenezRepository, PrenezRepository>();
 builder.Services.AddScoped<IPrenezService, PrenezService>();
 builder.Services.AddScoped<IVacunacionRepository, VacunacionRepository>();
 builder.Services.AddScoped<IVacunacionService, VacunacionService>();
+builder.Services.AddScoped<ITratamientoRepository, TratamientoRepository>();
+builder.Services.AddScoped<ITratamientoService, TratamientoService>();
 builder.Services.AddScoped<ISanidadService, SanidadService>();
 builder.Services.AddScoped<ICorralRepository, CorralRepository>();
 builder.Services.AddScoped<ICorralService, CorralService>();

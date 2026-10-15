@@ -421,6 +421,38 @@ class ApiClient {
     throw ApiException('No se pudo cargar la lista de vacunas.');
   }
 
+  // HU-57: tratamientos de un animal, del más reciente al más antiguo.
+  Future<List<Tratamiento>> listarTratamientos(String animalId) async {
+    final response = await _http.get(Uri.parse('$baseUrl/api/animales/$animalId/tratamientos'), headers: _headersAutenticados);
+
+    if (response.statusCode == 200) {
+      return (jsonDecode(response.body) as List<dynamic>)
+          .map((json) => Tratamiento.fromJson(json as Map<String, dynamic>))
+          .toList();
+    }
+
+    throw ApiException(_extraerMensajeError(response.body) ?? 'No se pudieron cargar los tratamientos.');
+  }
+
+  Future<void> registrarTratamiento(String animalId, DatosTratamiento datos) async {
+    final response = await _http.post(
+      Uri.parse('$baseUrl/api/animales/$animalId/tratamientos'),
+      headers: _headersAutenticados,
+      body: jsonEncode({
+        'motivo': datos.motivo,
+        'medicamento': datos.medicamento,
+        'dosis': datos.dosis,
+        'fechaInicio': DatosAnimal.fechaIso(datos.fechaInicio),
+        'duracionDias': datos.duracionDias,
+        'observacion': datos.observacion,
+      }),
+    );
+
+    if (response.statusCode != 200) {
+      throw ApiException(_extraerMensajeError(response.body) ?? 'No se pudo registrar el tratamiento.');
+    }
+  }
+
   Future<List<Vacunacion>> listarVacunaciones({String? animalId}) async {
     final ruta = animalId == null ? '$baseUrl/api/vacunaciones' : '$baseUrl/api/animales/$animalId/vacunaciones';
     final response = await _http.get(Uri.parse(ruta), headers: _headersAutenticados);
