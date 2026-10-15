@@ -53,6 +53,12 @@ builder.Services.AddScoped<ITratamientoService, TratamientoService>();
 builder.Services.AddScoped<ISanidadService, SanidadService>();
 builder.Services.AddScoped<ICorralRepository, CorralRepository>();
 builder.Services.AddScoped<ICorralService, CorralService>();
+// HU-40 (patrón Observer): el publicador avisa a cada observador registrado.
+builder.Services.AddScoped<IPublicadorEventos, PublicadorEventos>();
+builder.Services.AddScoped<IObservadorEventos, NotificadorAlertas>();
+builder.Services.AddScoped<IRevisorAlertas, RevisorAlertas>();
+builder.Services.AddScoped<INotificacionRepository, NotificacionRepository>();
+builder.Services.AddScoped<INotificacionService, NotificacionService>();
 builder.Services.AddScoped<IInvitacionRepository, InvitacionRepository>();
 builder.Services.AddScoped<IColaboradorService, ColaboradorService>();
 builder.Services.AddScoped<IInvitacionService, InvitacionService>();

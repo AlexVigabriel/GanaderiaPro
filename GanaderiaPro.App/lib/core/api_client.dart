@@ -218,6 +218,21 @@ class ApiClient {
     }
   }
 
+  // HU-40: cantidad de notificaciones sin leer del usuario. El servidor
+  // aprovecha el pedido para revisar si hay alertas nuevas.
+  Future<int> contarNotificacionesNoLeidas() async {
+    final response = await _http.get(
+      Uri.parse('$baseUrl/api/notificaciones/no-leidas/cantidad'),
+      headers: _headersAutenticados,
+    );
+
+    if (response.statusCode == 200) {
+      return (jsonDecode(response.body) as Map<String, dynamic>)['cantidad'] as int;
+    }
+
+    throw ApiException('No se pudieron consultar las notificaciones.');
+  }
+
   // HU-56: preñeces de una hembra, de la más reciente a la más antigua.
   Future<List<Prenez>> listarPreneces(String animalId) async {
     final response = await _http.get(Uri.parse('$baseUrl/api/animales/$animalId/preneces'), headers: _headersAutenticados);
