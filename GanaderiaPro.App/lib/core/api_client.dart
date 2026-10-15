@@ -9,6 +9,7 @@ import 'conexion.dart';
 import 'corral.dart';
 import 'pendientes.dart';
 import 'plan.dart';
+import 'reproduccion.dart';
 import 'sanidad.dart';
 import 'sesion_actual.dart';
 
@@ -214,6 +215,43 @@ class ApiClient {
 
     if (response.statusCode != 200) {
       throw ApiException(_extraerMensajeError(response.body) ?? 'No se pudo editar el pesaje.');
+    }
+  }
+
+  // HU-56: preñeces de una hembra, de la más reciente a la más antigua.
+  Future<List<Prenez>> listarPreneces(String animalId) async {
+    final response = await _http.get(Uri.parse('$baseUrl/api/animales/$animalId/preneces'), headers: _headersAutenticados);
+
+    if (response.statusCode == 200) {
+      return (jsonDecode(response.body) as List<dynamic>)
+          .map((json) => Prenez.fromJson(json as Map<String, dynamic>))
+          .toList();
+    }
+
+    throw ApiException(_extraerMensajeError(response.body) ?? 'No se pudo cargar la reproducción.');
+  }
+
+  Future<void> registrarServicio(String animalId, {required DateTime fecha, String? observacion}) async {
+    final response = await _http.post(
+      Uri.parse('$baseUrl/api/animales/$animalId/preneces'),
+      headers: _headersAutenticados,
+      body: jsonEncode({'fechaServicio': DatosAnimal.fechaIso(fecha), 'observacion': observacion}),
+    );
+
+    if (response.statusCode != 200) {
+      throw ApiException(_extraerMensajeError(response.body) ?? 'No se pudo registrar el servicio.');
+    }
+  }
+
+  Future<void> registrarParto(String animalId, String prenezId, {required DateTime fecha}) async {
+    final response = await _http.post(
+      Uri.parse('$baseUrl/api/animales/$animalId/preneces/$prenezId/parto'),
+      headers: _headersAutenticados,
+      body: jsonEncode({'fechaParto': DatosAnimal.fechaIso(fecha)}),
+    );
+
+    if (response.statusCode != 200) {
+      throw ApiException(_extraerMensajeError(response.body) ?? 'No se pudo registrar el parto.');
     }
   }
 

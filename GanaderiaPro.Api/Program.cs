@@ -44,6 +44,8 @@ builder.Services.AddScoped<IAnimalRepository, AnimalRepository>();
 builder.Services.AddScoped<IAnimalService, AnimalService>();
 builder.Services.AddScoped<IPesajeRepository, PesajeRepository>();
 builder.Services.AddScoped<IPesajeService, PesajeService>();
+builder.Services.AddScoped<IPrenezRepository, PrenezRepository>();
+builder.Services.AddScoped<IPrenezService, PrenezService>();
 builder.Services.AddScoped<IVacunacionRepository, VacunacionRepository>();
 builder.Services.AddScoped<IVacunacionService, VacunacionService>();
 builder.Services.AddScoped<ISanidadService, SanidadService>();
