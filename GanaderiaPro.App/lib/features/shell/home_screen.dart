@@ -3,13 +3,16 @@ import 'package:flutter/material.dart';
 import '../../core/api_client.dart';
 import '../../core/permisos.dart';
 import '../../core/plan.dart';
+import '../../core/route_observer.dart';
 import '../../core/sesion_actual.dart';
+import '../../core/tablero.dart';
 import '../../core/widgets/componentes.dart';
 import '../../core/widgets/plan_widgets.dart';
 import 'app_shell.dart';
 
-// Los indicadores del tablero son HU-12/HU-13 (Sprint 3). Mientras tanto,
-// la pantalla da la bienvenida y lleva a los módulos que ya existen.
+// HU-12: tablero con los indicadores generales del rancho. Se recargan cada
+// vez que la pantalla vuelve a quedar visible, sin recargar la aplicación.
+// Los gráficos (HU-13) quedan para la Release 2.
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -17,11 +20,33 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen> with RouteAware {
+  late Future<ResumenTablero> _resumen = ApiClient().obtenerResumenTablero();
+
   // HU-58: "Tu plan" solo para el propietario (módulo Configuración).
   final Future<UsoPlan?>? _usoPlan = SesionActual.instancia.puedeVer(Modulos.configuracion)
       ? ApiClient().obtenerUsoPlan().then<UsoPlan?>((u) => u).catchError((_) => null)
       : null;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final ruta = ModalRoute.of(context);
+    if (ruta is PageRoute) routeObserver.subscribe(this, ruta);
+  }
+
+  @override
+  void dispose() {
+    routeObserver.unsubscribe(this);
+    super.dispose();
+  }
+
+  // Al volver de registrar o dar de baja un animal, los indicadores se
+  // actualizan solos.
+  @override
+  void didPopNext() => _recargar();
+
+  void _recargar() => setState(() => _resumen = ApiClient().obtenerResumenTablero());
 
   @override
   Widget build(BuildContext context) {
@@ -40,6 +65,8 @@ class _HomeScreenState extends State<HomeScreen> {
               subtitulo: 'Resumen de tu rancho y accesos rápidos.',
             ),
             const SizedBox(height: 28),
+            _IndicadoresTablero(resumen: _resumen, alReintentar: _recargar),
+            const SizedBox(height: 16),
             Card(
               margin: EdgeInsets.zero,
               child: InkWell(
@@ -101,6 +128,77 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _IndicadoresTablero extends StatelessWidget {
+  const _IndicadoresTablero({required this.resumen, required this.alReintentar});
+
+  final Future<ResumenTablero> resumen;
+  final VoidCallback alReintentar;
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<ResumenTablero>(
+      future: resumen,
+      builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          final tema = Theme.of(context);
+          return Card(
+            margin: EdgeInsets.zero,
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Row(
+                children: [
+                  Icon(Icons.error_outline, color: tema.colorScheme.error),
+                  const SizedBox(width: 12),
+                  const Expanded(child: Text('No se pudieron cargar los indicadores.')),
+                  TextButton(onPressed: alReintentar, child: const Text('Reintentar')),
+                ],
+              ),
+            ),
+          );
+        }
+
+        // Mientras carga, las tarjetas muestran «—».
+        final r = snapshot.data;
+        final tarjetas = [
+          TarjetaIndicador(etiqueta: 'Animales activos', valor: r?.animalesActivos, icono: Icons.pets_outlined),
+          TarjetaIndicador(etiqueta: 'Machos activos', valor: r?.machosActivos, icono: Icons.male),
+          TarjetaIndicador(etiqueta: 'Hembras activas', valor: r?.hembrasActivas, icono: Icons.female),
+          TarjetaIndicador(etiqueta: 'Vacunados', valor: r?.vacunados, icono: Icons.verified_outlined),
+          TarjetaIndicador(
+            etiqueta: 'Vacunaciones pendientes',
+            valor: r?.vacunacionesPendientes,
+            icono: Icons.event_outlined,
+          ),
+          TarjetaIndicador(etiqueta: 'Próximas a parir', valor: r?.proximasAParir, icono: Icons.child_friendly),
+          TarjetaIndicador(
+            etiqueta: 'Fallecidos del año',
+            valor: r?.fallecidosDelAnio,
+            icono: Icons.heart_broken,
+          ),
+          TarjetaIndicador(etiqueta: 'Corrales activos', valor: r?.corralesActivos, icono: Icons.fence),
+        ];
+
+        return LayoutBuilder(
+          builder: (context, restricciones) {
+            const espacio = 16.0;
+            final columnas = restricciones.maxWidth >= 960
+                ? 4
+                : restricciones.maxWidth >= 480
+                    ? 2
+                    : 1;
+            final ancho = (restricciones.maxWidth - espacio * (columnas - 1)) / columnas;
+            return Wrap(
+              spacing: espacio,
+              runSpacing: espacio,
+              children: [for (final t in tarjetas) SizedBox(width: ancho, child: t)],
+            );
+          },
+        );
+      },
     );
   }
 }

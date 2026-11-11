@@ -13,6 +13,7 @@ import 'plan.dart';
 import 'reproduccion.dart';
 import 'sanidad.dart';
 import 'sesion_actual.dart';
+import 'tablero.dart';
 
 class ApiException implements Exception {
   ApiException(this.mensaje);
@@ -309,6 +310,15 @@ class ApiClient {
     if (response.statusCode != 200) {
       throw ApiException(_extraerMensajeError(response.body) ?? 'No se pudo eliminar el pesaje.');
     }
+  }
+
+  // ---- HU-12: indicadores del tablero
+  Future<ResumenTablero> obtenerResumenTablero() async {
+    final response = await _http.get(Uri.parse('$baseUrl/api/tablero/resumen'), headers: _headersAutenticados);
+    if (response.statusCode == 200) {
+      return ResumenTablero.fromJson(jsonDecode(response.body) as Map<String, dynamic>);
+    }
+    throw ApiException(_extraerMensajeError(response.body) ?? 'No se pudieron cargar los indicadores.');
   }
 
   // ---- HU-58: uso del plan (solo el propietario)
