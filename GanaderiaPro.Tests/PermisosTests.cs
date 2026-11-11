@@ -43,6 +43,12 @@ public class MatrizPermisosTests
     [InlineData(RolUsuario.Veterinario, Modulo.Sanidad, NivelAcceso.Escritura)]
     [InlineData(RolUsuario.EncargadoCorrales, Modulo.Sanidad, NivelAcceso.Lectura)]
     [InlineData(RolUsuario.EncargadoIngreso, Modulo.Sanidad, NivelAcceso.Lectura)]
+    // Reproducción (HU-56)
+    [InlineData(RolUsuario.Propietario, Modulo.Reproduccion, NivelAcceso.Escritura)]
+    [InlineData(RolUsuario.Socio, Modulo.Reproduccion, NivelAcceso.Lectura)]
+    [InlineData(RolUsuario.Veterinario, Modulo.Reproduccion, NivelAcceso.Escritura)]
+    [InlineData(RolUsuario.EncargadoCorrales, Modulo.Reproduccion, NivelAcceso.Lectura)]
+    [InlineData(RolUsuario.EncargadoIngreso, Modulo.Reproduccion, NivelAcceso.Lectura)]
     // Socios y colaboradores
     [InlineData(RolUsuario.Propietario, Modulo.Colaboradores, NivelAcceso.Escritura)]
     [InlineData(RolUsuario.Socio, Modulo.Colaboradores, NivelAcceso.Ninguno)]

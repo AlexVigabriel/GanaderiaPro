@@ -16,6 +16,7 @@ public class CorralServiceTests
     private readonly Mock<ICorralRepository> _corralRepoMock = new();
     private readonly Mock<IAnimalRepository> _animalRepoMock = new();
     private readonly Mock<IUnitOfWork> _unitOfWorkMock = new();
+    private readonly Mock<IPublicadorEventos> _publicadorMock = new();
 
     public CorralServiceTests()
     {
@@ -27,7 +28,7 @@ public class CorralServiceTests
     {
         var currentUserMock = new Mock<ICurrentUserContext>();
         currentUserMock.Setup(c => c.RanchoId).Returns(RanchoIdDePrueba);
-        return new CorralService(_corralRepoMock.Object, _animalRepoMock.Object, currentUserMock.Object, _unitOfWorkMock.Object);
+        return new CorralService(_corralRepoMock.Object, _animalRepoMock.Object, currentUserMock.Object, _unitOfWorkMock.Object, _publicadorMock.Object);
     }
 
     private Animal AnimalDelRancho(string arete, EstadoAnimal estado = EstadoAnimal.Activo)

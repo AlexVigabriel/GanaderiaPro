@@ -97,6 +97,7 @@ class SesionActual {
     Modulos.pesaje: 'Escritura',
     Modulos.corrales: 'Escritura',
     Modulos.sanidad: 'Escritura',
+    Modulos.reproduccion: 'Escritura',
     Modulos.colaboradores: 'Escritura',
     Modulos.tablero: 'Lectura',
     Modulos.configuracion: 'Escritura',

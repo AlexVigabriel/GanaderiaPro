@@ -2,6 +2,7 @@ using GanaderiaPro.Application.DTOs;
 using GanaderiaPro.Application.Exceptions;
 using GanaderiaPro.Application.Interfaces;
 using GanaderiaPro.Domain.Entities;
+using GanaderiaPro.Domain.Eventos;
 
 namespace GanaderiaPro.Application.Services;
 
@@ -15,17 +16,20 @@ public class CorralService : ICorralService
     private readonly IAnimalRepository _animalRepository;
     private readonly ICurrentUserContext _currentUser;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IPublicadorEventos _publicador;
 
     public CorralService(
         ICorralRepository corralRepository,
         IAnimalRepository animalRepository,
         ICurrentUserContext currentUser,
-        IUnitOfWork unitOfWork)
+        IUnitOfWork unitOfWork,
+        IPublicadorEventos publicador)
     {
         _corralRepository = corralRepository;
         _animalRepository = animalRepository;
         _currentUser = currentUser;
         _unitOfWork = unitOfWork;
+        _publicador = publicador;
     }
 
     public async Task<CorralResponse> CrearAsync(CrearCorralRequest request)
@@ -136,6 +140,7 @@ public class CorralService : ICorralService
             throw new ReglaDeNegocioException($"El animal {animal.Arete} está dado de baja: no se puede mover de corral.");
         }
 
+        CorralLleno? lleno = null;
         if (corralId is { } id && id != animal.CorralId)
         {
             var corral = await ObtenerDelRanchoAsync(id);
@@ -149,10 +154,21 @@ public class CorralService : ICorralService
             {
                 throw new ReglaDeNegocioException($"El corral «{corral.Nombre}» está lleno ({ocupados}/{corral.Capacidad}).");
             }
+
+            // HU-40: este animal completa la capacidad.
+            if (ocupados + 1 == corral.Capacidad)
+            {
+                lleno = new CorralLleno(ranchoId, corral.Id, corral.Nombre, corral.Capacidad);
+            }
         }
 
         animal.CorralId = corralId;
         await _unitOfWork.GuardarCambiosAsync();
+
+        if (lleno is not null)
+        {
+            await _publicador.PublicarAsync(lleno);
+        }
     }
 
     private async Task<string> ValidarNombreYCapacidadAsync(Guid ranchoId, string? nombre, int capacidad, Guid? excluirId)

@@ -172,3 +172,62 @@ class DatosVacunacion {
   static String _iso(DateTime f) =>
       '${f.year.toString().padLeft(4, '0')}-${f.month.toString().padLeft(2, '0')}-${f.day.toString().padLeft(2, '0')}';
 }
+
+// HU-57: tratamiento veterinario de un animal.
+class Tratamiento {
+  const Tratamiento({
+    required this.id,
+    required this.motivo,
+    required this.medicamento,
+    required this.dosis,
+    required this.fechaInicio,
+    required this.duracionDias,
+    required this.fechaFin,
+    required this.enCurso,
+    this.observacion,
+    required this.veterinario,
+  });
+
+  final String id;
+  final String motivo;
+  final String medicamento;
+  final String dosis;
+  final DateTime fechaInicio;
+  final int duracionDias;
+  final DateTime fechaFin;
+  final bool enCurso;
+  final String? observacion;
+  final String veterinario;
+
+  factory Tratamiento.fromJson(Map<String, dynamic> json) => Tratamiento(
+    id: json['id'] as String,
+    motivo: json['motivo'] as String,
+    medicamento: json['medicamento'] as String,
+    dosis: json['dosis'] as String,
+    fechaInicio: DateTime.parse(json['fechaInicio'] as String),
+    duracionDias: json['duracionDias'] as int,
+    fechaFin: DateTime.parse(json['fechaFin'] as String),
+    enCurso: json['enCurso'] as bool,
+    observacion: json['observacion'] as String?,
+    veterinario: json['veterinario'] as String,
+  );
+}
+
+// Datos de un tratamiento tal como se envían al registrarlo.
+class DatosTratamiento {
+  const DatosTratamiento({
+    required this.motivo,
+    required this.medicamento,
+    required this.dosis,
+    required this.fechaInicio,
+    required this.duracionDias,
+    this.observacion,
+  });
+
+  final String motivo;
+  final String medicamento;
+  final String dosis;
+  final DateTime fechaInicio;
+  final int duracionDias;
+  final String? observacion;
+}

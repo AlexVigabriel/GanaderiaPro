@@ -9,6 +9,8 @@ public enum Modulo
     Pesaje,
     Corrales,
     Sanidad,
+    // HU-56: preñez y parto.
+    Reproduccion,
     Colaboradores,
     Tablero,
     // HU-58: plan del rancho y su uso. Solo el propietario.
@@ -26,8 +28,8 @@ public enum NivelAcceso
 // HU-34: matriz de permisos del backlog (sección 5). Es el único lugar donde
 // se define qué puede hacer cada rol: la usan el servidor para permitir o
 // rechazar cada pedido y la app para mostrar u ocultar menús y botones.
-// Los módulos que todavía no existen (Reproducción, Importar/Exportar Excel,
-// Configuración) se suman acá cuando se implementen.
+// Los módulos que todavía no existen (Importar/Exportar Excel) se suman acá
+// cuando se implementen.
 public static class MatrizPermisos
 {
     private const NivelAcceso E = NivelAcceso.Escritura;
@@ -37,22 +39,24 @@ public static class MatrizPermisos
     private static readonly IReadOnlyDictionary<RolUsuario, IReadOnlyDictionary<Modulo, NivelAcceso>> Matriz =
         new Dictionary<RolUsuario, IReadOnlyDictionary<Modulo, NivelAcceso>>
         {
-            [RolUsuario.Propietario] = Fila(ganado: E, pesaje: E, corrales: E, sanidad: E, colaboradores: E),
-            [RolUsuario.Socio] = Fila(ganado: L, pesaje: L, corrales: L, sanidad: L, colaboradores: N),
-            [RolUsuario.Veterinario] = Fila(ganado: L, pesaje: E, corrales: L, sanidad: E, colaboradores: N),
-            [RolUsuario.EncargadoCorrales] = Fila(ganado: L, pesaje: E, corrales: E, sanidad: L, colaboradores: N),
-            [RolUsuario.EncargadoIngreso] = Fila(ganado: E, pesaje: E, corrales: L, sanidad: L, colaboradores: N),
+            [RolUsuario.Propietario] = Fila(ganado: E, pesaje: E, corrales: E, sanidad: E, reproduccion: E, colaboradores: E),
+            [RolUsuario.Socio] = Fila(ganado: L, pesaje: L, corrales: L, sanidad: L, reproduccion: L, colaboradores: N),
+            [RolUsuario.Veterinario] = Fila(ganado: L, pesaje: E, corrales: L, sanidad: E, reproduccion: E, colaboradores: N),
+            [RolUsuario.EncargadoCorrales] = Fila(ganado: L, pesaje: E, corrales: E, sanidad: L, reproduccion: L, colaboradores: N),
+            [RolUsuario.EncargadoIngreso] = Fila(ganado: E, pesaje: E, corrales: L, sanidad: L, reproduccion: L, colaboradores: N),
         };
 
     // El tablero es de solo lectura para todos los roles.
     private static IReadOnlyDictionary<Modulo, NivelAcceso> Fila(
-        NivelAcceso ganado, NivelAcceso pesaje, NivelAcceso corrales, NivelAcceso sanidad, NivelAcceso colaboradores) =>
+        NivelAcceso ganado, NivelAcceso pesaje, NivelAcceso corrales, NivelAcceso sanidad, NivelAcceso reproduccion,
+        NivelAcceso colaboradores) =>
         new Dictionary<Modulo, NivelAcceso>
         {
             [Modulo.Ganado] = ganado,
             [Modulo.Pesaje] = pesaje,
             [Modulo.Corrales] = corrales,
             [Modulo.Sanidad] = sanidad,
+            [Modulo.Reproduccion] = reproduccion,
             [Modulo.Colaboradores] = colaboradores,
             [Modulo.Tablero] = L,
             [Modulo.Configuracion] = colaboradores,
