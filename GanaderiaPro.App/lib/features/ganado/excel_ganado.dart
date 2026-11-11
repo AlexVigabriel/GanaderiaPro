@@ -1,5 +1,3 @@
-import 'dart:typed_data';
-
 import 'package:flutter/material.dart';
 
 import '../../core/animal.dart';
@@ -118,7 +116,7 @@ class _Importando extends StatefulWidget {
   const _Importando({required this.nombre, required this.bytes});
 
   final String nombre;
-  final Uint8List bytes;
+  final List<int> bytes;
 
   @override
   State<_Importando> createState() => _ImportandoState();

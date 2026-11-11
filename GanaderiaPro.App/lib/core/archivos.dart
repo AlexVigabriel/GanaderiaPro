@@ -9,8 +9,9 @@ class ArchivosLocales {
 
   // Devuelve el nombre y el contenido del Excel elegido, o null si se canceló.
   Future<({String nombre, Uint8List bytes})?> elegirExcel() async {
-    final archivos = await FilePicker.pickFiles(type: FileType.custom, allowedExtensions: ['xlsx']);
-    if (archivos.isEmpty) return null;
+    // Según la versión, cancelar devuelve null o una lista vacía.
+    final List<PlatformFile>? archivos = await FilePicker.pickFiles(type: FileType.custom, allowedExtensions: ['xlsx']);
+    if (archivos == null || archivos.isEmpty) return null;
     final archivo = archivos.first;
     return (nombre: archivo.name, bytes: await archivo.readAsBytes());
   }

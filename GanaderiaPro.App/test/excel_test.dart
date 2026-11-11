@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -13,14 +12,14 @@ import 'package:http/testing.dart';
 
 // Sin diálogos del sistema: guarda en memoria y "elige" un archivo fijo.
 class _ArchivosFalsos extends ArchivosLocales {
-  final guardados = <String, Uint8List>{};
+  final guardados = <String, List<int>>{};
+
+  // Los tipos se heredan de ArchivosLocales.
+  @override
+  elegirExcel() async => (nombre: 'mis_animales.xlsx', bytes: utf8.encode('xlsx'));
 
   @override
-  Future<({String nombre, Uint8List bytes})?> elegirExcel() async =>
-      (nombre: 'mis_animales.xlsx', bytes: Uint8List.fromList([1, 2, 3]));
-
-  @override
-  Future<bool> guardar(String nombre, Uint8List bytes) async {
+  guardar(nombre, bytes) async {
     guardados[nombre] = bytes;
     return true;
   }

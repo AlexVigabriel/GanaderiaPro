@@ -336,7 +336,7 @@ class ApiClient {
     throw ApiException(_extraerMensajeError(response.body) ?? 'No se pudo descargar el archivo.');
   }
 
-  Future<ResultadoImportacion> importarGanadoExcel(Uint8List bytes, String nombreArchivo) async {
+  Future<ResultadoImportacion> importarGanadoExcel(List<int> bytes, String nombreArchivo) async {
     final pedido = http.MultipartRequest('POST', Uri.parse('$baseUrl/api/animales/excel/importar'));
     final token = SesionActual.instancia.token;
     if (token != null) pedido.headers['Authorization'] = 'Bearer $token';
