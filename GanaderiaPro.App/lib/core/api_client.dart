@@ -362,6 +362,29 @@ class ApiClient {
     throw ApiException(_extraerMensajeError(response.body) ?? 'No se pudo generar la invitación.');
   }
 
+  // ---- HU-29 y HU-30: Socios (mismo formato que los colaboradores)
+  Future<List<Colaborador>> listarSocios() async {
+    final response = await _http.get(Uri.parse('$baseUrl/api/socios'), headers: _headersAutenticados);
+    if (response.statusCode == 200) {
+      return (jsonDecode(response.body) as List<dynamic>)
+          .map((json) => Colaborador.fromJson(json as Map<String, dynamic>))
+          .toList();
+    }
+    throw ApiException(_extraerMensajeError(response.body) ?? 'No se pudieron cargar los socios.');
+  }
+
+  Future<InvitacionCreada> invitarSocio({required String nombre, required String email}) => _enviarInvitacion(
+    _http.post(
+      Uri.parse('$baseUrl/api/socios'),
+      headers: _headersAutenticados,
+      body: jsonEncode({'nombre': nombre, 'email': email}),
+    ),
+  );
+
+  Future<InvitacionCreada> regenerarInvitacionSocio(String socioId) => _enviarInvitacion(
+    _http.post(Uri.parse('$baseUrl/api/socios/$socioId/invitacion'), headers: _headersAutenticados),
+  );
+
   Future<void> cambiarRolColaborador(String colaboradorId, String rol) => _enviarColaborador(
     _http.put(
       Uri.parse('$baseUrl/api/colaboradores/$colaboradorId/rol'),

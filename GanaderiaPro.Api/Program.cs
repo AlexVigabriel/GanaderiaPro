@@ -62,6 +62,7 @@ builder.Services.AddScoped<INotificacionRepository, NotificacionRepository>();
 builder.Services.AddScoped<INotificacionService, NotificacionService>();
 builder.Services.AddScoped<IInvitacionRepository, InvitacionRepository>();
 builder.Services.AddScoped<IColaboradorService, ColaboradorService>();
+builder.Services.AddScoped<ISocioService, SocioService>();
 builder.Services.AddScoped<IInvitacionService, InvitacionService>();
 builder.Services.AddScoped<ILimitesPlanProvider, LimitesPlanProvider>();
 builder.Services.AddScoped<IControlLimitesPlan, ControlLimitesPlan>();

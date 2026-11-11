@@ -29,6 +29,7 @@ const modulosDisponibles = [
   ModuloMenu(titulo: 'Corrales', icono: Icons.fence, ruta: '/corrales', modulo: Modulos.corrales),
   ModuloMenu(titulo: 'Sanidad', icono: Icons.vaccines_outlined, ruta: '/sanidad', modulo: Modulos.sanidad),
   ModuloMenu(titulo: 'Colaboradores', icono: Icons.group_outlined, ruta: '/colaboradores', modulo: Modulos.colaboradores),
+  ModuloMenu(titulo: 'Socios', icono: Icons.handshake_outlined, ruta: '/socios', modulo: Modulos.colaboradores),
 ];
 
 // Estructura común de las pantallas internas: menú lateral fijo en

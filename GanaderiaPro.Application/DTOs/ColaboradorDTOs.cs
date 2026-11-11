@@ -22,3 +22,6 @@ public record InvitacionCreadaResponse(ColaboradorResponse Colaborador, string C
 public record InvitacionResponse(string Rancho, string Nombre, string Email, RolUsuario Rol, DateTime Vence);
 
 public record AceptarInvitacionRequest(string Contrasena, string ConfirmarContrasena);
+
+// HU-29: el socio no elige rol: siempre tiene acceso de solo lectura.
+public record InvitarSocioRequest(string Nombre, string Email);

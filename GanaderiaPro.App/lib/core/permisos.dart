@@ -21,4 +21,5 @@ const moduloDeRuta = {
   '/corrales': Modulos.corrales,
   '/sanidad': Modulos.sanidad,
   '/colaboradores': Modulos.colaboradores,
+  '/socios': Modulos.colaboradores,
 };

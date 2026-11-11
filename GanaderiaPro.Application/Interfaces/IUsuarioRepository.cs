@@ -9,6 +9,8 @@ public interface IUsuarioRepository
     Task<Usuario?> ObtenerPorIdAsync(Guid id);
     Task<Usuario?> ObtenerDelRanchoAsync(Guid ranchoId, Guid id);
     Task<IReadOnlyList<Usuario>> ListarColaboradoresAsync(Guid ranchoId);
+    // HU-30: socios del rancho, ordenados por nombre.
+    Task<IReadOnlyList<Usuario>> ListarSociosAsync(Guid ranchoId);
 
     // HU-40: usuarios activos del rancho (propietario incluido), para las alertas.
     Task<IReadOnlyList<Usuario>> ListarActivosAsync(Guid ranchoId);
