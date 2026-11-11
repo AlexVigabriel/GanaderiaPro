@@ -20,6 +20,7 @@ import '../shell/app_shell.dart';
 import 'baja_animal_dialog.dart';
 import 'carga_multiple_dialog.dart';
 import 'editar_animal_screen.dart';
+import 'excel_ganado.dart';
 import 'ficha_animal_screen.dart';
 
 class ListadoAnimalesScreen extends StatefulWidget {
@@ -270,6 +271,18 @@ class _ListadoAnimalesScreenState extends State<ListadoAnimalesScreen> with Rout
               subtitulo: 'Administrá tu ganado y registrá información detallada.',
               soloConsulta: !_puedeEditar,
               acciones: [
+                // HU-43 y HU-44: exportar, plantilla e importación.
+                if (BotonExcel.visible)
+                  BotonExcel(
+                    filtros: () => (
+                      busqueda: _busqueda.text.trim(),
+                      estado: _estado,
+                      sexo: _sexo,
+                      raza: _raza,
+                      categoria: _categoria,
+                    ),
+                    onImportado: _cargar,
+                  ),
                 if (_puedeEditar)
                   FilledButton.icon(
                     onPressed: _agregar,

@@ -84,7 +84,7 @@ public class HistorialAnimalServiceTests
         var eventos = await CrearServicio().ListarAsync(_animal.Id);
 
         Assert.Equal(
-            ["MovimientoCorral", "Parto", "Tratamiento", "Vacunacion", "Pesaje", "Servicio"],
+            new[] { "MovimientoCorral", "Parto", "Tratamiento", "Vacunacion", "Pesaje", "Servicio" },
             eventos.Select(e => e.Tipo).ToArray());
         Assert.Equal("Pasó del corral «Norte» a «Sur»", eventos[0].Descripcion);
         Assert.Equal("Laura Rojas", eventos[0].Usuario);

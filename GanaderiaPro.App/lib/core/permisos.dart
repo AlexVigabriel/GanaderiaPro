@@ -12,6 +12,9 @@ abstract final class Modulos {
   static const tablero = 'Tablero';
   // HU-58: plan del rancho. Solo el propietario.
   static const configuracion = 'Configuracion';
+  // HU-43 y HU-44: Excel de ganado.
+  static const importarExcel = 'ImportarExcel';
+  static const exportarExcel = 'ExportarExcel';
 }
 
 // Módulo de cada ruta protegida (las que no están, como el tablero, las ve

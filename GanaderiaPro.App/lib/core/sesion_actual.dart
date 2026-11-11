@@ -101,5 +101,7 @@ class SesionActual {
     Modulos.colaboradores: 'Escritura',
     Modulos.tablero: 'Lectura',
     Modulos.configuracion: 'Escritura',
+    Modulos.importarExcel: 'Escritura',
+    Modulos.exportarExcel: 'Escritura',
   };
 }

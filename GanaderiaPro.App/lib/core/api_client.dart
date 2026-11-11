@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:http/http.dart' as http;
 
@@ -312,6 +313,39 @@ class ApiClient {
     if (response.statusCode != 200) {
       throw ApiException(_extraerMensajeError(response.body) ?? 'No se pudo eliminar el pesaje.');
     }
+  }
+
+  // ---- HU-43 y HU-44: Excel de ganado
+  Future<Uint8List> descargarPlantillaExcel() => _descargar(Uri.parse('$baseUrl/api/animales/excel/plantilla'));
+
+  // Con los mismos filtros que el listado.
+  Future<Uint8List> exportarGanadoExcel({String? busqueda, String? estado, String? sexo, String? raza, String? categoria}) {
+    final query = <String, String>{
+      if (busqueda != null && busqueda.isNotEmpty) 'busqueda': busqueda,
+      'estado': ?estado,
+      'sexo': ?sexo,
+      if (raza != null && raza.isNotEmpty) 'raza': raza,
+      'categoria': ?categoria,
+    };
+    return _descargar(Uri.parse('$baseUrl/api/animales/excel/exportar').replace(queryParameters: query.isEmpty ? null : query));
+  }
+
+  Future<Uint8List> _descargar(Uri url) async {
+    final response = await _http.get(url, headers: _headersAutenticados);
+    if (response.statusCode == 200) return response.bodyBytes;
+    throw ApiException(_extraerMensajeError(response.body) ?? 'No se pudo descargar el archivo.');
+  }
+
+  Future<ResultadoImportacion> importarGanadoExcel(Uint8List bytes, String nombreArchivo) async {
+    final pedido = http.MultipartRequest('POST', Uri.parse('$baseUrl/api/animales/excel/importar'));
+    final token = SesionActual.instancia.token;
+    if (token != null) pedido.headers['Authorization'] = 'Bearer $token';
+    pedido.files.add(http.MultipartFile.fromBytes('archivo', bytes, filename: nombreArchivo));
+    final response = await http.Response.fromStream(await _http.send(pedido));
+    if (response.statusCode == 200) {
+      return ResultadoImportacion.fromJson(jsonDecode(response.body) as Map<String, dynamic>);
+    }
+    throw ApiException(_extraerMensajeError(response.body) ?? 'No se pudo importar el archivo.');
   }
 
   // ---- HU-36.1 y HU-38: asistente de consultas
