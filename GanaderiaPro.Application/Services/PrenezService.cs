@@ -76,6 +76,7 @@ public class PrenezService : IPrenezService
             FechaProbableParto = Prenez.CalcularFechaProbableParto(request.FechaServicio),
             Observacion = string.IsNullOrWhiteSpace(request.Observacion) ? null : request.Observacion.Trim(),
             FechaRegistro = DateTime.UtcNow,
+            RegistradoPorId = _currentUser.UsuarioId,
         };
 
         _prenezRepository.Agregar(prenez);

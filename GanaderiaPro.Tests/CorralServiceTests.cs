@@ -17,18 +17,24 @@ public class CorralServiceTests
     private readonly Mock<IAnimalRepository> _animalRepoMock = new();
     private readonly Mock<IUnitOfWork> _unitOfWorkMock = new();
     private readonly Mock<IPublicadorEventos> _publicadorMock = new();
+    private readonly Mock<IMovimientoCorralRepository> _movimientoRepoMock = new();
+    private readonly List<MovimientoCorral> _movimientos = [];
+    private static readonly Guid UsuarioIdDePrueba = Guid.NewGuid();
 
     public CorralServiceTests()
     {
         _corralRepoMock.Setup(r => r.ListarAnimalesActivosAsync(It.IsAny<Guid>())).ReturnsAsync(new List<Animal>());
         _corralRepoMock.Setup(r => r.ContarAnimalesActivosAsync(RanchoIdDePrueba)).ReturnsAsync(new Dictionary<Guid, int>());
+        _movimientoRepoMock.Setup(r => r.Agregar(It.IsAny<MovimientoCorral>())).Callback<MovimientoCorral>(_movimientos.Add);
     }
 
     private CorralService CrearServicio()
     {
         var currentUserMock = new Mock<ICurrentUserContext>();
         currentUserMock.Setup(c => c.RanchoId).Returns(RanchoIdDePrueba);
-        return new CorralService(_corralRepoMock.Object, _animalRepoMock.Object, currentUserMock.Object, _unitOfWorkMock.Object, _publicadorMock.Object);
+        currentUserMock.Setup(c => c.UsuarioId).Returns(UsuarioIdDePrueba);
+        return new CorralService(_corralRepoMock.Object, _animalRepoMock.Object, currentUserMock.Object, _unitOfWorkMock.Object,
+            _publicadorMock.Object, _movimientoRepoMock.Object);
     }
 
     private Animal AnimalDelRancho(string arete, EstadoAnimal estado = EstadoAnimal.Activo)
@@ -257,5 +263,36 @@ public class CorralServiceTests
         var service = CrearServicio();
 
         await Assert.ThrowsAsync<RecursoNoEncontradoException>(() => service.AsignarAnimalAsync(animal.Id, Guid.NewGuid()));
+    }
+
+    [Fact]
+    public async Task AsignarAnimal_DejaElMovimientoEnElHistorialConFechaYUsuario()
+    {
+        // HU-22 y HU-25.
+        var origen = CorralDelRancho("Corral Norte", 5);
+        var animal = AnimalDelRancho("C-20");
+        animal.CorralId = origen.Id;
+        animal.Corral = origen;
+        var destino = CorralDelRancho("Corral Sur", 5);
+
+        await CrearServicio().AsignarAnimalAsync(animal.Id, destino.Id);
+
+        var movimiento = Assert.Single(_movimientos);
+        Assert.Equal(animal.Id, movimiento.AnimalId);
+        Assert.Equal("Corral Norte", movimiento.CorralOrigen);
+        Assert.Equal("Corral Sur", movimiento.CorralDestino);
+        Assert.Equal(UsuarioIdDePrueba, movimiento.UsuarioId);
+    }
+
+    [Fact]
+    public async Task AsignarAnimal_AlMismoCorral_NoRegistraMovimiento()
+    {
+        var corral = CorralDelRancho("Corral Este", 5);
+        var animal = AnimalDelRancho("C-21");
+        animal.CorralId = corral.Id;
+
+        await CrearServicio().AsignarAnimalAsync(animal.Id, corral.Id);
+
+        Assert.Empty(_movimientos);
     }
 }

@@ -24,5 +24,11 @@ public class PrenezConfiguration : IEntityTypeConfiguration<Prenez>
             .WithMany()
             .HasForeignKey(p => p.AnimalId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        // HU-22: quién registró el servicio.
+        builder.HasOne(p => p.RegistradoPor)
+            .WithMany()
+            .HasForeignKey(p => p.RegistradoPorId)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }

@@ -13,6 +13,7 @@ import 'editar_animal_screen.dart';
 import 'listado_animales_screen.dart';
 import '../corrales/cambiar_corral_dialog.dart';
 import '../sanidad/vacunaciones_widgets.dart';
+import 'historial_animal.dart';
 import 'pesajes_animal.dart';
 import 'reproduccion_animal.dart';
 
@@ -277,6 +278,8 @@ class _FichaAnimalScreenState extends State<FichaAnimalScreen> {
                 const SizedBox(height: 16),
                 _tarjetaBaja(animal, tema),
               ],
+              const SizedBox(height: 16),
+              TarjetaHistorial(animal: animal),
               if (animal.observaciones != null) ...[
                 const SizedBox(height: 16),
                 Card(

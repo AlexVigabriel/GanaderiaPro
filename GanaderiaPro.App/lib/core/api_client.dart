@@ -7,6 +7,7 @@ import 'cerrar_sesion.dart';
 import 'colaborador.dart';
 import 'conexion.dart';
 import 'corral.dart';
+import 'historial.dart';
 import 'notificaciones.dart';
 import 'pendientes.dart';
 import 'plan.dart';
@@ -310,6 +311,17 @@ class ApiClient {
     if (response.statusCode != 200) {
       throw ApiException(_extraerMensajeError(response.body) ?? 'No se pudo eliminar el pesaje.');
     }
+  }
+
+  // ---- HU-22: historial del animal
+  Future<List<EventoHistorial>> listarHistorial(String animalId) async {
+    final response = await _http.get(Uri.parse('$baseUrl/api/animales/$animalId/historial'), headers: _headersAutenticados);
+    if (response.statusCode == 200) {
+      return (jsonDecode(response.body) as List<dynamic>)
+          .map((json) => EventoHistorial.fromJson(json as Map<String, dynamic>))
+          .toList();
+    }
+    throw ApiException(_extraerMensajeError(response.body) ?? 'No se pudo cargar el historial.');
   }
 
   // ---- HU-12: indicadores del tablero

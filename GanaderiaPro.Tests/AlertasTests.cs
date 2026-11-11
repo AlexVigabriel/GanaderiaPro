@@ -124,7 +124,8 @@ public class AlertasTests
         var usuario = new Mock<ICurrentUserContext>();
         usuario.Setup(u => u.RanchoId).Returns(RanchoId);
         var publicador = new Mock<IPublicadorEventos>();
-        var servicio = new CorralService(corrales.Object, animales.Object, usuario.Object, new Mock<IUnitOfWork>().Object, publicador.Object);
+        var servicio = new CorralService(corrales.Object, animales.Object, usuario.Object, new Mock<IUnitOfWork>().Object, publicador.Object,
+            new Mock<IMovimientoCorralRepository>().Object);
 
         await servicio.AsignarAnimalAsync(animal.Id, corral.Id);
 

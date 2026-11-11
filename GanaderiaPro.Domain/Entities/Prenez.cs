@@ -19,6 +19,10 @@ public class Prenez
     public string? Observacion { get; set; }
     public DateTime FechaRegistro { get; set; }
 
+    // HU-22: usuario que registró el servicio (vacío en los anteriores a esta versión).
+    public Guid? RegistradoPorId { get; set; }
+    public Usuario? RegistradoPor { get; set; }
+
     public bool Abierta => FechaParto is null;
 
     public static DateOnly CalcularFechaProbableParto(DateOnly fechaServicio) => fechaServicio.AddDays(DiasGestacion);
