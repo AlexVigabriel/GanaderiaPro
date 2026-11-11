@@ -63,10 +63,16 @@ public class NotificadorAlertas : IObservadorEventos
             destinatarios = usuarios.Where(u => u.Rol == RolUsuario.Propietario).ToList();
         }
 
+        var ahora = DateTime.UtcNow;
         var agregadas = 0;
         foreach (var usuario in destinatarios)
         {
-            if (await _notificacionRepository.ExisteAsync(usuario.Id, alerta.Clave))
+            // Con ventana (HU-38): se puede repetir pasado ese tiempo, así que la
+            // clave guardada lleva la fecha para no chocar con el índice único.
+            var repetida = alerta.Ventana is { } ventana
+                ? await _notificacionRepository.ExisteDesdeAsync(usuario.Id, alerta.Clave, ahora - ventana)
+                : await _notificacionRepository.ExisteAsync(usuario.Id, alerta.Clave);
+            if (repetida)
             {
                 continue;
             }
@@ -80,8 +86,8 @@ public class NotificadorAlertas : IObservadorEventos
                 Mensaje = alerta.Mensaje,
                 ReferenciaTipo = alerta.ReferenciaTipo,
                 ReferenciaId = alerta.ReferenciaId,
-                Clave = alerta.Clave,
-                Fecha = DateTime.UtcNow,
+                Clave = alerta.Ventana is null ? alerta.Clave : $"{alerta.Clave}@{ahora:yyyyMMddHHmmss}",
+                Fecha = ahora,
             });
             agregadas++;
         }
@@ -98,7 +104,8 @@ public class NotificadorAlertas : IObservadorEventos
         string ReferenciaTipo,
         Guid ReferenciaId,
         string Clave,
-        IReadOnlySet<RolUsuario> Roles);
+        IReadOnlySet<RolUsuario> Roles,
+        TimeSpan? Ventana = null);
 
     private static Alerta? Describir(IEventoRancho evento)
     {
@@ -127,6 +134,14 @@ public class NotificadorAlertas : IObservadorEventos
                 p.AnimalId,
                 $"parto:{p.PrenezId}",
                 new HashSet<RolUsuario> { RolUsuario.Veterinario }),
+            DatoFaltante d => new Alerta(
+                TipoNotificacion.DatoFaltante,
+                $"El asistente no encontró {d.Dato}. Registralo para que la información esté completa.",
+                "Asistente",
+                Guid.Empty,
+                $"dato:{d.Clave}",
+                new HashSet<RolUsuario> { d.Responsable },
+                Ventana: TimeSpan.FromHours(24)),
             _ => null,
         };
     }

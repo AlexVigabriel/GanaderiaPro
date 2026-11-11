@@ -26,6 +26,8 @@ class ModuloMenu {
 const modulosDisponibles = [
   ModuloMenu(titulo: 'Tablero', icono: Icons.space_dashboard_outlined, ruta: '/', modulo: Modulos.tablero),
   ModuloMenu(titulo: 'Animales', icono: Icons.pets_outlined, ruta: '/ganado', modulo: Modulos.ganado),
+  // HU-36.1: el asistente lo ven todos los roles (como el tablero).
+  ModuloMenu(titulo: 'Asistente', icono: Icons.forum_outlined, ruta: '/asistente', modulo: Modulos.tablero),
   ModuloMenu(titulo: 'Corrales', icono: Icons.fence, ruta: '/corrales', modulo: Modulos.corrales),
   ModuloMenu(titulo: 'Sanidad', icono: Icons.vaccines_outlined, ruta: '/sanidad', modulo: Modulos.sanidad),
   ModuloMenu(titulo: 'Colaboradores', icono: Icons.group_outlined, ruta: '/colaboradores', modulo: Modulos.colaboradores),

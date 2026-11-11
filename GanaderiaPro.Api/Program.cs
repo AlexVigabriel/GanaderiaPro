@@ -52,6 +52,7 @@ builder.Services.AddScoped<ITratamientoRepository, TratamientoRepository>();
 builder.Services.AddScoped<ITratamientoService, TratamientoService>();
 builder.Services.AddScoped<ISanidadService, SanidadService>();
 builder.Services.AddScoped<ITableroService, TableroService>();
+builder.Services.AddScoped<IAsistenteService, AsistenteService>();
 builder.Services.AddScoped<ICorralRepository, CorralRepository>();
 builder.Services.AddScoped<IMovimientoCorralRepository, MovimientoCorralRepository>();
 builder.Services.AddScoped<IHistorialAnimalService, HistorialAnimalService>();

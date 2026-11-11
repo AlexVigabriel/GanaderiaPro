@@ -1,3 +1,5 @@
+using GanaderiaPro.Domain.Entities;
+
 namespace GanaderiaPro.Domain.Eventos;
 
 // HU-40 (patrón Observer): hechos del rancho que pueden interesar a alguien.
@@ -27,3 +29,12 @@ public sealed record PartoProximo(
     Guid AnimalId,
     string Arete,
     DateOnly FechaProbableParto) : IEventoRancho;
+
+// HU-38: el asistente reconoció la consulta pero el dato no está registrado.
+// Clave identifica la consulta (por ejemplo, «peso:AR-002»): no se avisa dos
+// veces lo mismo dentro de 24 horas.
+public sealed record DatoFaltante(
+    Guid RanchoId,
+    string Dato,
+    RolUsuario Responsable,
+    string Clave) : IEventoRancho;

@@ -7,6 +7,7 @@ import 'cerrar_sesion.dart';
 import 'colaborador.dart';
 import 'conexion.dart';
 import 'corral.dart';
+import 'asistente.dart';
 import 'historial.dart';
 import 'notificaciones.dart';
 import 'pendientes.dart';
@@ -311,6 +312,24 @@ class ApiClient {
     if (response.statusCode != 200) {
       throw ApiException(_extraerMensajeError(response.body) ?? 'No se pudo eliminar el pesaje.');
     }
+  }
+
+  // ---- HU-36.1 y HU-38: asistente de consultas
+  Future<RespuestaAsistente> consultarAsistente(String pregunta) async {
+    final url = Uri.parse('$baseUrl/api/asistente').replace(queryParameters: {'pregunta': pregunta});
+    final response = await _http.get(url, headers: _headersAutenticados);
+    if (response.statusCode == 200) {
+      return RespuestaAsistente.fromJson(jsonDecode(response.body) as Map<String, dynamic>);
+    }
+    throw ApiException(_extraerMensajeError(response.body) ?? 'El asistente no pudo responder.');
+  }
+
+  Future<List<String>> listarEjemplosAsistente() async {
+    final response = await _http.get(Uri.parse('$baseUrl/api/asistente/ejemplos'), headers: _headersAutenticados);
+    if (response.statusCode == 200) {
+      return (jsonDecode(response.body) as List<dynamic>).cast<String>();
+    }
+    throw ApiException(_extraerMensajeError(response.body) ?? 'No se pudieron cargar los ejemplos.');
   }
 
   // ---- HU-22: historial del animal

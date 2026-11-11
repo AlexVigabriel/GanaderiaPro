@@ -16,6 +16,10 @@ public class NotificacionRepository : INotificacionRepository
 
     // Incluye las agregadas en esta misma operación y todavía no guardadas,
     // para no crear dos veces la misma alerta.
+    public async Task<bool> ExisteDesdeAsync(Guid usuarioId, string prefijoClave, DateTime desde) =>
+        _dbContext.Notificaciones.Local.Any(n => n.UsuarioId == usuarioId && n.Clave.StartsWith(prefijoClave) && n.Fecha >= desde) ||
+        await _dbContext.Notificaciones.AnyAsync(n => n.UsuarioId == usuarioId && n.Clave.StartsWith(prefijoClave) && n.Fecha >= desde);
+
     public async Task<bool> ExisteAsync(Guid usuarioId, string clave) =>
         _dbContext.Notificaciones.Local.Any(n => n.UsuarioId == usuarioId && n.Clave == clave) ||
         await _dbContext.Notificaciones.AnyAsync(n => n.UsuarioId == usuarioId && n.Clave == clave);

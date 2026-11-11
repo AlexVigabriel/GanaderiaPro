@@ -14,6 +14,7 @@ import 'features/auth/registro_screen.dart';
 import 'features/auth/aceptar_invitacion_screen.dart';
 import 'features/colaboradores/colaboradores_screen.dart';
 import 'features/socios/socios_screen.dart';
+import 'features/asistente/asistente_screen.dart';
 import 'features/corrales/corrales_screen.dart';
 import 'features/notificaciones/notificaciones_screen.dart';
 import 'features/ganado/listado_animales_screen.dart';
@@ -41,7 +42,7 @@ class GanaderiaProApp extends StatelessWidget {
   const GanaderiaProApp({super.key});
 
   // Pantallas que solo se ven con sesión iniciada.
-  static const _rutasProtegidas = {'/', '/ganado', '/sanidad', '/corrales', '/colaboradores', '/socios', '/notificaciones'};
+  static const _rutasProtegidas = {'/', '/ganado', '/sanidad', '/corrales', '/colaboradores', '/socios', '/asistente', '/notificaciones'};
 
   @override
   Widget build(BuildContext context) {
@@ -114,6 +115,8 @@ class GanaderiaProApp extends StatelessWidget {
         return const ColaboradoresScreen();
       case '/socios':
         return const SociosScreen();
+      case '/asistente':
+        return const AsistenteScreen();
       case '/notificaciones':
         return const NotificacionesScreen();
       case '/invitacion':

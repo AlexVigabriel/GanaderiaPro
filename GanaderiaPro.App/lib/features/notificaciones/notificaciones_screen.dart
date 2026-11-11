@@ -169,6 +169,8 @@ class _FilaNotificacion extends StatelessWidget {
       'VacunaPendiente' => (Icons.vaccines_outlined, tema.colorScheme.primary),
       'CorralLleno' => (Icons.fence, const Color(0xFFB7791F)),
       'PartoProximo' => (Icons.pregnant_woman, tema.colorScheme.tertiary),
+      // HU-38: el asistente no encontró un dato que le toca registrar.
+      'DatoFaltante' => (Icons.edit_note, tema.colorScheme.error),
       _ => (Icons.notifications_outlined, tema.colorScheme.onSurfaceVariant),
     };
     final hora = '${n.fecha.hour.toString().padLeft(2, '0')}:${n.fecha.minute.toString().padLeft(2, '0')}';

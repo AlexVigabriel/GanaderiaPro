@@ -5,7 +5,9 @@ public enum TipoNotificacion
 {
     VacunaPendiente,
     CorralLleno,
-    PartoProximo
+    PartoProximo,
+    // HU-38: el asistente no encontró un dato y avisa al responsable.
+    DatoFaltante
 }
 
 // HU-40: alerta para un usuario. La clave identifica el hecho que la originó

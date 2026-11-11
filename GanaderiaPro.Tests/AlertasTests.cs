@@ -25,6 +25,9 @@ public class AlertasTests
         repo.Setup(r => r.Agregar(It.IsAny<Notificacion>())).Callback<Notificacion>(guardadas.Add);
         repo.Setup(r => r.ExisteAsync(It.IsAny<Guid>(), It.IsAny<string>()))
             .ReturnsAsync((Guid u, string c) => guardadas.Any(n => n.UsuarioId == u && n.Clave == c));
+        repo.Setup(r => r.ExisteDesdeAsync(It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<DateTime>()))
+            .ReturnsAsync((Guid u, string prefijo, DateTime desde) =>
+                guardadas.Any(n => n.UsuarioId == u && n.Clave.StartsWith(prefijo) && n.Fecha >= desde));
         var usuariosRepo = new Mock<IUsuarioRepository>();
         usuariosRepo.Setup(r => r.ListarActivosAsync(RanchoId)).ReturnsAsync(usuarios);
         return (new NotificadorAlertas(repo.Object, usuariosRepo.Object, new Mock<IUnitOfWork>().Object), guardadas);
@@ -156,5 +159,34 @@ public class AlertasTests
 
         Assert.Equal(2, publicados.OfType<VacunaPendienteDetectada>().Count());
         Assert.Equal(prenez.Id, Assert.Single(publicados.OfType<PartoProximo>()).PrenezId);
+    }
+
+    [Fact]
+    public async Task DatoFaltante_AvisaAlResponsableUnaSolaVezEn24Horas()
+    {
+        // HU-38: la misma consulta repetida no genera otra notificación.
+        var vet = U("Laura", RolUsuario.Veterinario);
+        var (notificador, guardadas) = Notificador(U("Ana", RolUsuario.Propietario), vet);
+        var evento = new DatoFaltante(RanchoId, "vacunaciones del animal AR-003", RolUsuario.Veterinario, "vacuna:x");
+
+        await notificador.ManejarAsync(evento);
+        await notificador.ManejarAsync(evento);
+
+        var notificacion = Assert.Single(guardadas);
+        Assert.Equal(vet.Id, notificacion.UsuarioId);
+        Assert.Equal(TipoNotificacion.DatoFaltante, notificacion.Tipo);
+        Assert.StartsWith("dato:vacuna:x@", notificacion.Clave);
+    }
+
+    [Fact]
+    public async Task DatoFaltante_SinColaboradorConEseRol_AvisaAlPropietario()
+    {
+        // RN-12.
+        var ana = U("Ana", RolUsuario.Propietario);
+        var (notificador, guardadas) = Notificador(ana);
+
+        await notificador.ManejarAsync(new DatoFaltante(RanchoId, "el peso del animal AR-002", RolUsuario.EncargadoCorrales, "peso:x"));
+
+        Assert.Equal(ana.Id, Assert.Single(guardadas).UsuarioId);
     }
 }
