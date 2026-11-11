@@ -179,6 +179,44 @@ namespace GanaderiaPro.Infrastructure.Persistence.Migrations
                     b.ToTable("Invitaciones", (string)null);
                 });
 
+            modelBuilder.Entity("GanaderiaPro.Domain.Entities.MovimientoCorral", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("AnimalId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("CorralDestino")
+                        .HasMaxLength(60)
+                        .HasColumnType("character varying(60)");
+
+                    b.Property<Guid?>("CorralDestinoId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("CorralOrigen")
+                        .HasMaxLength(60)
+                        .HasColumnType("character varying(60)");
+
+                    b.Property<Guid?>("CorralOrigenId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("Fecha")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UsuarioId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UsuarioId");
+
+                    b.HasIndex("AnimalId", "Fecha");
+
+                    b.ToTable("MovimientosCorral", (string)null);
+                });
+
             modelBuilder.Entity("GanaderiaPro.Domain.Entities.Notificacion", b =>
                 {
                     b.Property<Guid>("Id")
@@ -253,7 +291,12 @@ namespace GanaderiaPro.Infrastructure.Persistence.Migrations
                         .HasPrecision(7, 2)
                         .HasColumnType("numeric(7,2)");
 
+                    b.Property<Guid?>("RegistradoPorId")
+                        .HasColumnType("uuid");
+
                     b.HasKey("Id");
+
+                    b.HasIndex("RegistradoPorId");
 
                     b.HasIndex("AnimalId", "Fecha");
 
@@ -285,9 +328,14 @@ namespace GanaderiaPro.Infrastructure.Persistence.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
 
+                    b.Property<Guid?>("RegistradoPorId")
+                        .HasColumnType("uuid");
+
                     b.HasKey("Id");
 
                     b.HasIndex("FechaProbableParto");
+
+                    b.HasIndex("RegistradoPorId");
 
                     b.HasIndex("AnimalId", "FechaServicio");
 
@@ -574,6 +622,25 @@ namespace GanaderiaPro.Infrastructure.Persistence.Migrations
                     b.Navigation("Usuario");
                 });
 
+            modelBuilder.Entity("GanaderiaPro.Domain.Entities.MovimientoCorral", b =>
+                {
+                    b.HasOne("GanaderiaPro.Domain.Entities.Animal", "Animal")
+                        .WithMany()
+                        .HasForeignKey("AnimalId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("GanaderiaPro.Domain.Entities.Usuario", "Usuario")
+                        .WithMany()
+                        .HasForeignKey("UsuarioId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Animal");
+
+                    b.Navigation("Usuario");
+                });
+
             modelBuilder.Entity("GanaderiaPro.Domain.Entities.Notificacion", b =>
                 {
                     b.HasOne("GanaderiaPro.Domain.Entities.Usuario", "Usuario")
@@ -593,7 +660,14 @@ namespace GanaderiaPro.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("GanaderiaPro.Domain.Entities.Usuario", "RegistradoPor")
+                        .WithMany()
+                        .HasForeignKey("RegistradoPorId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.Navigation("Animal");
+
+                    b.Navigation("RegistradoPor");
                 });
 
             modelBuilder.Entity("GanaderiaPro.Domain.Entities.Prenez", b =>
@@ -604,7 +678,14 @@ namespace GanaderiaPro.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("GanaderiaPro.Domain.Entities.Usuario", "RegistradoPor")
+                        .WithMany()
+                        .HasForeignKey("RegistradoPorId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.Navigation("Animal");
+
+                    b.Navigation("RegistradoPor");
                 });
 
             modelBuilder.Entity("GanaderiaPro.Domain.Entities.Tratamiento", b =>
