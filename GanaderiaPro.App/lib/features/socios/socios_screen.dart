@@ -247,8 +247,8 @@ class _FormularioSocioState extends State<_FormularioSocio> {
     final errorEmail = validarEmail(_email.text);
     setState(() {
       _errores = {
-        if (errorNombre != null) 'nombre': errorNombre,
-        if (errorEmail != null) 'email': errorEmail,
+        'nombre': ?errorNombre,
+        'email': ?errorEmail,
       };
       _errorServidor = null;
     });
