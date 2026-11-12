@@ -13,4 +13,8 @@ public class Pesaje
     public decimal Peso { get; set; }
     public string? Observacion { get; set; }
     public DateTime FechaRegistro { get; set; }
+
+    // HU-22: usuario que lo registró (vacío en los pesajes anteriores a esta versión).
+    public Guid? RegistradoPorId { get; set; }
+    public Usuario? RegistradoPor { get; set; }
 }

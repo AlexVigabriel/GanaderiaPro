@@ -2,6 +2,7 @@ using GanaderiaPro.Application.DTOs;
 using GanaderiaPro.Application.Exceptions;
 using GanaderiaPro.Application.Interfaces;
 using GanaderiaPro.Domain.Entities;
+using GanaderiaPro.Domain.Eventos;
 
 namespace GanaderiaPro.Application.Services;
 
@@ -15,17 +16,23 @@ public class CorralService : ICorralService
     private readonly IAnimalRepository _animalRepository;
     private readonly ICurrentUserContext _currentUser;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IPublicadorEventos _publicador;
+    private readonly IMovimientoCorralRepository _movimientoRepository;
 
     public CorralService(
         ICorralRepository corralRepository,
         IAnimalRepository animalRepository,
         ICurrentUserContext currentUser,
-        IUnitOfWork unitOfWork)
+        IUnitOfWork unitOfWork,
+        IPublicadorEventos publicador,
+        IMovimientoCorralRepository movimientoRepository)
     {
         _corralRepository = corralRepository;
         _animalRepository = animalRepository;
         _currentUser = currentUser;
         _unitOfWork = unitOfWork;
+        _publicador = publicador;
+        _movimientoRepository = movimientoRepository;
     }
 
     public async Task<CorralResponse> CrearAsync(CrearCorralRequest request)
@@ -62,7 +69,11 @@ public class CorralService : ICorralService
                 throw new ReglaDeNegocioException($"El animal {animal.Arete} está dado de baja: no se puede asignar a un corral.");
             }
 
-            animal.CorralId = corral.Id;
+            if (animal.CorralId != corral.Id)
+            {
+                RegistrarMovimiento(animal, corral);
+                animal.CorralId = corral.Id;
+            }
         }
 
         _corralRepository.Agregar(corral);
@@ -136,9 +147,17 @@ public class CorralService : ICorralService
             throw new ReglaDeNegocioException($"El animal {animal.Arete} está dado de baja: no se puede mover de corral.");
         }
 
-        if (corralId is { } id && id != animal.CorralId)
+        if (corralId == animal.CorralId)
+        {
+            return;
+        }
+
+        CorralLleno? lleno = null;
+        Corral? destino = null;
+        if (corralId is { } id)
         {
             var corral = await ObtenerDelRanchoAsync(id);
+            destino = corral;
             if (!corral.Activo)
             {
                 throw new ReglaDeNegocioException($"El corral «{corral.Nombre}» está desactivado.");
@@ -149,11 +168,38 @@ public class CorralService : ICorralService
             {
                 throw new ReglaDeNegocioException($"El corral «{corral.Nombre}» está lleno ({ocupados}/{corral.Capacidad}).");
             }
+
+            // HU-40: este animal completa la capacidad.
+            if (ocupados + 1 == corral.Capacidad)
+            {
+                lleno = new CorralLleno(ranchoId, corral.Id, corral.Nombre, corral.Capacidad);
+            }
         }
 
+        RegistrarMovimiento(animal, destino);
         animal.CorralId = corralId;
         await _unitOfWork.GuardarCambiosAsync();
+
+        if (lleno is not null)
+        {
+            await _publicador.PublicarAsync(lleno);
+        }
     }
+
+    // HU-22 y HU-25: el movimiento queda en el historial del animal con fecha y
+    // usuario. Se llama antes de cambiar animal.CorralId.
+    private void RegistrarMovimiento(Animal animal, Corral? destino) =>
+        _movimientoRepository.Agregar(new MovimientoCorral
+        {
+            Id = Guid.NewGuid(),
+            AnimalId = animal.Id,
+            CorralOrigenId = animal.CorralId,
+            CorralOrigen = animal.Corral?.Nombre,
+            CorralDestinoId = destino?.Id,
+            CorralDestino = destino?.Nombre,
+            Fecha = DateTime.UtcNow,
+            UsuarioId = _currentUser.UsuarioId,
+        });
 
     private async Task<string> ValidarNombreYCapacidadAsync(Guid ranchoId, string? nombre, int capacidad, Guid? excluirId)
     {

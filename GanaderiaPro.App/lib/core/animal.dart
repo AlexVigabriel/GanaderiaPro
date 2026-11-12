@@ -217,3 +217,25 @@ class ResultadoCarga {
   final int registrados;
   final List<FilaRechazada> rechazados;
 }
+
+// HU-43.2: resumen de una importación de Excel («N importadas, M rechazadas»).
+// La fila es la del Excel.
+class ResultadoImportacion {
+  const ResultadoImportacion({required this.importadas, required this.rechazadas, required this.detalle});
+
+  final int importadas;
+  final int rechazadas;
+  final List<FilaRechazada> detalle;
+
+  factory ResultadoImportacion.fromJson(Map<String, dynamic> json) => ResultadoImportacion(
+    importadas: json['importadas'] as int,
+    rechazadas: json['rechazadas'] as int,
+    detalle: [
+      for (final d in json['detalle'] as List<dynamic>)
+        FilaRechazada(
+          fila: (d as Map<String, dynamic>)['fila'] as int,
+          motivo: d['arete'] == null || (d['arete'] as String).isEmpty ? d['motivo'] as String : '${d['arete']}: ${d['motivo']}',
+        ),
+    ],
+  );
+}

@@ -11,7 +11,7 @@ namespace GanaderiaPro.Application.Services;
 // les quita o devuelve el acceso.
 public class ColaboradorService : IColaboradorService
 {
-    public static readonly TimeSpan VigenciaInvitacion = TimeSpan.FromDays(7);
+    public static readonly TimeSpan VigenciaInvitacion = AltaInvitado.VigenciaInvitacion;
 
     private readonly IUsuarioRepository _usuarioRepository;
     private readonly IInvitacionRepository _invitacionRepository;
@@ -49,17 +49,8 @@ public class ColaboradorService : IColaboradorService
     {
         ExigirPropietario();
 
-        var nombre = request.Nombre?.Trim() ?? string.Empty;
-        if (nombre.Length == 0 || nombre.Length > 150)
-        {
-            throw new ReglaDeNegocioException("El nombre es obligatorio (hasta 150 caracteres).");
-        }
-
-        var email = ReglasCuenta.NormalizarEmail(request.Email);
-        if (!EsEmailValido(email))
-        {
-            throw new ReglaDeNegocioException("Ingresá un correo válido.");
-        }
+        var nombre = AltaInvitado.ValidarNombre(request.Nombre);
+        var email = AltaInvitado.ValidarEmail(request.Email);
 
         ValidarRolDeColaborador(request.Rol);
 
@@ -178,37 +169,11 @@ public class ColaboradorService : IColaboradorService
         return usuario;
     }
 
-    private (string Codigo, Invitacion Invitacion) CrearInvitacion(Guid usuarioId)
-    {
-        var ahora = DateTime.UtcNow;
-        var codigo = CodigoInvitacion.Generar();
-        var invitacion = new Invitacion
-        {
-            Id = Guid.NewGuid(),
-            UsuarioId = usuarioId,
-            CodigoHash = CodigoInvitacion.Hash(codigo),
-            FechaCreacion = ahora,
-            FechaVencimiento = ahora.Add(VigenciaInvitacion),
-        };
-        _invitacionRepository.Agregar(invitacion);
-        return (codigo, invitacion);
-    }
+    private (string Codigo, Invitacion Invitacion) CrearInvitacion(Guid usuarioId) =>
+        AltaInvitado.CrearInvitacion(_invitacionRepository, usuarioId);
 
-    private async Task InvalidarInvitacionesAsync(Guid usuarioId)
-    {
-        var ahora = DateTime.UtcNow;
-        foreach (var invitacion in await _invitacionRepository.ListarSinUsarAsync(usuarioId))
-        {
-            invitacion.FechaVencimiento = ahora;
-        }
-    }
-
-    private static bool EsEmailValido(string email)
-    {
-        var arroba = email.IndexOf('@');
-        return email.Length <= 200 && arroba > 0 && email.LastIndexOf('@') == arroba &&
-               email.IndexOf('.', arroba) > arroba + 1 && !email.EndsWith('.') && !email.Contains(' ');
-    }
+    private Task InvalidarInvitacionesAsync(Guid usuarioId) =>
+        AltaInvitado.InvalidarInvitacionesAsync(_invitacionRepository, usuarioId);
 
     private static ColaboradorResponse ToResponse(Usuario u, DateTime? invitacionVence) =>
         new(u.Id, u.Nombre, u.Email, u.Rol, u.Estado, u.UltimoAcceso, invitacionVence);

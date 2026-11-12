@@ -53,6 +53,7 @@ public class PesajeService : IPesajeService
             Peso = request.Peso,
             Observacion = string.IsNullOrWhiteSpace(request.Observacion) ? null : request.Observacion.Trim(),
             FechaRegistro = DateTime.UtcNow,
+            RegistradoPorId = _currentUser.UsuarioId,
         };
 
         // El peso actual cambia solo si este pesaje es el más reciente; uno
