@@ -25,5 +25,10 @@ public class PesajeConfiguration : IEntityTypeConfiguration<Pesaje>
             .WithMany()
             .HasForeignKey(p => p.AnimalId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        builder.HasOne(p => p.RegistradoPor)
+            .WithMany()
+            .HasForeignKey(p => p.RegistradoPorId)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }

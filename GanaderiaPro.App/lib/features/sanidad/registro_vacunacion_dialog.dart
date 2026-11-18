@@ -204,7 +204,9 @@ class _RegistroVacunacionState extends State<_RegistroVacunacion> {
                 builder: (context, snapshot) {
                   if (snapshot.hasError) {
                     return TextButton.icon(
-                      onPressed: () => setState(() => _vacunas = _api.listarVacunas()),
+                      onPressed: () => setState(() {
+                        _vacunas = _api.listarVacunas();
+                      }),
                       icon: const Icon(Icons.refresh),
                       label: const Text('No se pudo cargar la lista de vacunas. Reintentar'),
                     );

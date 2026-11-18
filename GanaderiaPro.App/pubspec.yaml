@@ -40,6 +40,8 @@ dependencies:
   sqflite: ^2.4.4+1
   sqflite_common_ffi_web: ^1.2.0
   flutter_secure_storage: ^11.2.0
+  # HU-43 y HU-44: elegir el Excel a importar y guardar los descargados (web y móvil).
+  file_picker: ^13.3.3
 
 dev_dependencies:
   flutter_test:

@@ -6,7 +6,8 @@ namespace GanaderiaPro.Application.Interfaces;
 public interface IAnimalService
 {
     Task<AnimalResponse> RegistrarAsync(RegistrarAnimalRequest request);
-    Task<RegistrarLoteResponse> RegistrarLoteAsync(IReadOnlyList<RegistrarAnimalRequest> filas);
+    // maximoFilas: 500 en la carga múltiple (HU-66); la importación de Excel permite 1000 (HU-43.2).
+    Task<RegistrarLoteResponse> RegistrarLoteAsync(IReadOnlyList<RegistrarAnimalRequest> filas, int maximoFilas = 500);
     Task<ResumenAnimalesResponse> ObtenerResumenAsync();
     Task<IReadOnlyList<AnimalResponse>> BuscarAsync(
         string? busqueda, EstadoAnimal? estado, SexoAnimal? sexo, string? raza, CategoriaAnimal? categoria = null);
