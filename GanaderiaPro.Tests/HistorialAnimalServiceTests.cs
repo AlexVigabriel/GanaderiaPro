@@ -18,6 +18,7 @@ public class HistorialAnimalServiceTests
     private readonly Mock<IPesajeRepository> _pesajes = new();
     private readonly Mock<IPrenezRepository> _preneces = new();
     private readonly Mock<IMovimientoCorralRepository> _movimientos = new();
+    private readonly Mock<IEventoEstadoAnimalRepository> _estados = new();
     private readonly Animal _animal = new() { Id = Guid.NewGuid(), RanchoId = RanchoIdDePrueba, Arete = "H-01", Sexo = SexoAnimal.Hembra };
     private readonly Usuario _vet = new() { Id = Guid.NewGuid(), Nombre = "Laura Rojas", Rol = RolUsuario.Veterinario };
 
@@ -29,6 +30,7 @@ public class HistorialAnimalServiceTests
         _pesajes.Setup(r => r.ListarPorAnimalAsync(_animal.Id)).ReturnsAsync(new List<Pesaje>());
         _preneces.Setup(r => r.ListarPorAnimalAsync(_animal.Id)).ReturnsAsync(new List<Prenez>());
         _movimientos.Setup(r => r.ListarPorAnimalAsync(_animal.Id)).ReturnsAsync(new List<MovimientoCorral>());
+        _estados.Setup(r => r.ListarPorAnimalAsync(_animal.Id)).ReturnsAsync(new List<EventoEstadoAnimal>());
     }
 
     private HistorialAnimalService CrearServicio()
@@ -36,7 +38,7 @@ public class HistorialAnimalServiceTests
         var currentUser = new Mock<ICurrentUserContext>();
         currentUser.Setup(c => c.RanchoId).Returns(RanchoIdDePrueba);
         return new HistorialAnimalService(_animales.Object, _vacunaciones.Object, _tratamientos.Object, _pesajes.Object,
-            _preneces.Object, _movimientos.Object, currentUser.Object);
+            _preneces.Object, _movimientos.Object, _estados.Object, currentUser.Object);
     }
 
     [Fact]
@@ -50,6 +52,43 @@ public class HistorialAnimalServiceTests
     {
         // RN-16.
         await Assert.ThrowsAsync<RecursoNoEncontradoException>(() => CrearServicio().ListarAsync(Guid.NewGuid()));
+    }
+
+
+    [Fact]
+    public async Task BajaYReactivacion_QuedanEnElHistorialConUsuario()
+    {
+        var fechaBaja = new DateOnly(2026, 11, 10);
+        var fechaReactivacion = new DateOnly(2026, 11, 12);
+        _estados.Setup(r => r.ListarPorAnimalAsync(_animal.Id)).ReturnsAsync(new List<EventoEstadoAnimal>
+        {
+            new()
+            {
+                Id = Guid.NewGuid(),
+                AnimalId = _animal.Id,
+                EstadoAnterior = EstadoAnimal.Activo,
+                EstadoNuevo = EstadoAnimal.Vendido,
+                FechaEvento = fechaBaja,
+                FechaRegistro = fechaBaja.ToDateTime(new TimeOnly(12, 0), DateTimeKind.Utc),
+                Usuario = _vet,
+            },
+            new()
+            {
+                Id = Guid.NewGuid(),
+                AnimalId = _animal.Id,
+                EstadoAnterior = EstadoAnimal.Vendido,
+                EstadoNuevo = EstadoAnimal.Activo,
+                FechaEvento = fechaReactivacion,
+                FechaRegistro = fechaReactivacion.ToDateTime(new TimeOnly(12, 0), DateTimeKind.Utc),
+                Usuario = _vet,
+            },
+        });
+
+        var eventos = await CrearServicio().ListarAsync(_animal.Id);
+
+        Assert.Equal(new[] { "Reactivacion", "Baja" }, eventos.Select(e => e.Tipo));
+        Assert.All(eventos, e => Assert.Equal("Laura Rojas", e.Usuario));
+        Assert.Equal(fechaReactivacion, eventos[0].Fecha);
     }
 
     [Fact]
