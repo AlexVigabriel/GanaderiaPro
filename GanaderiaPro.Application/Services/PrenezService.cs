@@ -110,6 +110,7 @@ public class PrenezService : IPrenezService
         }
 
         prenez.FechaParto = request.FechaParto;
+        prenez.PartoRegistradoPorId = _currentUser.UsuarioId;
         await _unitOfWork.GuardarCambiosAsync();
 
         return ToResponse(prenez);

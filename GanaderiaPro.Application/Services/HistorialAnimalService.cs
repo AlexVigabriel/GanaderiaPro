@@ -3,6 +3,7 @@ using GanaderiaPro.Application.Common;
 using GanaderiaPro.Application.DTOs;
 using GanaderiaPro.Application.Exceptions;
 using GanaderiaPro.Application.Interfaces;
+using GanaderiaPro.Domain.Entities;
 
 namespace GanaderiaPro.Application.Services;
 
@@ -18,6 +19,7 @@ public class HistorialAnimalService : IHistorialAnimalService
     private readonly IPesajeRepository _pesajeRepository;
     private readonly IPrenezRepository _prenezRepository;
     private readonly IMovimientoCorralRepository _movimientoRepository;
+    private readonly IEventoEstadoAnimalRepository _estadoRepository;
     private readonly ICurrentUserContext _currentUser;
 
     public HistorialAnimalService(
@@ -27,6 +29,7 @@ public class HistorialAnimalService : IHistorialAnimalService
         IPesajeRepository pesajeRepository,
         IPrenezRepository prenezRepository,
         IMovimientoCorralRepository movimientoRepository,
+        IEventoEstadoAnimalRepository estadoRepository,
         ICurrentUserContext currentUser)
     {
         _animalRepository = animalRepository;
@@ -36,6 +39,7 @@ public class HistorialAnimalService : IHistorialAnimalService
         _prenezRepository = prenezRepository;
         _movimientoRepository = movimientoRepository;
         _currentUser = currentUser;
+        _estadoRepository = estadoRepository;
     }
 
     public async Task<IReadOnlyList<EventoHistorialResponse>> ListarAsync(Guid animalId)
@@ -70,7 +74,7 @@ public class HistorialAnimalService : IHistorialAnimalService
                 $"Servicio · parto probable el {p.FechaProbableParto:dd/MM/yyyy}", p.RegistradoPor?.Nombre, p.FechaRegistro));
             if (p.FechaParto is { } parto)
             {
-                eventos.Add(new(parto, "Parto", "Parto registrado", p.RegistradoPor?.Nombre, p.FechaRegistro));
+                eventos.Add(new(parto, "Parto", "Parto registrado", p.PartoRegistradoPor?.Nombre ?? p.RegistradoPor?.Nombre, p.FechaRegistro));
             }
         }
 
@@ -83,6 +87,24 @@ public class HistorialAnimalService : IHistorialAnimalService
                 var (origen, destino) => $"Pasó del corral «{origen}» a «{destino}»",
             };
             eventos.Add(new(FechaRancho.DeUtc(m.Fecha), "MovimientoCorral", descripcion, m.Usuario?.Nombre, m.Fecha));
+        }
+
+        var cambiosEstado = await _estadoRepository.ListarPorAnimalAsync(animal.Id);
+        foreach (var cambio in cambiosEstado)
+        {
+            var reactivado = cambio.EstadoNuevo == EstadoAnimal.Activo;
+            var descripcion = reactivado
+                ? $"Animal reactivado (antes: {cambio.EstadoAnterior})."
+                : $"Baja registrada: {cambio.EstadoNuevo}.";
+            if (!string.IsNullOrWhiteSpace(cambio.Observacion)) descripcion += $" {cambio.Observacion}";
+            eventos.Add(new(cambio.FechaEvento, reactivado ? "Reactivacion" : "Baja", descripcion,
+                cambio.Usuario?.Nombre, cambio.FechaRegistro));
+        }
+
+        // Compatibilidad con bajas antiguas, anteriores al registro de eventos.
+        if (animal.FechaBaja is { } fechaBaja && !cambiosEstado.Any(c => c.EstadoNuevo != EstadoAnimal.Activo))
+        {
+            eventos.Add(new(fechaBaja, "Baja", $"Baja registrada: {animal.Estado}.", null, animal.FechaRegistro));
         }
 
         return eventos
