@@ -30,5 +30,10 @@ public class PrenezConfiguration : IEntityTypeConfiguration<Prenez>
             .WithMany()
             .HasForeignKey(p => p.RegistradoPorId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne(p => p.PartoRegistradoPor)
+            .WithMany()
+            .HasForeignKey(p => p.PartoRegistradoPorId)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }
