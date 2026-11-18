@@ -1,7 +1,7 @@
 namespace GanaderiaPro.Application.DTOs;
 
 // HU-22: un evento de la línea de tiempo del animal.
-// Tipo: Vacunacion, Tratamiento, Pesaje, Servicio, Parto o MovimientoCorral.
+// Tipo: Vacunacion, Tratamiento, Pesaje, Servicio, Parto, MovimientoCorral, Baja o Reactivacion.
 // Usuario: quien lo registró (null en registros anteriores a esta versión).
 public record EventoHistorialResponse(
     DateOnly Fecha,
