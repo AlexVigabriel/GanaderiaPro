@@ -22,6 +22,8 @@ public class Prenez
     // HU-22: usuario que registró el servicio (vacío en los anteriores a esta versión).
     public Guid? RegistradoPorId { get; set; }
     public Usuario? RegistradoPor { get; set; }
+    public Guid? PartoRegistradoPorId { get; set; }
+    public Usuario? PartoRegistradoPor { get; set; }
 
     public bool Abierta => FechaParto is null;
 
