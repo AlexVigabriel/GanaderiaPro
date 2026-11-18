@@ -11,6 +11,7 @@ import '../../core/widgets/componentes.dart';
 import '../shell/app_shell.dart';
 import 'registro_vacunacion_dialog.dart';
 import 'vacunaciones_widgets.dart';
+import 'tratamientos_widgets.dart';
 
 // Módulo Sanidad: indicadores y pendientes (HU-27), registro de
 // vacunaciones de uno o varios animales y últimas aplicadas (HU-26).
@@ -61,6 +62,11 @@ class _SanidadScreenState extends State<SanidadScreen> {
     _recargar();
   }
 
+  // HU-57: desde Sanidad se elige el animal.
+  Future<void> _registrarTratamiento() async {
+    if (await abrirRegistroTratamiento(context) && mounted) _avisar('Tratamiento registrado.');
+  }
+
   Future<void> _editar(Vacunacion v) async {
     final guardadas = await abrirRegistroVacunacion(context, editar: v);
     if (guardadas == null || !mounted) return;
@@ -87,9 +93,15 @@ class _SanidadScreenState extends State<SanidadScreen> {
           children: [
             EncabezadoPantalla(
               titulo: 'Sanidad',
-              subtitulo: 'Registrá vacunaciones y seguí el calendario sanitario del rancho.',
+              subtitulo: 'Registrá vacunaciones y tratamientos, y seguí el calendario sanitario del rancho.',
               soloConsulta: !_puedeEditar,
               acciones: [
+                if (_puedeEditar)
+                  OutlinedButton.icon(
+                    onPressed: _registrarTratamiento,
+                    icon: const Icon(Icons.medication_outlined),
+                    label: const Text('Registrar tratamiento'),
+                  ),
                 if (_puedeEditar)
                   FilledButton.icon(
                     onPressed: _registrar,

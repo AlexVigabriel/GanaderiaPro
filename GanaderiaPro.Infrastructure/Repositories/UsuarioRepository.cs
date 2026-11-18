@@ -32,6 +32,17 @@ public class UsuarioRepository : IUsuarioRepository
             u.RanchoId == ranchoId && lista.Contains(u.Rol) && u.Estado != EstadoUsuario.Inactivo);
     }
 
+    public async Task<IReadOnlyList<Usuario>> ListarActivosAsync(Guid ranchoId) =>
+        await _dbContext.Usuarios
+            .Where(u => u.RanchoId == ranchoId && u.Estado == EstadoUsuario.Activo)
+            .ToListAsync();
+
+    public async Task<IReadOnlyList<Usuario>> ListarSociosAsync(Guid ranchoId) =>
+        await _dbContext.Usuarios
+            .Where(u => u.RanchoId == ranchoId && u.Rol == RolUsuario.Socio)
+            .OrderBy(u => u.Nombre)
+            .ToListAsync();
+
     public async Task<IReadOnlyList<Usuario>> ListarColaboradoresAsync(Guid ranchoId)
     {
         // Como arreglo, para que EF lo traduzca a "Rol IN (...)".

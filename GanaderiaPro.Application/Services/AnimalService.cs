@@ -75,16 +75,16 @@ public class AnimalService : IAnimalService
 
     // HU-66: carga múltiple. Las filas válidas se registran juntas y las
     // inválidas se devuelven con su número de fila y el motivo.
-    public async Task<RegistrarLoteResponse> RegistrarLoteAsync(IReadOnlyList<RegistrarAnimalRequest> filas)
+    public async Task<RegistrarLoteResponse> RegistrarLoteAsync(IReadOnlyList<RegistrarAnimalRequest> filas, int maximoFilas = MaximoFilasPorLote)
     {
         if (filas.Count == 0)
         {
             throw new ReglaDeNegocioException("No hay animales para cargar.");
         }
 
-        if (filas.Count > MaximoFilasPorLote)
+        if (filas.Count > maximoFilas)
         {
-            throw new ReglaDeNegocioException($"Se pueden cargar hasta {MaximoFilasPorLote} animales por vez.");
+            throw new ReglaDeNegocioException($"Se pueden cargar hasta {maximoFilas} animales por vez.");
         }
 
         var ranchoId = _currentUser.RanchoId;

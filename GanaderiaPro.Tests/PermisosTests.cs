@@ -43,12 +43,30 @@ public class MatrizPermisosTests
     [InlineData(RolUsuario.Veterinario, Modulo.Sanidad, NivelAcceso.Escritura)]
     [InlineData(RolUsuario.EncargadoCorrales, Modulo.Sanidad, NivelAcceso.Lectura)]
     [InlineData(RolUsuario.EncargadoIngreso, Modulo.Sanidad, NivelAcceso.Lectura)]
+    // Reproducción (HU-56)
+    [InlineData(RolUsuario.Propietario, Modulo.Reproduccion, NivelAcceso.Escritura)]
+    [InlineData(RolUsuario.Socio, Modulo.Reproduccion, NivelAcceso.Lectura)]
+    [InlineData(RolUsuario.Veterinario, Modulo.Reproduccion, NivelAcceso.Escritura)]
+    [InlineData(RolUsuario.EncargadoCorrales, Modulo.Reproduccion, NivelAcceso.Lectura)]
+    [InlineData(RolUsuario.EncargadoIngreso, Modulo.Reproduccion, NivelAcceso.Lectura)]
     // Socios y colaboradores
     [InlineData(RolUsuario.Propietario, Modulo.Colaboradores, NivelAcceso.Escritura)]
     [InlineData(RolUsuario.Socio, Modulo.Colaboradores, NivelAcceso.Ninguno)]
     [InlineData(RolUsuario.Veterinario, Modulo.Colaboradores, NivelAcceso.Ninguno)]
     [InlineData(RolUsuario.EncargadoCorrales, Modulo.Colaboradores, NivelAcceso.Ninguno)]
     [InlineData(RolUsuario.EncargadoIngreso, Modulo.Colaboradores, NivelAcceso.Ninguno)]
+    // Importar Excel (HU-43): propietario y encargado de ingreso
+    [InlineData(RolUsuario.Propietario, Modulo.ImportarExcel, NivelAcceso.Escritura)]
+    [InlineData(RolUsuario.Socio, Modulo.ImportarExcel, NivelAcceso.Ninguno)]
+    [InlineData(RolUsuario.Veterinario, Modulo.ImportarExcel, NivelAcceso.Ninguno)]
+    [InlineData(RolUsuario.EncargadoCorrales, Modulo.ImportarExcel, NivelAcceso.Ninguno)]
+    [InlineData(RolUsuario.EncargadoIngreso, Modulo.ImportarExcel, NivelAcceso.Escritura)]
+    // Exportar Excel (HU-44): además el socio
+    [InlineData(RolUsuario.Propietario, Modulo.ExportarExcel, NivelAcceso.Escritura)]
+    [InlineData(RolUsuario.Socio, Modulo.ExportarExcel, NivelAcceso.Escritura)]
+    [InlineData(RolUsuario.Veterinario, Modulo.ExportarExcel, NivelAcceso.Ninguno)]
+    [InlineData(RolUsuario.EncargadoCorrales, Modulo.ExportarExcel, NivelAcceso.Ninguno)]
+    [InlineData(RolUsuario.EncargadoIngreso, Modulo.ExportarExcel, NivelAcceso.Escritura)]
     // Dashboard: solo lectura para todos
     [InlineData(RolUsuario.Propietario, Modulo.Tablero, NivelAcceso.Lectura)]
     [InlineData(RolUsuario.Veterinario, Modulo.Tablero, NivelAcceso.Lectura)]

@@ -8,6 +8,7 @@ import '../../core/sesion_actual.dart';
 import '../../core/sanidad.dart';
 import '../../core/widgets/componentes.dart';
 import 'registro_vacunacion_dialog.dart';
+import 'tratamientos_widgets.dart';
 
 // Una vacunación en una lista: vacuna, dosis, fechas y, si corresponde, el
 // animal y los botones para corregirla.
@@ -126,6 +127,8 @@ class TarjetaHistorialSanitario extends StatefulWidget {
 class _TarjetaHistorialSanitarioState extends State<TarjetaHistorialSanitario> {
   final _api = ApiClient();
   late Future<List<Vacunacion>> _futuro = _api.listarVacunaciones(animalId: widget.animal.id);
+  // HU-57: los tratamientos se muestran aparte de las vacunas.
+  late Future<List<Tratamiento>> _tratamientos = _api.listarTratamientos(widget.animal.id);
 
   void _recargar(String mensaje) {
     if (!mounted) return;
@@ -138,6 +141,14 @@ class _TarjetaHistorialSanitarioState extends State<TarjetaHistorialSanitario> {
   Future<void> _registrar() async {
     final guardadas = await abrirRegistroVacunacion(context, animal: widget.animal);
     if (guardadas != null) _recargar('Vacunación registrada.');
+  }
+
+  Future<void> _registrarTratamiento() async {
+    if (!await abrirRegistroTratamiento(context, animal: widget.animal) || !mounted) return;
+    setState(() {
+      _tratamientos = _api.listarTratamientos(widget.animal.id);
+    });
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Tratamiento registrado.')));
   }
 
   Future<void> _editar(Vacunacion v) async {
@@ -170,14 +181,27 @@ class _TarjetaHistorialSanitarioState extends State<TarjetaHistorialSanitario> {
               children: [
                 Text('Historial sanitario', style: tema.textTheme.titleMedium),
                 if (activo)
-                  FilledButton.icon(
-                    onPressed: _registrar,
-                    icon: const Icon(Icons.vaccines_outlined, size: 18),
-                    label: const Text('Registrar vacunación'),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      OutlinedButton.icon(
+                        onPressed: _registrarTratamiento,
+                        icon: const Icon(Icons.medication_outlined, size: 18),
+                        label: const Text('Registrar tratamiento'),
+                      ),
+                      FilledButton.icon(
+                        onPressed: _registrar,
+                        icon: const Icon(Icons.vaccines_outlined, size: 18),
+                        label: const Text('Registrar vacunación'),
+                      ),
+                    ],
                   ),
               ],
             ),
             const SizedBox(height: 16),
+            Text('Vacunaciones', style: tema.textTheme.titleSmall),
+            const SizedBox(height: 8),
             FutureBuilder<List<Vacunacion>>(
               future: _futuro,
               builder: (context, snapshot) {
@@ -207,6 +231,24 @@ class _TarjetaHistorialSanitarioState extends State<TarjetaHistorialSanitario> {
                       ),
                   ],
                 );
+              },
+            ),
+            const SizedBox(height: 20),
+            Text('Tratamientos', style: tema.textTheme.titleSmall),
+            const SizedBox(height: 8),
+            FutureBuilder<List<Tratamiento>>(
+              future: _tratamientos,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState != ConnectionState.done) {
+                  return const Padding(padding: EdgeInsets.all(16), child: Center(child: CircularProgressIndicator()));
+                }
+                if (snapshot.hasError) {
+                  return Text(
+                    'No se pudieron cargar los tratamientos.',
+                    style: tema.textTheme.bodyMedium?.copyWith(color: tema.colorScheme.error),
+                  );
+                }
+                return ListaTratamientos(tratamientos: snapshot.data!);
               },
             ),
           ],

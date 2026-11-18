@@ -24,7 +24,7 @@ public class SanidadService : ISanidadService
     public async Task<SanidadResumenResponse> ObtenerResumenAsync()
     {
         var vacunaciones = await _vacunacionRepository.ListarDeActivosAsync(_currentUser.RanchoId);
-        var pendientes = CalcularPendientes(vacunaciones);
+        var pendientes = PendientesSanidad.Calcular(vacunaciones);
 
         return new SanidadResumenResponse(
             Vacunados: vacunaciones.Select(v => v.AnimalId).Distinct().Count(),
@@ -33,31 +33,5 @@ public class SanidadService : ISanidadService
     }
 
     public async Task<IReadOnlyList<PendienteResponse>> ListarPendientesAsync() =>
-        CalcularPendientes(await _vacunacionRepository.ListarDeActivosAsync(_currentUser.RanchoId));
-
-    // Por cada animal y vacuna, solo cuenta la última aplicación: si tiene
-    // próxima dosis, está pendiente. Aplicar la vacuna de nuevo la cumple.
-    // Ordenadas por fecha de próxima dosis, de la más antigua a la más reciente.
-    private static List<PendienteResponse> CalcularPendientes(IEnumerable<Vacunacion> vacunaciones)
-    {
-        var hoy = FechaRancho.Hoy();
-
-        return vacunaciones
-            .GroupBy(v => new { v.AnimalId, v.VacunaId })
-            .Select(g => g.OrderByDescending(v => v.FechaAplicacion).ThenByDescending(v => v.FechaRegistro).First())
-            .Where(v => v.FechaProximaDosis is not null)
-            .OrderBy(v => v.FechaProximaDosis)
-            .ThenBy(v => v.Animal?.Arete)
-            .Select(v => new PendienteResponse(
-                v.Id,
-                v.AnimalId,
-                v.Animal?.Arete ?? string.Empty,
-                v.Animal?.Nombre,
-                v.VacunaId,
-                v.Vacuna?.Nombre ?? string.Empty,
-                v.FechaAplicacion,
-                v.FechaProximaDosis!.Value,
-                v.FechaProximaDosis.Value < hoy))
-            .ToList();
-    }
+        PendientesSanidad.Calcular(await _vacunacionRepository.ListarDeActivosAsync(_currentUser.RanchoId));
 }

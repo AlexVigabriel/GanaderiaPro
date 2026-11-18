@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../core/api_client.dart';
@@ -6,6 +8,7 @@ import '../../core/cerrar_sesion.dart';
 import '../../core/colaborador.dart';
 import '../../core/conexion.dart';
 import '../../core/formato.dart';
+import '../../core/notificaciones.dart';
 import '../../core/permisos.dart';
 import '../../core/sesion_actual.dart';
 
@@ -23,9 +26,12 @@ class ModuloMenu {
 const modulosDisponibles = [
   ModuloMenu(titulo: 'Tablero', icono: Icons.space_dashboard_outlined, ruta: '/', modulo: Modulos.tablero),
   ModuloMenu(titulo: 'Animales', icono: Icons.pets_outlined, ruta: '/ganado', modulo: Modulos.ganado),
+  // HU-36.1: el asistente lo ven todos los roles (como el tablero).
+  ModuloMenu(titulo: 'Asistente', icono: Icons.forum_outlined, ruta: '/asistente', modulo: Modulos.tablero),
   ModuloMenu(titulo: 'Corrales', icono: Icons.fence, ruta: '/corrales', modulo: Modulos.corrales),
   ModuloMenu(titulo: 'Sanidad', icono: Icons.vaccines_outlined, ruta: '/sanidad', modulo: Modulos.sanidad),
   ModuloMenu(titulo: 'Colaboradores', icono: Icons.group_outlined, ruta: '/colaboradores', modulo: Modulos.colaboradores),
+  ModuloMenu(titulo: 'Socios', icono: Icons.handshake_outlined, ruta: '/socios', modulo: Modulos.colaboradores),
 ];
 
 // Estructura común de las pantallas internas: menú lateral fijo en
@@ -120,7 +126,10 @@ class _BarraSuperior extends StatelessWidget {
           ),
           // HU-46: aparece solo cuando el servidor no responde.
           IndicadorConexion(estado: EstadoConexion.instancia),
-          const SizedBox(width: 12),
+          const SizedBox(width: 8),
+          // HU-40: alertas sin leer.
+          const CampanaNotificaciones(),
+          const SizedBox(width: 8),
           // HU-52: menú de perfil con el usuario, el rancho y "Cerrar sesión".
           PopupMenuButton<String>(
             tooltip: 'Perfil',
@@ -401,6 +410,73 @@ class IndicadorConexion extends StatelessWidget {
                   ),
                 ],
               ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+// HU-40: campana con la cantidad de notificaciones sin leer. Se actualiza al
+// abrir cada pantalla y cada minuto.
+class CampanaNotificaciones extends StatefulWidget {
+  const CampanaNotificaciones({super.key});
+
+  static const intervalo = Duration(minutes: 1);
+
+  @override
+  State<CampanaNotificaciones> createState() => _CampanaNotificacionesState();
+}
+
+class _CampanaNotificacionesState extends State<CampanaNotificaciones> {
+  final _api = ApiClient();
+  Timer? _temporizador;
+
+  @override
+  void initState() {
+    super.initState();
+    _actualizar();
+    _temporizador = Timer.periodic(CampanaNotificaciones.intervalo, (_) => _actualizar());
+  }
+
+  @override
+  void dispose() {
+    _temporizador?.cancel();
+    super.dispose();
+  }
+
+  // Sin conexión o con error se conserva la última cantidad conocida.
+  Future<void> _actualizar() async {
+    try {
+      final cantidad = await _api.contarNotificacionesNoLeidas();
+      if (mounted) notificacionesNoLeidas.value = cantidad;
+    } catch (_) {}
+  }
+
+  // HU-41: abre el centro de notificaciones (salvo que ya se esté ahí).
+  void _abrir() {
+    if (ModalRoute.of(context)?.settings.name == '/notificaciones') return;
+    Navigator.of(context).pushNamed('/notificaciones');
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final tema = Theme.of(context);
+    return ValueListenableBuilder<int>(
+      valueListenable: notificacionesNoLeidas,
+      builder: (context, cantidad, _) {
+        final texto = cantidad > 99 ? '99+' : '$cantidad';
+        return IconButton(
+          tooltip: cantidad == 0 ? 'Notificaciones' : 'Notificaciones: $texto sin leer',
+          onPressed: _abrir,
+          icon: Badge(
+            isLabelVisible: cantidad > 0,
+            label: Text(texto),
+            backgroundColor: tema.colorScheme.error,
+            child: Icon(
+              cantidad > 0 ? Icons.notifications_active_outlined : Icons.notifications_none_outlined,
+              color: tema.colorScheme.onSurface,
             ),
           ),
         );

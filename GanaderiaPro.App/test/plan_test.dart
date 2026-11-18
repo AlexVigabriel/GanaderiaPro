@@ -103,7 +103,8 @@ void main() {
       await tester.pumpWidget(MaterialApp(theme: AppTheme.claro, home: const HomeScreen()));
       await tester.pumpAndSettle();
     }, () => MockClient((request) async {
-      pidioElPlan = true;
+      // La campana (HU-40) también consulta al servidor: solo cuenta el plan.
+      if (request.url.path.contains('/plan')) pidioElPlan = true;
       return http.Response('{}', 403);
     }));
 

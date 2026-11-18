@@ -19,6 +19,7 @@ public class PesajeRepository : IPesajeRepository
     // Del más reciente al más antiguo.
     public async Task<IReadOnlyList<Pesaje>> ListarPorAnimalAsync(Guid animalId) =>
         await _dbContext.Pesajes
+            .Include(p => p.RegistradoPor)
             .Where(p => p.AnimalId == animalId)
             .OrderByDescending(p => p.Fecha)
             .ThenByDescending(p => p.FechaRegistro)

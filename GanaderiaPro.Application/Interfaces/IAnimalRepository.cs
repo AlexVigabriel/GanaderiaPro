@@ -16,6 +16,9 @@ public interface IAnimalRepository
     // RN-04: las bajas no cuentan para el límite del plan.
     Task<int> ContarActivosAsync(Guid ranchoId);
 
+    // HU-12: fallecidos con fecha de baja desde la fecha dada (año en curso).
+    Task<int> ContarFallecidosDesdeAsync(Guid ranchoId, DateOnly desde);
+
     // RN-05: si tiene eventos (pesajes o vacunaciones) no se elimina.
     Task<bool> TieneEventosAsync(Guid animalId);
 }

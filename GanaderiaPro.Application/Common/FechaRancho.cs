@@ -7,6 +7,9 @@ public static class FechaRancho
 {
     private static readonly TimeZoneInfo ZonaHoraria = TimeZoneInfo.FindSystemTimeZoneById("America/La_Paz");
 
-    public static DateOnly Hoy() =>
-        DateOnly.FromDateTime(TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, ZonaHoraria));
+    public static DateOnly Hoy() => DeUtc(DateTime.UtcNow);
+
+    // Día (en Bolivia) de un instante guardado en UTC.
+    public static DateOnly DeUtc(DateTime utc) =>
+        DateOnly.FromDateTime(TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(utc, DateTimeKind.Utc), ZonaHoraria));
 }

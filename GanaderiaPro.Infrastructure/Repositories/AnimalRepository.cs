@@ -64,9 +64,16 @@ public class AnimalRepository : IAnimalRepository
     public Task<int> ContarActivosAsync(Guid ranchoId) =>
         _dbContext.Animales.CountAsync(a => a.RanchoId == ranchoId && a.Estado == EstadoAnimal.Activo);
 
+    public Task<int> ContarFallecidosDesdeAsync(Guid ranchoId, DateOnly desde) =>
+        _dbContext.Animales.CountAsync(a => a.RanchoId == ranchoId
+            && a.Estado == EstadoAnimal.Fallecido
+            && a.FechaBaja >= desde);
+
     public async Task<bool> TieneEventosAsync(Guid animalId) =>
         await _dbContext.Pesajes.AnyAsync(p => p.AnimalId == animalId) ||
-        await _dbContext.Vacunaciones.AnyAsync(v => v.AnimalId == animalId);
+        await _dbContext.Vacunaciones.AnyAsync(v => v.AnimalId == animalId) ||
+        await _dbContext.Preneces.AnyAsync(p => p.AnimalId == animalId) ||
+        await _dbContext.Tratamientos.AnyAsync(t => t.AnimalId == animalId);
 
     public async Task<IReadOnlyList<ConteoAnimales>> ContarPorEstadoYSexoAsync(Guid ranchoId) =>
         await _dbContext.Animales
