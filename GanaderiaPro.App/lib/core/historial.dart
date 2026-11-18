@@ -24,6 +24,8 @@ const _nombresDeTipo = {
   'Servicio': 'Servicio',
   'Parto': 'Parto',
   'MovimientoCorral': 'Movimiento de corral',
+  'Baja': 'Baja',
+  'Reactivacion': 'Reactivación',
 };
 
 String nombreDeTipoDeEvento(String tipo) => _nombresDeTipo[tipo] ?? tipo;
