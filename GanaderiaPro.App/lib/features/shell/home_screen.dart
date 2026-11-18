@@ -46,7 +46,9 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
   @override
   void didPopNext() => _recargar();
 
-  void _recargar() => setState(() => _resumen = ApiClient().obtenerResumenTablero());
+  void _recargar() => setState(() {
+        _resumen = ApiClient().obtenerResumenTablero();
+      });
 
   @override
   Widget build(BuildContext context) {

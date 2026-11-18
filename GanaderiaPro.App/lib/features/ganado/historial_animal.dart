@@ -20,7 +20,9 @@ class TarjetaHistorial extends StatefulWidget {
 class _TarjetaHistorialState extends State<TarjetaHistorial> {
   Future<List<EventoHistorial>>? _eventos;
 
-  void _cargar() => setState(() => _eventos = ApiClient().listarHistorial(widget.animal.id));
+  void _cargar() => setState(() {
+        _eventos = ApiClient().listarHistorial(widget.animal.id);
+      });
 
   @override
   Widget build(BuildContext context) {
