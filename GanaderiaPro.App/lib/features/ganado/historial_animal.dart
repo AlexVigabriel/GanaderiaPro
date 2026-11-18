@@ -98,6 +98,8 @@ class _FilaEvento extends StatelessWidget {
     'Servicio' => Icons.favorite_border,
     'Parto' => Icons.child_friendly,
     'MovimientoCorral' => Icons.fence,
+    'Baja' => Icons.person_off_outlined,
+    'Reactivacion' => Icons.person_add_alt_1_outlined,
     _ => Icons.circle_outlined,
   };
 
