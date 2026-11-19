@@ -3,14 +3,13 @@ using GanaderiaPro.Application.DTOs;
 using GanaderiaPro.Application.Exceptions;
 using GanaderiaPro.Application.Interfaces;
 using GanaderiaPro.Domain.Entities;
+using GanaderiaPro.Domain.Reglas;
 
 namespace GanaderiaPro.Application.Services;
 
 // HU-55: registro e historial de pesajes de un animal.
 public class PesajeService : IPesajeService
 {
-    private const decimal PesoMaximoKg = 1500;
-
     private readonly IPesajeRepository _pesajeRepository;
     private readonly IAnimalRepository _animalRepository;
     private readonly ICurrentUserContext _currentUser;
@@ -153,11 +152,6 @@ public class PesajeService : IPesajeService
             return "Solo se pueden registrar pesajes de animales activos.";
         }
 
-        if (request.Peso <= 0 || request.Peso > PesoMaximoKg)
-        {
-            return $"El peso debe ser mayor que 0 y de hasta {PesoMaximoKg} kg.";
-        }
-
         // RN-14: no se registran fechas futuras.
         if (request.Fecha > FechaRancho.Hoy())
         {
@@ -167,6 +161,12 @@ public class PesajeService : IPesajeService
         if (animal.FechaNacimiento is { } nacimiento && request.Fecha < nacimiento)
         {
             return "La fecha del pesaje no puede ser anterior al nacimiento.";
+        }
+
+        // RC-03: el peso tiene que ser posible para la edad del animal en la fecha del pesaje.
+        if (LimitesGanado.ValidarPeso(request.Peso, animal.FechaNacimiento, request.Fecha) is { } errorPeso)
+        {
+            return errorPeso;
         }
 
         if (request.Observacion?.Trim().Length > 500)

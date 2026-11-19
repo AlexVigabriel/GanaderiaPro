@@ -195,6 +195,7 @@ class _EditarAnimalScreenState extends State<EditarAnimalScreen> {
                                 CampoFecha(
                                   valor: _nacimiento,
                                   errorText: _errorNacimiento,
+                                  ayuda: avisoEdad(_nacimiento),
                                   onChanged: (f) => setState(() {
                                     _nacimiento = f;
                                     _errorNacimiento = null;
@@ -227,7 +228,7 @@ class _EditarAnimalScreenState extends State<EditarAnimalScreen> {
                                 TextFormField(
                                   controller: _peso,
                                   keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                                  validator: validarPeso,
+                                  validator: (v) => validarPeso(v, nacimiento: _nacimiento),
                                 ),
                               ),
                               campo(

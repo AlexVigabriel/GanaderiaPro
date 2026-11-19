@@ -174,7 +174,7 @@ class _CargaMultipleAnimalesState extends State<CargaMultipleAnimales> {
         'raza': ?validarRaza(fila.raza),
         'nacimiento': ?validarFechaNacimiento(fila.nacimiento),
         'pesoNacimiento': ?validarPesoNacimiento(fila.pesoNacimiento.text),
-        'peso': ?validarPeso(fila.peso.text),
+        'peso': ?validarPeso(fila.peso.text, nacimiento: fila.nacimiento),
         'nombre': ?validarLargo(fila.nombre.text, 100),
         'observaciones': ?validarLargo(fila.observaciones.text, 500),
       };
@@ -576,6 +576,7 @@ class _FilaWidget extends StatelessWidget {
                   valor: fila.nacimiento,
                   denso: true,
                   errorText: fila.errores['nacimiento'],
+                  ayuda: avisoEdad(fila.nacimiento),
                   onChanged: (f) {
                     fila.nacimiento = f;
                     onCambio();
