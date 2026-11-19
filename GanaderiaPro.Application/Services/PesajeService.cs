@@ -169,9 +169,10 @@ public class PesajeService : IPesajeService
             return errorPeso;
         }
 
-        if (request.Observacion?.Trim().Length > 500)
+        // RC-07: la observación tiene que describir algo, no ser solo un número.
+        if (TextoDescriptivo.Validar(request.Observacion, 500) is { } errorObservacion)
         {
-            return "La observación puede tener hasta 500 caracteres.";
+            return errorObservacion;
         }
 
         return null;

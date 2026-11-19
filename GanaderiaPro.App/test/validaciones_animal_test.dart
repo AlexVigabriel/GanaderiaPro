@@ -52,6 +52,20 @@ void main() {
       expect(validarPeso('420', nacimiento: hoySinHora.subtract(const Duration(days: 180))), isNull);
       expect(validarPeso('1500', nacimiento: DateTime(hoy.year - 5, hoy.month, hoy.day)), isNull);
     });
+    test('las observaciones tienen que describir algo (RC-07)', () {
+      for (final valida in [
+        'Animal nacido completamente sano',
+        'Requiere chequeo médico en cuatro días',
+        'Peso registrado: 40 kg',
+        '',
+      ]) {
+        expect(validarObservacion(valida), isNull, reason: valida);
+      }
+      for (final invalida in ['40', '60', '40,5', '--', '4 x']) {
+        expect(validarObservacion(invalida), 'Debe describir algo, no solo un número', reason: invalida);
+      }
+      expect(validarObservacion('Animal tranquilo', 10), 'Hasta 10 caracteres');
+    });
     test('los pesos son opcionales pero deben ser números', () {
       expect(validarPeso(''), isNull);
       expect(validarPesoNacimiento('abc'), 'Ingresá un número');

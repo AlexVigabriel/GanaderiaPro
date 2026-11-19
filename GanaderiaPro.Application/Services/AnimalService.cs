@@ -324,15 +324,16 @@ public class AnimalService : IAnimalService
                 return "Escribí cuál fue la causa de muerte.";
             }
 
-            if (request.DetalleCausa?.Trim().Length > 100)
+            if (TextoDescriptivo.Validar(request.DetalleCausa, 100, "El detalle de la causa") is { } errorDetalle)
             {
-                return "El detalle de la causa puede tener hasta 100 caracteres.";
+                return errorDetalle;
             }
         }
 
-        if (request.Observacion?.Trim().Length > 500)
+        // RC-07: la observación tiene que describir algo, no ser solo un número.
+        if (TextoDescriptivo.Validar(request.Observacion, 500) is { } errorObservacion)
         {
-            return "La observación puede tener hasta 500 caracteres.";
+            return errorObservacion;
         }
 
         return null;
@@ -403,9 +404,10 @@ public class AnimalService : IAnimalService
             return "El color puede tener hasta 40 caracteres.";
         }
 
-        if (request.Observaciones?.Trim().Length > 500)
+        // RC-07: las observaciones tienen que describir algo, no ser solo un número.
+        if (TextoDescriptivo.Validar(request.Observaciones, 500, "Las observaciones") is { } errorObservaciones)
         {
-            return "Las observaciones pueden tener hasta 500 caracteres.";
+            return errorObservaciones;
         }
 
         return null;

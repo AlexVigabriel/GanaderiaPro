@@ -109,6 +109,19 @@ public class TratamientoServiceTests
             () => servicio.RegistrarAsync(animal.Id, Pedido(motivo: "  ")));
     }
 
+    [Fact]
+    public async Task Registrar_ConObservacionSoloNumerica_LanzaExcepcion()
+    {
+        // RC-07: «60» solo no describe nada.
+        var animal = Animal();
+        var (servicio, _, _) = Crear(animal);
+
+        var ex = await Assert.ThrowsAsync<ReglaDeNegocioException>(
+            () => servicio.RegistrarAsync(animal.Id, Pedido() with { Observacion = "60" }));
+
+        Assert.Contains("describir algo", ex.Message);
+    }
+
     [Theory]
     [InlineData(EstadoAnimal.Vendido)]
     [InlineData(EstadoAnimal.Fallecido)]

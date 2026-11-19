@@ -80,7 +80,7 @@ class _RegistroTratamientoState extends State<_RegistroTratamiento> {
       if (_inicio != null && nacimiento != null && _inicio!.isBefore(nacimiento))
         'inicio': 'No puede ser anterior al nacimiento',
       if (duracion == null || duracion < 1 || duracion > 365) 'duracion': 'De 1 a 365 días',
-      if (_observacion.text.trim().length > 500) 'observacion': 'Hasta 500 caracteres',
+      'observacion': ?validarObservacion(_observacion.text),
     };
   }
 

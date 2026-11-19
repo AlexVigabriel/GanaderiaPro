@@ -50,9 +50,10 @@ public class PrenezService : IPrenezService
             throw new ReglaDeNegocioException("La fecha de servicio no puede ser anterior al nacimiento.");
         }
 
-        if (request.Observacion?.Trim().Length > 500)
+        // RC-07: la observación tiene que describir algo, no ser solo un número.
+        if (TextoDescriptivo.Validar(request.Observacion, 500) is { } errorObservacion)
         {
-            throw new ReglaDeNegocioException("La observación puede tener hasta 500 caracteres.");
+            throw new ReglaDeNegocioException(errorObservacion);
         }
 
         var anteriores = await _prenezRepository.ListarPorAnimalAsync(animal.Id);

@@ -176,7 +176,7 @@ class _CargaMultipleAnimalesState extends State<CargaMultipleAnimales> {
         'pesoNacimiento': ?validarPesoNacimiento(fila.pesoNacimiento.text),
         'peso': ?validarPeso(fila.peso.text, nacimiento: fila.nacimiento),
         'nombre': ?validarLargo(fila.nombre.text, 100),
-        'observaciones': ?validarLargo(fila.observaciones.text, 500),
+        'observaciones': ?validarObservacion(fila.observaciones.text),
       };
       if (!errores.containsKey('arete') && (aretes[normalizarIdentificacion(fila.arete.text)] ?? 0) > 1) {
         errores['arete'] = 'Repetido en la tabla';

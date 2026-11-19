@@ -319,6 +319,28 @@ public class AnimalServiceTests
         }
     }
 
+    [Theory]
+    [InlineData("40", false)]
+    [InlineData("Peso registrado: 40 kg", true)]
+    public async Task Registrar_ObservacionesTienenQueDescribirAlgo(string observaciones, bool valida)
+    {
+        // RC-07: también aplica a la carga múltiple y a la importación de Excel (mismo ValidarDatos).
+        var repoMock = new Mock<IAnimalRepository>();
+        var service = CrearServicio(repoMock);
+        var request = new RegistrarAnimalRequest("A018", SexoAnimal.Hembra, "Nelore", null,
+            FechaNacimiento: HaceDosAnios, Observaciones: observaciones);
+
+        if (valida)
+        {
+            Assert.Equal(observaciones, (await service.RegistrarAsync(request)).Observaciones);
+        }
+        else
+        {
+            var ex = await Assert.ThrowsAsync<ReglaDeNegocioException>(() => service.RegistrarAsync(request));
+            Assert.Equal("Las observaciones deben describir algo, no solo un número.", ex.Message);
+        }
+    }
+
     [Fact]
     public async Task Registrar_SinRaza_LanzaExcepcion()
     {

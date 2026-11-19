@@ -38,6 +38,6 @@ public static class PlanillaGanado
         ("Color", false, "Texto."),
         ("Peso (kg)", false, "Número entre 15 y 1500, posible para la edad (hasta 60 kg + 2 kg por día de vida)."),
         ("Peso al nacer (kg)", false, "Número entre 15 y 60."),
-        ("Observaciones", false, "Texto."),
+        ("Observaciones", false, "Texto que describa algo (no solo un número). Ej.: Peso registrado: 40 kg."),
     ];
 }

@@ -90,6 +90,7 @@ class _TarjetaReproduccionState extends State<TarjetaReproduccion> {
   }) {
     DateTime? fecha = fechaDeHoy();
     String? error;
+    String? errorObservacion;
     final observacion = TextEditingController();
     return showDialog<(DateTime, String?)>(
       context: context,
@@ -122,7 +123,7 @@ class _TarjetaReproduccionState extends State<TarjetaReproduccion> {
                     controller: observacion,
                     maxLines: 2,
                     maxLength: 500,
-                    decoration: const InputDecoration(labelText: 'Observación (opcional)'),
+                    decoration: InputDecoration(labelText: 'Observación (opcional)', errorText: errorObservacion),
                   ),
                 ],
               ],
@@ -134,6 +135,12 @@ class _TarjetaReproduccionState extends State<TarjetaReproduccion> {
               onPressed: () {
                 if (fecha == null) {
                   setDialogo(() => error = 'Elegí la fecha');
+                  return;
+                }
+                // RC-07: la observación tiene que describir algo.
+                final problema = validarObservacion(observacion.text);
+                if (problema != null) {
+                  setDialogo(() => errorObservacion = problema);
                   return;
                 }
                 final texto = observacion.text.trim();

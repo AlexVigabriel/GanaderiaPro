@@ -400,7 +400,7 @@ class _RegistroPesajeState extends State<_RegistroPesaje> {
       _errores = {
         'peso': ?validarPesoPesaje(_peso.text, nacimiento: widget.animal.fechaNacimiento, fecha: _fecha),
         'fecha': ?validarFechaBaja(_fecha, widget.animal.fechaNacimiento, obligatoria: 'La fecha es obligatoria'),
-        'observacion': ?validarLargo(_observacion.text, 500),
+        'observacion': ?validarObservacion(_observacion.text),
       };
       final cambioLaFecha = !_editando || !_mismoDia(widget.pesaje!.fecha, _fecha!);
       if (!_errores.containsKey('fecha') && cambioLaFecha && widget.historial.any((p) => _mismoDia(p.fecha, _fecha!))) {

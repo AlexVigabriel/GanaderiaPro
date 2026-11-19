@@ -118,4 +118,16 @@ String? _validarRango(String? valor, bool Function(double) enRango, String mensa
 String? validarLargo(String? valor, int maximo) =>
     (valor != null && valor.trim().length > maximo) ? 'Hasta $maximo caracteres' : null;
 
+// RC-07: una observación tiene que describir algo (al menos una palabra de
+// tres letras). «40» solo no dice nada; «Peso registrado: 40 kg» sí. Vacío
+// es válido porque el campo es opcional. Misma regla que TextoDescriptivo.
+final _palabraDeTresLetras = RegExp(r'\p{L}{3,}', unicode: true);
+
+String? validarObservacion(String? valor, [int maximo = 500]) {
+  final texto = valor?.trim() ?? '';
+  if (texto.length > maximo) return 'Hasta $maximo caracteres';
+  if (texto.isNotEmpty && !_palabraDeTresLetras.hasMatch(texto)) return 'Debe describir algo, no solo un número';
+  return null;
+}
+
 double? leerPeso(String texto) => double.tryParse(texto.trim().replaceAll(',', '.'));

@@ -237,7 +237,7 @@ class _EditarAnimalScreenState extends State<EditarAnimalScreen> {
                                   controller: _observaciones,
                                   maxLines: 3,
                                   decoration: const InputDecoration(hintText: 'Notas sobre el animal'),
-                                  validator: (v) => validarLargo(v, 500),
+                                  validator: validarObservacion,
                                 ),
                                 completo: true,
                               ),

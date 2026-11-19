@@ -251,9 +251,10 @@ public class VacunacionService : IVacunacionService
             return "La próxima dosis no puede ser anterior a la fecha de aplicación.";
         }
 
-        if (observacion?.Trim().Length > 500)
+        // RC-07: la observación tiene que describir algo, no ser solo un número.
+        if (TextoDescriptivo.Validar(observacion, 500) is { } errorObservacion)
         {
-            return "La observación puede tener hasta 500 caracteres.";
+            return errorObservacion;
         }
 
         return null;
