@@ -47,7 +47,7 @@ void main() {
     await tester.tap(find.text('Cargar 1 animal'));
     await tester.pump();
 
-    expect(find.text('Debe estar entre 15 y 60 kg'), findsOneWidget);
+    expect(find.text('Peso al nacer: de 15 a 60 kg (el peso actual va aparte)'), findsOneWidget);
   });
 
   testWidgets('Detecta identificaciones repetidas dentro de la tabla', (tester) async {

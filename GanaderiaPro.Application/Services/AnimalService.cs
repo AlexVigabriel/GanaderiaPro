@@ -385,7 +385,7 @@ public class AnimalService : IAnimalService
         if (request.PesoNacimiento is { } pesoNacimiento &&
             (pesoNacimiento < LimitesGanado.PesoNacimientoMinimoKg || pesoNacimiento > LimitesGanado.PesoNacimientoMaximoKg))
         {
-            return $"El peso al nacer debe estar entre {LimitesGanado.PesoNacimientoMinimoKg} y {LimitesGanado.PesoNacimientoMaximoKg} kg.";
+            return $"El peso al nacer (lo que pesó el día que nació) debe estar entre {LimitesGanado.PesoNacimientoMinimoKg} y {LimitesGanado.PesoNacimientoMaximoKg} kg. El peso actual se carga aparte.";
         }
 
         // RC-03: el peso actual tiene que ser posible para la edad del animal.

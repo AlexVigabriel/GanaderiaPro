@@ -33,11 +33,11 @@ void main() {
 
   group('Pesos', () {
     test('el peso al nacer va de 15 a 60 kg (RC-01)', () {
-      expect(validarPesoNacimiento('14,9'), 'Debe estar entre 15 y 60 kg');
+      expect(validarPesoNacimiento('14,9'), 'Peso al nacer: de 15 a 60 kg (el peso actual va aparte)');
       expect(validarPesoNacimiento('15'), isNull);
       expect(validarPesoNacimiento('60'), isNull);
-      expect(validarPesoNacimiento('60,5'), 'Debe estar entre 15 y 60 kg');
-      expect(validarPesoNacimiento('80'), 'Debe estar entre 15 y 60 kg');
+      expect(validarPesoNacimiento('60,5'), 'Peso al nacer: de 15 a 60 kg (el peso actual va aparte)');
+      expect(validarPesoNacimiento('80'), 'Peso al nacer: de 15 a 60 kg (el peso actual va aparte)');
     });
     test('el peso actual va de 15 a 1500 kg sin fecha de nacimiento', () {
       expect(validarPeso('14'), 'Debe estar entre 15 y 1500 kg');

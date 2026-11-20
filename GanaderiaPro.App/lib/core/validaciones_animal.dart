@@ -79,7 +79,7 @@ String? avisoEdad(DateTime? nacimiento) {
 String? validarPesoNacimiento(String? valor) => _validarRango(
   valor,
   (p) => p >= pesoNacimientoMinimoKg && p <= pesoNacimientoMaximoKg,
-  'Debe estar entre ${_kg(pesoNacimientoMinimoKg)} y ${_kg(pesoNacimientoMaximoKg)} kg',
+  'Peso al nacer: de ${_kg(pesoNacimientoMinimoKg)} a ${_kg(pesoNacimientoMaximoKg)} kg (el peso actual va aparte)',
 );
 
 // RC-03: peso más alto posible para un animal nacido en «nacimiento» a la

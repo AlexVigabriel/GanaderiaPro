@@ -15,6 +15,9 @@ public class PrenezConfiguration : IEntityTypeConfiguration<Prenez>
         builder.Property(p => p.Observacion)
             .HasMaxLength(500);
 
+        // RC-10
+        builder.Property(p => p.Diagnostico).HasConversion<string>().HasMaxLength(20);
+
         builder.HasIndex(p => new { p.AnimalId, p.FechaServicio });
 
         // Para listar rápido las próximas a parir.
