@@ -38,7 +38,7 @@ void main() {
     expect(tester.widget<TextField>(campo(0, 0)).controller!.text, 'AR001B');
   });
 
-  testWidgets('El peso al nacer fuera de 10 a 80 kg muestra el error', (tester) async {
+  testWidgets('El peso al nacer fuera de 15 a 60 kg muestra el error', (tester) async {
     await abrir(tester);
     await tester.enterText(campo(0, 0), 'AR-001');
     await tester.enterText(campo(0, 2), '95');
@@ -47,7 +47,7 @@ void main() {
     await tester.tap(find.text('Cargar 1 animal'));
     await tester.pump();
 
-    expect(find.text('Debe estar entre 10 y 80 kg'), findsOneWidget);
+    expect(find.text('Peso al nacer: de 15 a 60 kg (el peso actual va aparte)'), findsOneWidget);
   });
 
   testWidgets('Detecta identificaciones repetidas dentro de la tabla', (tester) async {

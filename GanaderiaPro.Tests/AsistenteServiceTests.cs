@@ -80,6 +80,19 @@ public class AsistenteServiceTests
     [InlineData("¿Cuántos animales Nelore hay?", "Hay 2 animales activos de raza Nelore.")]
     [InlineData("¿Cuántos animales se vendieron?", "Hay 1 animal vendido.")]
     [InlineData("¿Cuántos corrales hay?", "Hay 2 corrales activos.")]
+    [InlineData("¿Cuántos animales hay registrados?", "Hay 3 animales activos.")]
+    [InlineData("¿Cuántas hembras hay?", "Hay 2 hembras activas.")]
+    [InlineData("¿Cuántos machos hay?", "Hay 1 macho activo.")]
+    // RC-06: el mismo corral escrito de distintas formas.
+    [InlineData("¿Cuántas hembras hay en el corral tres?", "Hay 1 hembra activa en el corral «Corral 3».")]
+    [InlineData("¿Cuántas hembras hay en el corral número 3?", "Hay 1 hembra activa en el corral «Corral 3».")]
+    [InlineData("¿Cuántas hembras hay en el CORRAL CORRAL 3?", "Hay 1 hembra activa en el corral «Corral 3».")]
+    [InlineData("cuantas hembras hay en el corral nrte", "Hay 1 hembra activa en el corral «Norte».")]
+    // RC-05: repartos por raza y por corral.
+    [InlineData("¿Cuántos animales hay por raza?", "Animales activos por raza (3 en total):\n• Nelore: 2\n• Brahman: 1")]
+    [InlineData("¿Cuántos animales hay en cada corral?", "Animales activos por corral (3 en total):\n• Corral 3: 2\n• Norte: 1")]
+    [InlineData("¿Cuántas hembras hay por corral?", "Hembras activas por corral (2 en total):\n• Corral 3: 1\n• Norte: 1")]
+    [InlineData("¿Cuántos machos hay por raza en el corral 3?", "Machos activos en el corral «Corral 3» por raza (1 en total):\n• Nelore: 1")]
     public async Task Cantidades_CoincidenConLosDatos(string pregunta, string esperada)
     {
         var respuesta = await CrearServicio().ConsultarAsync(pregunta);
@@ -87,6 +100,50 @@ public class AsistenteServiceTests
         Assert.True(respuesta.Reconocida);
         Assert.False(respuesta.SinDatos);
         Assert.Equal(esperada, respuesta.Respuesta);
+    }
+
+    [Fact]
+    public void PreguntasFrecuentes_SonGenericas()
+    {
+        // RC-04: ninguna nombra un arete ni un corral concreto.
+        Assert.All(AsistenteService.Ejemplos, e =>
+        {
+            Assert.DoesNotContain(e, c => char.IsDigit(c));
+            Assert.DoesNotContain("AR-", e);
+            Assert.DoesNotContain("Norte", e);
+        });
+    }
+
+    [Fact]
+    public async Task PesoPromedioDeUnCorral_NoConfundeElNumeroConUnArete()
+    {
+        var respuesta = await CrearServicio().ConsultarAsync("¿Cuál es el peso promedio del corral número 3?");
+
+        Assert.Equal("El peso promedio del corral «Corral 3» es 500 kg (1 animal con peso registrado).", respuesta.Respuesta);
+    }
+
+    [Fact]
+    public async Task CorralAmbiguo_NoAdivinaYPideElNombreExacto()
+    {
+        // «oeste» está a una letra de «Este» y de «oseste» (caso de la prueba manual).
+        _corrales.Setup(r => r.ListarAsync(RanchoIdDePrueba, false)).ReturnsAsync(new List<Corral>
+        {
+            _norte, _tres,
+            new() { Id = Guid.NewGuid(), Nombre = "Este", Capacidad = 10, Activo = true },
+            new() { Id = Guid.NewGuid(), Nombre = "oseste", Capacidad = 10, Activo = true },
+        });
+
+        var respuesta = await CrearServicio().ConsultarAsync("¿Cuántas hembras hay en el corral oeste?");
+
+        Assert.Equal("¿Te referís al corral «Este» o «oseste»? Escribí el nombre exacto.", respuesta.Respuesta);
+    }
+
+    [Fact]
+    public async Task CorralEnPalabrasQueNoExiste_LoDice()
+    {
+        var respuesta = await CrearServicio().ConsultarAsync("¿Cuántas hembras hay en el corral cuatro?");
+
+        Assert.Contains("No encontré el corral «cuatro»", respuesta.Respuesta);
     }
 
     [Fact]

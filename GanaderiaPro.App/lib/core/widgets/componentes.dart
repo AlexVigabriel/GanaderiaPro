@@ -68,7 +68,7 @@ class _BotonAccionState extends State<BotonAccion> {
 }
 
 // Campo de solo lectura que abre un calendario. No deja elegir fechas
-// futuras (RN-14) ni de hace más de 25 años.
+// futuras (RN-14) ni de hace más de 20 años (RC-02).
 class CampoFecha extends StatelessWidget {
   const CampoFecha({
     super.key,
@@ -76,6 +76,7 @@ class CampoFecha extends StatelessWidget {
     required this.onChanged,
     this.hint = 'dd/mm/aaaa',
     this.errorText,
+    this.ayuda,
     this.denso = false,
     this.titulo = 'Fecha de nacimiento',
     this.primeraFecha,
@@ -84,7 +85,7 @@ class CampoFecha extends StatelessWidget {
 
   final DateTime? valor;
   final String titulo;
-  // Fecha más antigua que se puede elegir; por defecto, hace 25 años.
+  // Fecha más antigua que se puede elegir; por defecto, hace 20 años.
   final DateTime? primeraFecha;
   // Fecha más reciente que se puede elegir; por defecto, hoy (RN-14). La
   // próxima dosis de una vacuna sí puede ser futura.
@@ -92,6 +93,8 @@ class CampoFecha extends StatelessWidget {
   final ValueChanged<DateTime?> onChanged;
   final String hint;
   final String? errorText;
+  // Aviso que no bloquea (por ejemplo, una edad poco común).
+  final String? ayuda;
   final bool denso;
 
   Future<void> _elegir(BuildContext context) async {
@@ -122,6 +125,8 @@ class CampoFecha extends StatelessWidget {
           hintMaxLines: 1,
           errorText: errorText,
           errorMaxLines: 2,
+          helperText: ayuda,
+          helperMaxLines: 2,
           isDense: denso,
           suffixIconConstraints: denso ? const BoxConstraints(minWidth: 36, minHeight: 36) : null,
           suffixIcon: valor == null

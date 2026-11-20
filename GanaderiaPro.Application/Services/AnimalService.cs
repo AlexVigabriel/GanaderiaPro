@@ -5,15 +5,12 @@ using GanaderiaPro.Application.Exceptions;
 using GanaderiaPro.Application.Interfaces;
 using GanaderiaPro.Domain.Entities;
 using GanaderiaPro.Domain.Planes;
+using GanaderiaPro.Domain.Reglas;
 
 namespace GanaderiaPro.Application.Services;
 
 public class AnimalService : IAnimalService
 {
-    private const decimal PesoMaximoKg = 1500;
-    private const decimal PesoNacimientoMinimoKg = 10;
-    private const decimal PesoNacimientoMaximoKg = 80;
-    private const int AntiguedadMaximaAnios = 25;
     private const int MaximoFilasPorLote = 500;
 
     // La identificación (arete o caravana) se guarda en mayúsculas y solo
@@ -25,17 +22,20 @@ public class AnimalService : IAnimalService
     private readonly ICurrentUserContext _currentUser;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IControlLimitesPlan _limitesPlan;
+    private readonly IEventoEstadoAnimalRepository? _eventoEstadoRepository;
 
     public AnimalService(
         IAnimalRepository animalRepository,
         ICurrentUserContext currentUser,
         IUnitOfWork unitOfWork,
-        IControlLimitesPlan limitesPlan)
+        IControlLimitesPlan limitesPlan,
+        IEventoEstadoAnimalRepository? eventoEstadoRepository = null)
     {
         _animalRepository = animalRepository;
         _currentUser = currentUser;
         _unitOfWork = unitOfWork;
         _limitesPlan = limitesPlan;
+        _eventoEstadoRepository = eventoEstadoRepository;
     }
 
     public async Task<AnimalResponse> RegistrarAsync(RegistrarAnimalRequest request)
@@ -264,7 +264,9 @@ public class AnimalService : IAnimalService
             // Volver a Activo un animal dado de baja vuelve a ocupar lugar (RN-11).
             if (animal.Estado != EstadoAnimal.Activo)
             {
+                var estadoPrevio = animal.Estado;
                 await _limitesPlan.VerificarAsync(RecursoPlan.Animales);
+                RegistrarCambioEstado(animal, estadoPrevio, EstadoAnimal.Activo, request.Fecha ?? Hoy(), request.Observacion);
             }
 
             animal.Estado = EstadoAnimal.Activo;
@@ -282,6 +284,7 @@ public class AnimalService : IAnimalService
             throw new ReglaDeNegocioException(error);
         }
 
+        var estadoAnterior = animal.Estado;
         var fallecido = request.Estado == EstadoAnimal.Fallecido;
         animal.Estado = request.Estado;
         animal.FechaBaja = request.Fecha;
@@ -290,9 +293,26 @@ public class AnimalService : IAnimalService
         animal.DetalleCausaMuerte = fallecido && request.Causa == CausaMuerte.Otra
             ? TextoOpcional(request.DetalleCausa)
             : null;
+        RegistrarCambioEstado(animal, estadoAnterior, request.Estado, request.Fecha!.Value, request.Observacion);
         await _unitOfWork.GuardarCambiosAsync();
 
         return ToResponse(animal);
+    }
+
+    private void RegistrarCambioEstado(Animal animal, EstadoAnimal anterior, EstadoAnimal nuevo, DateOnly fecha, string? observacion)
+    {
+        if (_eventoEstadoRepository is null || anterior == nuevo) return;
+        _eventoEstadoRepository.Agregar(new EventoEstadoAnimal
+        {
+            Id = Guid.NewGuid(),
+            AnimalId = animal.Id,
+            EstadoAnterior = anterior,
+            EstadoNuevo = nuevo,
+            FechaEvento = fecha,
+            FechaRegistro = DateTime.UtcNow,
+            UsuarioId = _currentUser.UsuarioId,
+            Observacion = TextoOpcional(observacion),
+        });
     }
 
     private static string? ValidarBaja(Animal animal, CambiarEstadoRequest request)
@@ -327,15 +347,16 @@ public class AnimalService : IAnimalService
                 return "Escribí cuál fue la causa de muerte.";
             }
 
-            if (request.DetalleCausa?.Trim().Length > 100)
+            if (TextoDescriptivo.Validar(request.DetalleCausa, 100, "El detalle de la causa") is { } errorDetalle)
             {
-                return "El detalle de la causa puede tener hasta 100 caracteres.";
+                return errorDetalle;
             }
         }
 
-        if (request.Observacion?.Trim().Length > 500)
+        // RC-07: la observación tiene que describir algo, no ser solo un número.
+        if (TextoDescriptivo.Validar(request.Observacion, 500) is { } errorObservacion)
         {
-            return "La observación puede tener hasta 500 caracteres.";
+            return errorObservacion;
         }
 
         return null;
@@ -377,20 +398,23 @@ public class AnimalService : IAnimalService
             return "La fecha de nacimiento no puede ser futura.";
         }
 
-        if (nacimiento < Hoy().AddYears(-AntiguedadMaximaAnios))
+        // RC-02: más de 20 años no es la edad de un bovino vivo.
+        if (nacimiento < Hoy().AddYears(-LimitesGanado.EdadMaximaAnios))
         {
-            return $"La fecha de nacimiento no puede tener más de {AntiguedadMaximaAnios} años.";
+            return $"La fecha de nacimiento no puede tener más de {LimitesGanado.EdadMaximaAnios} años.";
         }
 
+        // RC-01: rango de un ternero recién nacido.
         if (request.PesoNacimiento is { } pesoNacimiento &&
-            (pesoNacimiento < PesoNacimientoMinimoKg || pesoNacimiento > PesoNacimientoMaximoKg))
+            (pesoNacimiento < LimitesGanado.PesoNacimientoMinimoKg || pesoNacimiento > LimitesGanado.PesoNacimientoMaximoKg))
         {
-            return $"El peso al nacer debe estar entre {PesoNacimientoMinimoKg} y {PesoNacimientoMaximoKg} kg.";
+            return $"El peso al nacer (lo que pesó el día que nació) debe estar entre {LimitesGanado.PesoNacimientoMinimoKg} y {LimitesGanado.PesoNacimientoMaximoKg} kg. El peso actual se carga aparte.";
         }
 
-        if (request.Peso is { } peso && (peso <= 0 || peso > PesoMaximoKg))
+        // RC-03: el peso actual tiene que ser posible para la edad del animal.
+        if (request.Peso is { } peso && LimitesGanado.ValidarPeso(peso, nacimiento, Hoy(), "El peso actual") is { } errorPeso)
         {
-            return $"El peso actual debe ser mayor que 0 y de hasta {PesoMaximoKg} kg.";
+            return errorPeso;
         }
 
         if (request.Nombre?.Trim().Length > 100)
@@ -403,9 +427,10 @@ public class AnimalService : IAnimalService
             return "El color puede tener hasta 40 caracteres.";
         }
 
-        if (request.Observaciones?.Trim().Length > 500)
+        // RC-07: las observaciones tienen que describir algo, no ser solo un número.
+        if (TextoDescriptivo.Validar(request.Observaciones, 500, "Las observaciones") is { } errorObservaciones)
         {
-            return "Las observaciones pueden tener hasta 500 caracteres.";
+            return errorObservaciones;
         }
 
         return null;

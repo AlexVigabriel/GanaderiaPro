@@ -173,50 +173,145 @@ class DatosVacunacion {
       '${f.year.toString().padLeft(4, '0')}-${f.month.toString().padLeft(2, '0')}-${f.day.toString().padLeft(2, '0')}';
 }
 
-// HU-57: tratamiento veterinario de un animal.
+// RC-08: unidades aceptadas para la dosis (el servidor exige cantidad y unidad).
+const unidadesDosis = ['ml', 'mg', 'g', 'cc', 'UI', 'comprimidos'];
+
+// Cantidad de la dosis: un número mayor que cero, con coma o punto decimal.
+String? validarCantidadDosis(String texto) {
+  final limpio = texto.trim();
+  if (limpio.isEmpty) return 'Escribí la cantidad';
+  final valor = double.tryParse(limpio.replaceAll(',', '.'));
+  if (valor == null || !RegExp(r'^\d+([.,]\d+)?$').hasMatch(limpio)) return 'Solo un número, ej. 5';
+  if (valor <= 0) return 'Mayor que cero';
+  return null;
+}
+
+// «1 comprimidos» se lee mal: con 1 va en singular.
+String armarDosis(String cantidad, String unidad) {
+  final c = cantidad.trim();
+  return unidad == 'comprimidos' && c == '1' ? '1 comprimido' : '$c $unidad';
+}
+
+// RC-09: valores tal como los manda el servidor y su texto en pantalla.
+const nombresEvolucion = {'Mejora': 'Mejora', 'SinCambios': 'Sin cambios', 'Empeora': 'Empeora'};
+const nombresResultado = {'Recuperado': 'Recuperado', 'SinMejoria': 'Sin mejoría', 'Derivado': 'Derivado'};
+
+// RC-09: un día del seguimiento de un tratamiento.
+class SeguimientoTratamiento {
+  const SeguimientoTratamiento({
+    required this.id,
+    required this.fecha,
+    required this.evolucion,
+    this.nota,
+    required this.usuario,
+  });
+
+  final String id;
+  final DateTime fecha;
+  // Mejora, SinCambios o Empeora.
+  final String evolucion;
+  final String? nota;
+  final String usuario;
+
+  factory SeguimientoTratamiento.fromJson(Map<String, dynamic> json) => SeguimientoTratamiento(
+    id: json['id'] as String,
+    fecha: DateTime.parse(json['fecha'] as String),
+    evolucion: json['evolucion'] as String,
+    nota: json['nota'] as String?,
+    usuario: json['usuario'] as String,
+  );
+}
+
+// HU-57: tratamiento veterinario de un animal. RC-08: diagnóstico.
+// RC-09: estado, día actual, seguimientos y resultado.
 class Tratamiento {
   const Tratamiento({
     required this.id,
-    required this.motivo,
+    required this.animalId,
+    required this.arete,
+    this.nombreAnimal,
+    required this.diagnostico,
     required this.medicamento,
     required this.dosis,
     required this.fechaInicio,
     required this.duracionDias,
     required this.fechaFin,
     required this.enCurso,
+    required this.estado,
+    required this.diaActual,
+    this.resultado,
+    this.fechaFinalizacion,
     this.observacion,
     required this.veterinario,
+    this.seguimientos = const [],
   });
 
   final String id;
-  final String motivo;
+  final String animalId;
+  final String arete;
+  final String? nombreAnimal;
+  final String diagnostico;
   final String medicamento;
   final String dosis;
   final DateTime fechaInicio;
   final int duracionDias;
   final DateTime fechaFin;
   final bool enCurso;
+  // EnCurso, Finalizado o SinResultado (pasó el último día sin cargar cómo terminó).
+  final String estado;
+  final int diaActual;
+  final String? resultado;
+  final DateTime? fechaFinalizacion;
   final String? observacion;
   final String veterinario;
+  final List<SeguimientoTratamiento> seguimientos;
 
-  factory Tratamiento.fromJson(Map<String, dynamic> json) => Tratamiento(
-    id: json['id'] as String,
-    motivo: json['motivo'] as String,
-    medicamento: json['medicamento'] as String,
-    dosis: json['dosis'] as String,
-    fechaInicio: DateTime.parse(json['fechaInicio'] as String),
-    duracionDias: json['duracionDias'] as int,
-    fechaFin: DateTime.parse(json['fechaFin'] as String),
-    enCurso: json['enCurso'] as bool,
-    observacion: json['observacion'] as String?,
-    veterinario: json['veterinario'] as String,
-  );
+  String get animal => nombreAnimal == null ? arete : '$arete · $nombreAnimal';
+
+  bool get finalizado => resultado != null;
+
+  String get avance => 'Día $diaActual de $duracionDias';
+
+  String get textoEstado => switch (estado) {
+    'EnCurso' => 'En curso',
+    'Finalizado' => nombresResultado[resultado] ?? 'Finalizado',
+    _ => 'Sin resultado',
+  };
+
+  // Hasta qué día se puede cargar un seguimiento: el último día o hoy.
+  DateTime ultimoDiaSeguimiento(DateTime hoy) => fechaFin.isBefore(hoy) ? fechaFin : hoy;
+
+  factory Tratamiento.fromJson(Map<String, dynamic> json) {
+    final finalizacion = json['fechaFinalizacion'] as String?;
+    return Tratamiento(
+      id: json['id'] as String,
+      animalId: json['animalId'] as String,
+      arete: json['arete'] as String,
+      nombreAnimal: json['nombreAnimal'] as String?,
+      diagnostico: json['diagnostico'] as String,
+      medicamento: json['medicamento'] as String,
+      dosis: json['dosis'] as String,
+      fechaInicio: DateTime.parse(json['fechaInicio'] as String),
+      duracionDias: json['duracionDias'] as int,
+      fechaFin: DateTime.parse(json['fechaFin'] as String),
+      enCurso: json['enCurso'] as bool,
+      estado: json['estado'] as String,
+      diaActual: json['diaActual'] as int,
+      resultado: json['resultado'] as String?,
+      fechaFinalizacion: finalizacion == null ? null : DateTime.parse(finalizacion),
+      observacion: json['observacion'] as String?,
+      veterinario: json['veterinario'] as String,
+      seguimientos: ((json['seguimientos'] as List<dynamic>?) ?? const [])
+          .map((s) => SeguimientoTratamiento.fromJson(s as Map<String, dynamic>))
+          .toList(),
+    );
+  }
 }
 
 // Datos de un tratamiento tal como se envían al registrarlo.
 class DatosTratamiento {
   const DatosTratamiento({
-    required this.motivo,
+    required this.diagnostico,
     required this.medicamento,
     required this.dosis,
     required this.fechaInicio,
@@ -224,7 +319,7 @@ class DatosTratamiento {
     this.observacion,
   });
 
-  final String motivo;
+  final String diagnostico;
   final String medicamento;
   final String dosis;
   final DateTime fechaInicio;

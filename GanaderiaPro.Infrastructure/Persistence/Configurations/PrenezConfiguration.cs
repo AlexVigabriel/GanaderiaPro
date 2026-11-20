@@ -15,6 +15,9 @@ public class PrenezConfiguration : IEntityTypeConfiguration<Prenez>
         builder.Property(p => p.Observacion)
             .HasMaxLength(500);
 
+        // RC-10
+        builder.Property(p => p.Diagnostico).HasConversion<string>().HasMaxLength(20);
+
         builder.HasIndex(p => new { p.AnimalId, p.FechaServicio });
 
         // Para listar rápido las próximas a parir.
@@ -29,6 +32,11 @@ public class PrenezConfiguration : IEntityTypeConfiguration<Prenez>
         builder.HasOne(p => p.RegistradoPor)
             .WithMany()
             .HasForeignKey(p => p.RegistradoPorId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne(p => p.PartoRegistradoPor)
+            .WithMany()
+            .HasForeignKey(p => p.PartoRegistradoPorId)
             .OnDelete(DeleteBehavior.Restrict);
     }
 }

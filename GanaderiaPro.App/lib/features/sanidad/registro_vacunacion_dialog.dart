@@ -99,7 +99,7 @@ class _RegistroVacunacionState extends State<_RegistroVacunacion> {
           obligatoria: 'La fecha de aplicación es obligatoria',
         ),
         'proxima': ?validarProximaDosis(_proxima, _aplicacion),
-        'observacion': ?validarLargo(_observacion.text, 500),
+        'observacion': ?validarObservacion(_observacion.text),
       };
       _errorServidor = null;
     });

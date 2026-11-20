@@ -7,7 +7,8 @@ import '../../core/historial.dart';
 
 // HU-22: línea de tiempo del animal (vacunaciones, tratamientos, pesajes,
 // preñez/parto y movimientos de corral), de lo más reciente a lo más antiguo.
-// Se carga al abrir «Historial».
+// Se carga al abrir «Historial». RC-11: seguimiento y fin de los tratamientos,
+// diagnóstico de preñez y aborto, con filtro por categoría.
 class TarjetaHistorial extends StatefulWidget {
   const TarjetaHistorial({super.key, required this.animal});
 
@@ -19,6 +20,8 @@ class TarjetaHistorial extends StatefulWidget {
 
 class _TarjetaHistorialState extends State<TarjetaHistorial> {
   Future<List<EventoHistorial>>? _eventos;
+  // null = todos.
+  String? _filtro;
 
   void _cargar() => setState(() {
         _eventos = ApiClient().listarHistorial(widget.animal.id);
@@ -61,8 +64,8 @@ class _TarjetaHistorialState extends State<TarjetaHistorial> {
                   ],
                 );
               }
-              final eventos = snapshot.data!;
-              if (eventos.isEmpty) {
+              final todos = snapshot.data!;
+              if (todos.isEmpty) {
                 return Padding(
                   padding: const EdgeInsets.symmetric(vertical: 12),
                   child: Text(
@@ -71,8 +74,36 @@ class _TarjetaHistorialState extends State<TarjetaHistorial> {
                   ),
                 );
               }
+              final eventos = filtrarHistorial(todos, _filtro);
               return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      ChoiceChip(
+                        label: const Text('Todos'),
+                        selected: _filtro == null,
+                        onSelected: (_) => setState(() => _filtro = null),
+                      ),
+                      for (final c in categoriasDeHistorial.entries)
+                        ChoiceChip(
+                          label: Text(c.value),
+                          selected: _filtro == c.key,
+                          onSelected: (_) => setState(() => _filtro = c.key),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  if (eventos.isEmpty)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      child: Text(
+                        'Sin eventos de este tipo',
+                        style: tema.textTheme.bodyMedium?.copyWith(color: tema.colorScheme.onSurfaceVariant),
+                      ),
+                    ),
                   for (var i = 0; i < eventos.length; i++)
                     _FilaEvento(evento: eventos[i], ultima: i == eventos.length - 1),
                 ],
@@ -94,10 +125,16 @@ class _FilaEvento extends StatelessWidget {
   static IconData _icono(String tipo) => switch (tipo) {
     'Vacunacion' => Icons.vaccines_outlined,
     'Tratamiento' => Icons.medication_outlined,
+    'SeguimientoTratamiento' => Icons.monitor_heart_outlined,
+    'FinTratamiento' => Icons.flag_outlined,
+    'DiagnosticoPrenez' => Icons.fact_check_outlined,
+    'Aborto' => Icons.heart_broken_outlined,
     'Pesaje' => Icons.monitor_weight_outlined,
     'Servicio' => Icons.favorite_border,
     'Parto' => Icons.child_friendly,
     'MovimientoCorral' => Icons.fence,
+    'Baja' => Icons.person_off_outlined,
+    'Reactivacion' => Icons.person_add_alt_1_outlined,
     _ => Icons.circle_outlined,
   };
 

@@ -20,6 +20,7 @@ public class PrenezRepository : IPrenezRepository
     public async Task<IReadOnlyList<Prenez>> ListarPorAnimalAsync(Guid animalId) =>
         await _dbContext.Preneces
             .Include(p => p.RegistradoPor)
+            .Include(p => p.PartoRegistradoPor)
             .Where(p => p.AnimalId == animalId)
             .OrderByDescending(p => p.FechaServicio)
             .ToListAsync();
@@ -28,10 +29,13 @@ public class PrenezRepository : IPrenezRepository
         _dbContext.Preneces.FirstOrDefaultAsync(p => p.AnimalId == animalId && p.Id == prenezId);
 
     // Preñeces abiertas de hembras activas del rancho, con parto probable hasta la fecha dada.
+    // RC-10: el diagnóstico «Vacía» y el aborto también la cierran.
     public async Task<IReadOnlyList<Prenez>> ListarAbiertasConPartoHastaAsync(Guid ranchoId, DateOnly hasta) =>
         await _dbContext.Preneces
             .Include(p => p.Animal)
             .Where(p => p.FechaParto == null
+                && p.FechaAborto == null
+                && p.Diagnostico != DiagnosticoPrenez.Vacia
                 && p.FechaProbableParto <= hasta
                 && p.Animal!.RanchoId == ranchoId
                 && p.Animal.Estado == EstadoAnimal.Activo)

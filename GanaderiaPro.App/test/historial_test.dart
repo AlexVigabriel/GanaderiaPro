@@ -84,6 +84,69 @@ void main() {
     expect(find.text('15/09/2026'), findsOneWidget);
   });
 
+  testWidgets('RC-11: muestra seguimiento, diagnóstico de preñez, aborto, bajas y reactivaciones, y filtra por tipo', (tester) async {
+    Map<String, dynamic> evento(String fecha, String tipo, String categoria, String descripcion) => {
+      'fecha': fecha,
+      'tipo': tipo,
+      'categoria': categoria,
+      'descripcion': descripcion,
+      'usuario': 'Laura Rojas',
+      'fechaRegistro': '${fecha}T12:00:00Z',
+    };
+    await abrirHistorial(
+      tester,
+      MockClient(
+        (request) async => http.Response(
+          jsonEncode([
+            evento('2026-11-15', 'Reactivacion', 'Estado', 'Animal reactivado (antes: Vendido).'),
+            evento('2026-11-12', 'Baja', 'Estado', 'Baja registrada: Vendido.'),
+            evento('2026-11-10', 'FinTratamiento', 'Sanidad', 'Neumonía · resultado: Recuperado'),
+            evento('2026-11-09', 'SeguimientoTratamiento', 'Sanidad', 'Neumonía (día 3 de 7): Mejora'),
+            evento('2026-11-07', 'Tratamiento', 'Sanidad', 'Neumonía · Oxitetraciclina 10 ml, 7 días · finalizado: Recuperado'),
+            evento('2026-10-01', 'Aborto', 'Reproduccion', 'Aborto: la preñez se cerró'),
+            evento('2026-08-01', 'DiagnosticoPrenez', 'Reproduccion', 'Preñez confirmada'),
+            evento('2026-07-01', 'Pesaje', 'Pesajes', '400 kg'),
+            evento('2026-06-01', 'MovimientoCorral', 'Corrales', 'Entró al corral «Norte»'),
+          ]),
+          200,
+        ),
+      ),
+    );
+
+    expect(find.text('Seguimiento del tratamiento'), findsOneWidget);
+    expect(find.text('Fin del tratamiento'), findsOneWidget);
+    expect(find.text('Diagnóstico de preñez'), findsOneWidget);
+    expect(find.text('Aborto'), findsOneWidget);
+    expect(find.text('Entró al corral «Norte»'), findsOneWidget);
+
+    await tester.tap(find.widgetWithText(ChoiceChip, 'Reproducción'));
+    await tester.pumpAndSettle();
+    expect(find.text('Aborto'), findsOneWidget);
+    expect(find.text('Diagnóstico de preñez'), findsOneWidget);
+    expect(find.text('Seguimiento del tratamiento'), findsNothing);
+    expect(find.text('Pesaje'), findsNothing);
+
+    await tester.tap(find.widgetWithText(ChoiceChip, 'Sanidad'));
+    await tester.pumpAndSettle();
+    expect(find.text('Neumonía (día 3 de 7): Mejora'), findsOneWidget);
+    expect(find.text('Aborto'), findsNothing);
+
+    await tester.tap(find.widgetWithText(ChoiceChip, 'Corrales'));
+    await tester.pumpAndSettle();
+    expect(find.text('Entró al corral «Norte»'), findsOneWidget);
+    expect(find.text('Tratamiento'), findsNothing);
+
+    await tester.tap(find.widgetWithText(ChoiceChip, 'Estado'));
+    await tester.pumpAndSettle();
+    expect(find.text('Baja registrada: Vendido.'), findsOneWidget);
+    expect(find.text('Reactivación'), findsOneWidget);
+    expect(find.text('Entró al corral «Norte»'), findsNothing);
+
+    await tester.tap(find.widgetWithText(ChoiceChip, 'Todos'));
+    await tester.pumpAndSettle();
+    expect(find.text('400 kg'), findsOneWidget);
+  });
+
   testWidgets('Sin eventos muestra «Sin registros»', (tester) async {
     await abrirHistorial(tester, MockClient((request) async => http.Response('[]', 200)));
 
