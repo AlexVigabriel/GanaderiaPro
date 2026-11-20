@@ -18,7 +18,9 @@ void main() {
       return http.Response(jsonEncode(['¿Cuántos animales hay?', '¿Cuál es el peso promedio?']), 200);
     }
     if (request.url.path.endsWith('/asistente')) {
-      return http.Response(jsonEncode(respuesta), 200);
+      // Como el servidor real: JSON en UTF-8 (la respuesta puede traer «•»).
+      return http.Response.bytes(utf8.encode(jsonEncode(respuesta)), 200,
+          headers: {'content-type': 'application/json; charset=utf-8'});
     }
     return http.Response('{}', 404);
   }
@@ -57,6 +59,39 @@ void main() {
 
     expect(preguntaEnviada, '¿Cuántos animales hay?');
     expect(find.text('Hay 3 animales activos.'), findsOneWidget);
+  });
+
+  testWidgets('Separa las preguntas frecuentes de la consulta propia (RC-04)', (tester) async {
+    await abrir(
+      tester,
+      MockClient((request) => servidor(request, respuesta: const {})),
+      () async {},
+    );
+
+    expect(find.text('Preguntas frecuentes'), findsOneWidget);
+    expect(find.text('Tu consulta'), findsOneWidget);
+    expect(find.widgetWithText(ActionChip, '¿Cuántos animales hay?'), findsOneWidget);
+  });
+
+  testWidgets('Muestra una respuesta por grupos en varias líneas (RC-05)', (tester) async {
+    const texto = 'Animales activos por raza (3 en total):\n• Nelore: 2\n• Brahman: 1';
+    await abrir(
+      tester,
+      MockClient((request) => servidor(request, respuesta: {
+        'respuesta': texto,
+        'reconocida': true,
+        'sinDatos': false,
+        'responsable': null,
+        'ejemplos': <String>[],
+      })),
+      () async {
+        await tester.enterText(find.byType(TextField), '¿Cuántos animales hay por raza?');
+        await tester.tap(find.byTooltip('Enviar'));
+        await tester.pumpAndSettle();
+      },
+    );
+
+    expect(find.text(texto), findsOneWidget);
   });
 
   testWidgets('Si no entiende, ofrece ejemplos en vez de inventar', (tester) async {

@@ -29,7 +29,8 @@ public sealed partial class PreguntaAsistente
     }
 
     // Palabras del texto original que podrían ser un arete: tienen al menos un
-    // número. Se descarta la que sigue a «corral» (es el nombre del corral).
+    // número. Se descarta la que sigue a «corral» o a «corral número» (es el
+    // nombre del corral).
     public IEnumerable<string> PosiblesAretes()
     {
         var tokens = Original.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries)
@@ -38,12 +39,70 @@ public sealed partial class PreguntaAsistente
         for (var i = 0; i < tokens.Count; i++)
         {
             var anterior = i > 0 ? Normalizar(tokens[i - 1]) : string.Empty;
-            if (tokens[i].Any(char.IsDigit) && anterior != "corral")
+            var antesDeAnterior = i > 1 ? Normalizar(tokens[i - 2]) : string.Empty;
+            var esNombreDeCorral = anterior == "corral" || (PalabrasNumero.Contains(anterior) && antesDeAnterior == "corral");
+            if (tokens[i].Any(char.IsDigit) && !esNombreDeCorral)
             {
                 yield return tokens[i];
             }
         }
     }
+
+    // RC-06: lo que el usuario escribió después de «corral», listo para
+    // comparar con el nombre del corral («corral número cuatro» → «4»).
+    public IReadOnlyList<string> DespuesDeCorral()
+    {
+        var indice = Palabras.ToList().IndexOf("corral");
+        return indice < 0 ? [] : ClaveCorral(string.Join(' ', Palabras.Skip(indice + 1)));
+    }
+
+    // RC-06: el nombre de un corral sin «corral» ni «número» al principio y
+    // con los números escritos en palabras pasados a cifras. Así «Corral 4»,
+    // «corral cuatro» y «Corral N° 4» quedan iguales: «4».
+    public static IReadOnlyList<string> ClaveCorral(string? nombre)
+    {
+        var palabras = Normalizar(nombre).Split(' ', StringSplitOptions.RemoveEmptyEntries)
+            .Select(p => NumerosEnPalabras.TryGetValue(p, out var cifra) ? cifra : p)
+            .ToList();
+        while (palabras.Count > 0 && (palabras[0] == "corral" || PalabrasNumero.Contains(palabras[0])))
+        {
+            palabras.RemoveAt(0);
+        }
+
+        return palabras;
+    }
+
+    // Distancia de edición (cantidad de letras agregadas, borradas o
+    // cambiadas). Sirve para aceptar un error de tipeo en un nombre.
+    public static int Distancia(string a, string b)
+    {
+        var anterior = Enumerable.Range(0, b.Length + 1).ToArray();
+        for (var i = 1; i <= a.Length; i++)
+        {
+            var actual = new int[b.Length + 1];
+            actual[0] = i;
+            for (var j = 1; j <= b.Length; j++)
+            {
+                var costo = a[i - 1] == b[j - 1] ? 0 : 1;
+                actual[j] = Math.Min(Math.Min(actual[j - 1] + 1, anterior[j] + 1), anterior[j - 1] + costo);
+            }
+
+            anterior = actual;
+        }
+
+        return anterior[b.Length];
+    }
+
+    private static readonly HashSet<string> PalabrasNumero = ["numero", "nro", "n", "no", "num"];
+
+    // Del cero al veinte, que alcanza para los nombres de corral habituales.
+    private static readonly Dictionary<string, string> NumerosEnPalabras = new()
+    {
+        ["cero"] = "0", ["uno"] = "1", ["dos"] = "2", ["tres"] = "3", ["cuatro"] = "4", ["cinco"] = "5",
+        ["seis"] = "6", ["siete"] = "7", ["ocho"] = "8", ["nueve"] = "9", ["diez"] = "10", ["once"] = "11",
+        ["doce"] = "12", ["trece"] = "13", ["catorce"] = "14", ["quince"] = "15", ["dieciseis"] = "16",
+        ["diecisiete"] = "17", ["dieciocho"] = "18", ["diecinueve"] = "19", ["veinte"] = "20",
+    };
 
     public static string Normalizar(string? texto)
     {

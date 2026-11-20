@@ -68,4 +68,40 @@ public class PrenecesController : ControllerBase
             return BadRequest(new { mensaje = ex.Message });
         }
     }
+
+    // RC-10
+    [HttpPost("{prenezId:guid}/diagnostico")]
+    public async Task<ActionResult<PrenezResponse>> RegistrarDiagnostico(
+        Guid animalId, Guid prenezId, RegistrarDiagnosticoPrenezRequest request)
+    {
+        try
+        {
+            return Ok(await _prenezService.RegistrarDiagnosticoAsync(animalId, prenezId, request));
+        }
+        catch (RecursoNoEncontradoException ex)
+        {
+            return NotFound(new { mensaje = ex.Message });
+        }
+        catch (ReglaDeNegocioException ex)
+        {
+            return BadRequest(new { mensaje = ex.Message });
+        }
+    }
+
+    [HttpPost("{prenezId:guid}/aborto")]
+    public async Task<ActionResult<PrenezResponse>> RegistrarAborto(Guid animalId, Guid prenezId, RegistrarAbortoRequest request)
+    {
+        try
+        {
+            return Ok(await _prenezService.RegistrarAbortoAsync(animalId, prenezId, request));
+        }
+        catch (RecursoNoEncontradoException ex)
+        {
+            return NotFound(new { mensaje = ex.Message });
+        }
+        catch (ReglaDeNegocioException ex)
+        {
+            return BadRequest(new { mensaje = ex.Message });
+        }
+    }
 }

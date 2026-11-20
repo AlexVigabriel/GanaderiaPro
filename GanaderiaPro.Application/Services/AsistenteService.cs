@@ -17,22 +17,22 @@ public class AsistenteService : IAsistenteService
 {
     public const string MensajeSinDatos = "No encontramos información actualizada sobre este dato.";
 
-    // Catálogo de consultas soportadas (va también en el manual de usuario).
+    // RC-04: preguntas frecuentes genéricas, válidas para cualquier rancho (no
+    // nombran un animal ni un corral). Las consultas sobre un animal o un
+    // corral concreto se escriben en la caja de texto.
     public static readonly IReadOnlyList<string> Ejemplos =
     [
-        "¿Cuántos animales hay?",
-        "¿Cuántas hembras hay en el corral Norte?",
-        "¿Cuántos machos de raza Nelore hay?",
-        "¿Cuántos animales se vendieron?",
-        "¿Cuántos animales fallecieron?",
+        "¿Cuántos animales hay registrados?",
+        "¿Cuántos machos hay?",
+        "¿Cuántas hembras hay?",
+        "¿Cuántos animales hay por raza?",
+        "¿Cuántos animales hay en cada corral?",
         "¿Cuál es el peso promedio?",
-        "¿Cuánto pesa el AR-002?",
-        "¿En qué corral está el AR-002?",
-        "¿Cuándo se vacunó el AR-002?",
         "¿Cuántas vacunaciones pendientes hay?",
         "¿Cuántas están próximas a parir?",
-        "¿Cuántos corrales hay?",
     ];
+
+    private enum Agrupacion { Ninguna, Raza, Corral }
 
     private static readonly CultureInfo Cultura = CultureInfo.InvariantCulture;
     private static readonly string[] PalabrasHembra = ["hembra", "hembras", "vaca", "vacas", "vaquillona", "vaquillonas", "ternera", "terneras"];
@@ -127,7 +127,13 @@ public class AsistenteService : IAsistenteService
             }
         }
 
-        if (pregunta.Contiene("cuant") && pregunta.ContienePalabras("corrales"))
+        // RC-05: «¿Cuántos animales hay en cada corral?» reparte por corral; no
+        // es la cantidad de corrales.
+        var agrupacion = pregunta.Contiene("por raza", "cada raza", "segun raza", "segun la raza") ? Agrupacion.Raza
+            : pregunta.Contiene("cada corral", "por corral", "los corrales", "segun corral", "segun el corral") ? Agrupacion.Corral
+            : Agrupacion.Ninguna;
+
+        if (agrupacion == Agrupacion.Ninguna && pregunta.Contiene("cuant") && pregunta.ContienePalabras("corrales"))
         {
             if (!PuedeVer(Modulo.Corrales, out var denegada)) return denegada;
             var corrales = (await _corralRepository.ListarAsync(ranchoId, incluirInactivos: false)).Count;
@@ -137,7 +143,8 @@ public class AsistenteService : IAsistenteService
         if (pregunta.Contiene("cuant"))
         {
             if (!PuedeVer(Modulo.Ganado, out var denegada)) return denegada;
-            return await ConteoAsync(pregunta);
+            if (agrupacion == Agrupacion.Corral && !PuedeVer(Modulo.Corrales, out denegada)) return denegada;
+            return await ConteoAsync(pregunta, agrupacion);
         }
 
         return NoReconocida();
@@ -145,7 +152,7 @@ public class AsistenteService : IAsistenteService
 
     // ---- Cantidades (animales por corral, sexo, raza o estado)
 
-    private async Task<RespuestaAsistenteResponse> ConteoAsync(PreguntaAsistente pregunta)
+    private async Task<RespuestaAsistenteResponse> ConteoAsync(PreguntaAsistente pregunta, Agrupacion agrupacion)
     {
         var estado = pregunta.Contiene("vend") ? EstadoAnimal.Vendido
             : pregunta.Contiene("fallec", "muert", "murieron") ? EstadoAnimal.Fallecido
@@ -156,10 +163,11 @@ public class AsistenteService : IAsistenteService
 
         var animales = await _animalRepository.BuscarAsync(_currentUser.RanchoId, null, estado, sexo, null);
 
-        var corral = await BuscarCorralAsync(pregunta);
-        if (corral.NoEncontrado is { } nombre)
+        // Al repartir por corral no se filtra por uno: se muestran todos.
+        var corral = agrupacion == Agrupacion.Corral ? (null, null) : await BuscarCorralAsync(pregunta);
+        if (corral.Problema is { } problema)
         {
-            return Respuesta($"No encontré el corral «{nombre}». Revisá el nombre en el módulo Corrales.");
+            return Respuesta(problema);
         }
 
         if (corral.Corral is { } c)
@@ -167,7 +175,7 @@ public class AsistenteService : IAsistenteService
             animales = animales.Where(a => a.CorralId == c.Id).ToList();
         }
 
-        var raza = animales.Select(a => a.Raza)
+        var raza = agrupacion == Agrupacion.Raza ? null : animales.Select(a => a.Raza)
             .Concat((await ActivosAsync()).Select(a => a.Raza))
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .Where(r => !string.IsNullOrWhiteSpace(r) && pregunta.ContienePalabras(r))
@@ -179,13 +187,50 @@ public class AsistenteService : IAsistenteService
         }
 
         var cantidad = animales.Count;
-        var sustantivo = (sexo, cantidad == 1) switch
+        var detalle = (raza is null ? string.Empty : $" de raza {raza}") +
+                      (corral.Corral is null ? string.Empty : $" en el corral «{corral.Corral.Nombre}»");
+
+        return agrupacion switch
         {
-            (SexoAnimal.Hembra, true) => "hembra",
-            (SexoAnimal.Hembra, false) => "hembras",
-            (SexoAnimal.Macho, true) => "macho",
-            (SexoAnimal.Macho, false) => "machos",
-            (_, true) => "animal",
+            Agrupacion.Raza => Lista(
+                $"{Describir(sexo, estado, plural: true, mayuscula: true)}{detalle} por raza ({cantidad} en total):",
+                animales.GroupBy(a => a.Raza, StringComparer.OrdinalIgnoreCase)
+                    .OrderByDescending(g => g.Count()).ThenBy(g => g.Key)
+                    .Select(g => (g.Key, g.Count()))),
+            Agrupacion.Corral => await PorCorralAsync(animales, sexo, estado, detalle),
+            _ => Respuesta($"Hay {cantidad} {Describir(sexo, estado, plural: cantidad != 1)}{detalle}."),
+        };
+    }
+
+    // RC-05: una línea por corral activo (también los vacíos) y los que no
+    // están en ningún corral.
+    private async Task<RespuestaAsistenteResponse> PorCorralAsync(
+        IReadOnlyList<Animal> animales, SexoAnimal? sexo, EstadoAnimal estado, string detalle)
+    {
+        var corrales = await _corralRepository.ListarAsync(_currentUser.RanchoId, incluirInactivos: false);
+        var lineas = corrales
+            .Select(c => (c.Nombre, animales.Count(a => a.CorralId == c.Id)))
+            .OrderByDescending(l => l.Item2).ThenBy(l => l.Nombre)
+            .ToList();
+        var sinCorral = animales.Count(a => a.CorralId is null || corrales.All(c => c.Id != a.CorralId));
+        if (sinCorral > 0)
+        {
+            lineas.Add(("Sin corral", sinCorral));
+        }
+
+        return Lista($"{Describir(sexo, estado, plural: true, mayuscula: true)}{detalle} por corral ({animales.Count} en total):", lineas);
+    }
+
+    // «hembra activa», «machos vendidos», «animales fallecidos»…
+    private static string Describir(SexoAnimal? sexo, EstadoAnimal estado, bool plural, bool mayuscula = false)
+    {
+        var sustantivo = (sexo, plural) switch
+        {
+            (SexoAnimal.Hembra, false) => "hembra",
+            (SexoAnimal.Hembra, true) => "hembras",
+            (SexoAnimal.Macho, false) => "macho",
+            (SexoAnimal.Macho, true) => "machos",
+            (_, false) => "animal",
             _ => "animales",
         };
         var femenino = sexo == SexoAnimal.Hembra;
@@ -194,18 +239,21 @@ public class AsistenteService : IAsistenteService
             EstadoAnimal.Vendido => femenino ? "vendida" : "vendido",
             EstadoAnimal.Fallecido => femenino ? "fallecida" : "fallecido",
             _ => femenino ? "activa" : "activo",
-        };
-        if (cantidad != 1)
-        {
-            adjetivo += "s";
-        }
-
-        var detalle = (raza is null ? string.Empty : $" de raza {raza}") +
-                      (corral.Corral is null ? string.Empty : $" en el corral «{corral.Corral.Nombre}»");
-        return Respuesta($"Hay {cantidad} {sustantivo} {adjetivo}{detalle}.");
+        } + (plural ? "s" : string.Empty);
+        var texto = $"{sustantivo} {adjetivo}";
+        return mayuscula ? char.ToUpperInvariant(texto[0]) + texto[1..] : texto;
     }
 
-    private async Task<(Corral? Corral, string? NoEncontrado)> BuscarCorralAsync(PreguntaAsistente pregunta)
+    private static RespuestaAsistenteResponse Lista(string titulo, IEnumerable<(string Nombre, int Cantidad)> lineas)
+    {
+        var filas = lineas.Select(l => $"• {l.Nombre}: {l.Cantidad}").ToList();
+        return Respuesta(filas.Count == 0 ? $"{titulo}\nNo hay animales registrados." : $"{titulo}\n{string.Join('\n', filas)}");
+    }
+
+    // RC-06: reconoce el corral aunque se escriba distinto: «corral cuatro»,
+    // «corral 4», «el corral Corral 4», sin tildes o con un error de tipeo.
+    // Problema: el mensaje para el usuario si no lo encontró o si hay dudas.
+    private async Task<(Corral? Corral, string? Problema)> BuscarCorralAsync(PreguntaAsistente pregunta)
     {
         var palabras = pregunta.Palabras;
         var indice = palabras.ToList().IndexOf("corral");
@@ -215,18 +263,46 @@ public class AsistenteService : IAsistenteService
         }
 
         var corrales = await _corralRepository.ListarAsync(_currentUser.RanchoId, incluirInactivos: false);
-        // Acepta «corral Norte» y también «Corral 3» escrito como «corral 3».
+
+        // 1) El nombre completo aparece tal cual en la pregunta.
         var encontrado = corrales
             .Where(c => pregunta.ContienePalabras(c.Nombre) || pregunta.ContienePalabras($"corral {c.Nombre}"))
             .OrderByDescending(c => c.Nombre.Length)
             .FirstOrDefault();
+
         if (encontrado is not null)
         {
             return (encontrado, null);
         }
 
+        // 2) Lo escrito después de «corral» coincide con el nombre, con los
+        // números en cifras y aceptando una letra de diferencia.
+        var escrito = pregunta.DespuesDeCorral();
+        var parecidos = corrales
+            .Select(c => (Corral: c, Clave: PreguntaAsistente.ClaveCorral(c.Nombre)))
+            .Where(x => x.Clave.Count > 0 && escrito.Count >= x.Clave.Count)
+            .Select(x => (x.Corral, Distancia: PreguntaAsistente.Distancia(
+                string.Join(' ', escrito.Take(x.Clave.Count)), string.Join(' ', x.Clave)), Largo: string.Join(' ', x.Clave).Length))
+            .Where(x => x.Distancia == 0 || (x.Distancia == 1 && x.Largo >= 4))
+            .ToList();
+        var mejores = parecidos.Where(x => x.Distancia == parecidos.Min(p => p.Distancia)).Select(x => x.Corral).ToList();
+        if (mejores.Count == 1)
+        {
+            return (mejores[0], null);
+        }
+
+        // Dos corrales igual de parecidos («oeste» → «Este» y «Oseste»): no
+        // adivina, pide el nombre exacto.
+        if (mejores.Count > 1)
+        {
+            var opciones = string.Join(" o ", mejores.OrderBy(c => c.Nombre).Select(c => $"«{c.Nombre}»"));
+            return (null, $"¿Te referís al corral {opciones}? Escribí el nombre exacto.");
+        }
+
         var siguiente = indice + 1 < palabras.Count ? palabras[indice + 1] : null;
-        return siguiente is null || siguiente is "hay" or "tiene" or "tienen" ? (null, null) : (null, siguiente);
+        return siguiente is null || siguiente is "hay" or "tiene" or "tienen"
+            ? (null, null)
+            : (null, $"No encontré el corral «{siguiente}». Revisá el nombre en el módulo Corrales.");
     }
 
     // ---- Datos de un animal (pueden faltar: HU-38)
@@ -244,9 +320,9 @@ public class AsistenteService : IAsistenteService
     private async Task<RespuestaAsistenteResponse> PesoPromedioAsync(PreguntaAsistente pregunta, IReadOnlyList<Animal> activos)
     {
         var corral = await BuscarCorralAsync(pregunta);
-        if (corral.NoEncontrado is { } nombre)
+        if (corral.Problema is { } problema)
         {
-            return Respuesta($"No encontré el corral «{nombre}». Revisá el nombre en el módulo Corrales.");
+            return Respuesta(problema);
         }
 
         var animales = corral.Corral is { } c ? activos.Where(a => a.CorralId == c.Id) : activos;

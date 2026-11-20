@@ -174,9 +174,9 @@ class _CargaMultipleAnimalesState extends State<CargaMultipleAnimales> {
         'raza': ?validarRaza(fila.raza),
         'nacimiento': ?validarFechaNacimiento(fila.nacimiento),
         'pesoNacimiento': ?validarPesoNacimiento(fila.pesoNacimiento.text),
-        'peso': ?validarPeso(fila.peso.text),
+        'peso': ?validarPeso(fila.peso.text, nacimiento: fila.nacimiento),
         'nombre': ?validarLargo(fila.nombre.text, 100),
-        'observaciones': ?validarLargo(fila.observaciones.text, 500),
+        'observaciones': ?validarObservacion(fila.observaciones.text),
       };
       if (!errores.containsKey('arete') && (aretes[normalizarIdentificacion(fila.arete.text)] ?? 0) > 1) {
         errores['arete'] = 'Repetido en la tabla';
@@ -576,6 +576,7 @@ class _FilaWidget extends StatelessWidget {
                   valor: fila.nacimiento,
                   denso: true,
                   errorText: fila.errores['nacimiento'],
+                  ayuda: avisoEdad(fila.nacimiento),
                   onChanged: (f) {
                     fila.nacimiento = f;
                     onCambio();

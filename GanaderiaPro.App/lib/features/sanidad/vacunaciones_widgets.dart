@@ -143,11 +143,16 @@ class _TarjetaHistorialSanitarioState extends State<TarjetaHistorialSanitario> {
     if (guardadas != null) _recargar('Vacunación registrada.');
   }
 
-  Future<void> _registrarTratamiento() async {
-    if (!await abrirRegistroTratamiento(context, animal: widget.animal) || !mounted) return;
+  void _recargarTratamientos() {
+    if (!mounted) return;
     setState(() {
       _tratamientos = _api.listarTratamientos(widget.animal.id);
     });
+  }
+
+  Future<void> _registrarTratamiento() async {
+    if (!await abrirRegistroTratamiento(context, animal: widget.animal) || !mounted) return;
+    _recargarTratamientos();
     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Tratamiento registrado.')));
   }
 
@@ -248,7 +253,11 @@ class _TarjetaHistorialSanitarioState extends State<TarjetaHistorialSanitario> {
                     style: tema.textTheme.bodyMedium?.copyWith(color: tema.colorScheme.error),
                   );
                 }
-                return ListaTratamientos(tratamientos: snapshot.data!);
+                return ListaTratamientos(
+                  tratamientos: snapshot.data!,
+                  puedeEditar: activo,
+                  onCambio: _recargarTratamientos,
+                );
               },
             ),
           ],
