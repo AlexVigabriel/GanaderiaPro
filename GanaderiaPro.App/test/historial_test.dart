@@ -84,7 +84,7 @@ void main() {
     expect(find.text('15/09/2026'), findsOneWidget);
   });
 
-  testWidgets('RC-11: muestra seguimiento, diagnóstico de preñez y aborto, y filtra por tipo', (tester) async {
+  testWidgets('RC-11: muestra seguimiento, diagnóstico de preñez, aborto, bajas y reactivaciones, y filtra por tipo', (tester) async {
     Map<String, dynamic> evento(String fecha, String tipo, String categoria, String descripcion) => {
       'fecha': fecha,
       'tipo': tipo,
@@ -98,6 +98,8 @@ void main() {
       MockClient(
         (request) async => http.Response(
           jsonEncode([
+            evento('2026-11-15', 'Reactivacion', 'Estado', 'Animal reactivado (antes: Vendido).'),
+            evento('2026-11-12', 'Baja', 'Estado', 'Baja registrada: Vendido.'),
             evento('2026-11-10', 'FinTratamiento', 'Sanidad', 'Neumonía · resultado: Recuperado'),
             evento('2026-11-09', 'SeguimientoTratamiento', 'Sanidad', 'Neumonía (día 3 de 7): Mejora'),
             evento('2026-11-07', 'Tratamiento', 'Sanidad', 'Neumonía · Oxitetraciclina 10 ml, 7 días · finalizado: Recuperado'),
@@ -133,6 +135,12 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Entró al corral «Norte»'), findsOneWidget);
     expect(find.text('Tratamiento'), findsNothing);
+
+    await tester.tap(find.widgetWithText(ChoiceChip, 'Estado'));
+    await tester.pumpAndSettle();
+    expect(find.text('Baja registrada: Vendido.'), findsOneWidget);
+    expect(find.text('Reactivación'), findsOneWidget);
+    expect(find.text('Entró al corral «Norte»'), findsNothing);
 
     await tester.tap(find.widgetWithText(ChoiceChip, 'Todos'));
     await tester.pumpAndSettle();

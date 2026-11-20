@@ -146,6 +146,47 @@ namespace GanaderiaPro.Infrastructure.Persistence.Migrations
                     b.ToTable("Corrales", (string)null);
                 });
 
+            modelBuilder.Entity("GanaderiaPro.Domain.Entities.EventoEstadoAnimal", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("AnimalId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("EstadoAnterior")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("EstadoNuevo")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<DateOnly>("FechaEvento")
+                        .HasColumnType("date");
+
+                    b.Property<DateTime>("FechaRegistro")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Observacion")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<Guid?>("UsuarioId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UsuarioId");
+
+                    b.HasIndex("AnimalId", "FechaEvento", "FechaRegistro");
+
+                    b.ToTable("EventosEstadoAnimal", (string)null);
+                });
+
             modelBuilder.Entity("GanaderiaPro.Domain.Entities.Invitacion", b =>
                 {
                     b.Property<Guid>("Id")
@@ -341,11 +382,16 @@ namespace GanaderiaPro.Infrastructure.Persistence.Migrations
                     b.Property<Guid?>("RegistradoPorId")
                         .HasColumnType("uuid");
 
+                    b.Property<Guid?>("PartoRegistradoPorId")
+                        .HasColumnType("uuid");
+
                     b.HasKey("Id");
 
                     b.HasIndex("FechaProbableParto");
 
                     b.HasIndex("RegistradoPorId");
+
+                    b.HasIndex("PartoRegistradoPorId");
 
                     b.HasIndex("AnimalId", "FechaServicio");
 
@@ -670,6 +716,24 @@ namespace GanaderiaPro.Infrastructure.Persistence.Migrations
                     b.Navigation("Rancho");
                 });
 
+            modelBuilder.Entity("GanaderiaPro.Domain.Entities.EventoEstadoAnimal", b =>
+                {
+                    b.HasOne("GanaderiaPro.Domain.Entities.Animal", "Animal")
+                        .WithMany()
+                        .HasForeignKey("AnimalId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("GanaderiaPro.Domain.Entities.Usuario", "Usuario")
+                        .WithMany()
+                        .HasForeignKey("UsuarioId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Animal");
+
+                    b.Navigation("Usuario");
+                });
+
             modelBuilder.Entity("GanaderiaPro.Domain.Entities.Invitacion", b =>
                 {
                     b.HasOne("GanaderiaPro.Domain.Entities.Usuario", "Usuario")
@@ -742,9 +806,16 @@ namespace GanaderiaPro.Infrastructure.Persistence.Migrations
                         .HasForeignKey("RegistradoPorId")
                         .OnDelete(DeleteBehavior.Restrict);
 
+                    b.HasOne("GanaderiaPro.Domain.Entities.Usuario", "PartoRegistradoPor")
+                        .WithMany()
+                        .HasForeignKey("PartoRegistradoPorId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.Navigation("Animal");
 
                     b.Navigation("RegistradoPor");
+
+                    b.Navigation("PartoRegistradoPor");
                 });
 
             modelBuilder.Entity("GanaderiaPro.Domain.Entities.SeguimientoTratamiento", b =>

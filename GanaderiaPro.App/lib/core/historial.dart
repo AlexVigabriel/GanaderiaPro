@@ -10,9 +10,9 @@ class EventoHistorial {
 
   final DateTime fecha;
   // Vacunacion, Tratamiento, SeguimientoTratamiento, FinTratamiento, Pesaje,
-  // Servicio, DiagnosticoPrenez, Parto, Aborto o MovimientoCorral.
+  // Servicio, DiagnosticoPrenez, Parto, Aborto, MovimientoCorral, Baja o Reactivacion.
   final String tipo;
-  // RC-11: Sanidad, Reproduccion, Pesajes o Corrales.
+  // RC-11: Sanidad, Reproduccion, Pesajes, Corrales o Estado.
   final String categoria;
   final String descripcion;
   // Quién lo registró (vacío en registros anteriores).
@@ -38,6 +38,8 @@ const _nombresDeTipo = {
   'Parto': 'Parto',
   'Aborto': 'Aborto',
   'MovimientoCorral': 'Movimiento de corral',
+  'Baja': 'Baja',
+  'Reactivacion': 'Reactivación',
 };
 
 String nombreDeTipoDeEvento(String tipo) => _nombresDeTipo[tipo] ?? tipo;
@@ -48,6 +50,7 @@ const categoriasDeHistorial = {
   'Reproduccion': 'Reproducción',
   'Pesajes': 'Pesajes',
   'Corrales': 'Corrales',
+  'Estado': 'Estado',
 };
 
 // null = todos.

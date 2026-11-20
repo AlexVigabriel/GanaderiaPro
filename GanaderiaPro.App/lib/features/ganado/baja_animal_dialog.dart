@@ -58,6 +58,9 @@ class DatosBajaFormulario {
   }
 
   DatosEstado aDatos(String estado) {
+    // Al reactivar no se mandan la fecha ni la nota de la baja anterior: el
+    // servidor registra la reactivación con la fecha de hoy (HU-22).
+    if (estado == 'Activo') return const DatosEstado(estado: 'Activo');
     final fallecido = estado == 'Fallecido';
     final nota = observacion.text.trim();
     return DatosEstado(

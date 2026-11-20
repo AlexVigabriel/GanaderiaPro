@@ -22,17 +22,20 @@ public class AnimalService : IAnimalService
     private readonly ICurrentUserContext _currentUser;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IControlLimitesPlan _limitesPlan;
+    private readonly IEventoEstadoAnimalRepository? _eventoEstadoRepository;
 
     public AnimalService(
         IAnimalRepository animalRepository,
         ICurrentUserContext currentUser,
         IUnitOfWork unitOfWork,
-        IControlLimitesPlan limitesPlan)
+        IControlLimitesPlan limitesPlan,
+        IEventoEstadoAnimalRepository? eventoEstadoRepository = null)
     {
         _animalRepository = animalRepository;
         _currentUser = currentUser;
         _unitOfWork = unitOfWork;
         _limitesPlan = limitesPlan;
+        _eventoEstadoRepository = eventoEstadoRepository;
     }
 
     public async Task<AnimalResponse> RegistrarAsync(RegistrarAnimalRequest request)
@@ -261,7 +264,9 @@ public class AnimalService : IAnimalService
             // Volver a Activo un animal dado de baja vuelve a ocupar lugar (RN-11).
             if (animal.Estado != EstadoAnimal.Activo)
             {
+                var estadoPrevio = animal.Estado;
                 await _limitesPlan.VerificarAsync(RecursoPlan.Animales);
+                RegistrarCambioEstado(animal, estadoPrevio, EstadoAnimal.Activo, request.Fecha ?? Hoy(), request.Observacion);
             }
 
             animal.Estado = EstadoAnimal.Activo;
@@ -279,6 +284,7 @@ public class AnimalService : IAnimalService
             throw new ReglaDeNegocioException(error);
         }
 
+        var estadoAnterior = animal.Estado;
         var fallecido = request.Estado == EstadoAnimal.Fallecido;
         animal.Estado = request.Estado;
         animal.FechaBaja = request.Fecha;
@@ -287,9 +293,26 @@ public class AnimalService : IAnimalService
         animal.DetalleCausaMuerte = fallecido && request.Causa == CausaMuerte.Otra
             ? TextoOpcional(request.DetalleCausa)
             : null;
+        RegistrarCambioEstado(animal, estadoAnterior, request.Estado, request.Fecha!.Value, request.Observacion);
         await _unitOfWork.GuardarCambiosAsync();
 
         return ToResponse(animal);
+    }
+
+    private void RegistrarCambioEstado(Animal animal, EstadoAnimal anterior, EstadoAnimal nuevo, DateOnly fecha, string? observacion)
+    {
+        if (_eventoEstadoRepository is null || anterior == nuevo) return;
+        _eventoEstadoRepository.Agregar(new EventoEstadoAnimal
+        {
+            Id = Guid.NewGuid(),
+            AnimalId = animal.Id,
+            EstadoAnterior = anterior,
+            EstadoNuevo = nuevo,
+            FechaEvento = fecha,
+            FechaRegistro = DateTime.UtcNow,
+            UsuarioId = _currentUser.UsuarioId,
+            Observacion = TextoOpcional(observacion),
+        });
     }
 
     private static string? ValidarBaja(Animal animal, CambiarEstadoRequest request)

@@ -22,6 +22,7 @@ public class GanaderiaProDbContext : DbContext
     public DbSet<Invitacion> Invitaciones => Set<Invitacion>();
     public DbSet<Notificacion> Notificaciones => Set<Notificacion>();
     public DbSet<MovimientoCorral> MovimientosCorral => Set<MovimientoCorral>();
+    public DbSet<EventoEstadoAnimal> EventosEstadoAnimal => Set<EventoEstadoAnimal>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

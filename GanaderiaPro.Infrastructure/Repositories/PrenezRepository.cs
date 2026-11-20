@@ -20,6 +20,7 @@ public class PrenezRepository : IPrenezRepository
     public async Task<IReadOnlyList<Prenez>> ListarPorAnimalAsync(Guid animalId) =>
         await _dbContext.Preneces
             .Include(p => p.RegistradoPor)
+            .Include(p => p.PartoRegistradoPor)
             .Where(p => p.AnimalId == animalId)
             .OrderByDescending(p => p.FechaServicio)
             .ToListAsync();

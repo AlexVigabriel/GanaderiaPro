@@ -21,6 +21,7 @@ public class HistorialAnimalService : IHistorialAnimalService
     private readonly IPesajeRepository _pesajeRepository;
     private readonly IPrenezRepository _prenezRepository;
     private readonly IMovimientoCorralRepository _movimientoRepository;
+    private readonly IEventoEstadoAnimalRepository _estadoRepository;
     private readonly ICurrentUserContext _currentUser;
 
     public HistorialAnimalService(
@@ -30,6 +31,7 @@ public class HistorialAnimalService : IHistorialAnimalService
         IPesajeRepository pesajeRepository,
         IPrenezRepository prenezRepository,
         IMovimientoCorralRepository movimientoRepository,
+        IEventoEstadoAnimalRepository estadoRepository,
         ICurrentUserContext currentUser)
     {
         _animalRepository = animalRepository;
@@ -39,6 +41,7 @@ public class HistorialAnimalService : IHistorialAnimalService
         _prenezRepository = prenezRepository;
         _movimientoRepository = movimientoRepository;
         _currentUser = currentUser;
+        _estadoRepository = estadoRepository;
     }
 
     public static string NombreResultado(ResultadoTratamiento resultado) => resultado switch
@@ -123,7 +126,8 @@ public class HistorialAnimalService : IHistorialAnimalService
             }
             if (p.FechaParto is { } parto)
             {
-                eventos.Add(new(parto, "Parto", CategoriaEvento.Reproduccion, "Parto registrado", quien, p.FechaRegistro.AddTicks(2)));
+                eventos.Add(new(parto, "Parto", CategoriaEvento.Reproduccion, "Parto registrado",
+                    p.PartoRegistradoPor?.Nombre ?? quien, p.FechaRegistro.AddTicks(2)));
             }
         }
 
@@ -137,6 +141,25 @@ public class HistorialAnimalService : IHistorialAnimalService
             };
             eventos.Add(new(FechaRancho.DeUtc(m.Fecha), "MovimientoCorral", CategoriaEvento.Corrales, descripcion,
                 m.Usuario?.Nombre, m.Fecha));
+        }
+
+        var cambiosEstado = await _estadoRepository.ListarPorAnimalAsync(animal.Id);
+        foreach (var cambio in cambiosEstado)
+        {
+            var reactivado = cambio.EstadoNuevo == EstadoAnimal.Activo;
+            var descripcion = reactivado
+                ? $"Animal reactivado (antes: {cambio.EstadoAnterior})."
+                : $"Baja registrada: {cambio.EstadoNuevo}.";
+            if (!string.IsNullOrWhiteSpace(cambio.Observacion)) descripcion += $" {cambio.Observacion}";
+            eventos.Add(new(cambio.FechaEvento, reactivado ? "Reactivacion" : "Baja", CategoriaEvento.Estado, descripcion,
+                cambio.Usuario?.Nombre, cambio.FechaRegistro));
+        }
+
+        // Compatibilidad con bajas antiguas, anteriores al registro de eventos.
+        if (animal.FechaBaja is { } fechaBaja && !cambiosEstado.Any(c => c.EstadoNuevo != EstadoAnimal.Activo))
+        {
+            eventos.Add(new(fechaBaja, "Baja", CategoriaEvento.Estado, $"Baja registrada: {animal.Estado}.", null,
+                animal.FechaRegistro));
         }
 
         return eventos
