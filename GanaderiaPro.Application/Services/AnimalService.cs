@@ -5,15 +5,12 @@ using GanaderiaPro.Application.Exceptions;
 using GanaderiaPro.Application.Interfaces;
 using GanaderiaPro.Domain.Entities;
 using GanaderiaPro.Domain.Planes;
+using GanaderiaPro.Domain.Reglas;
 
 namespace GanaderiaPro.Application.Services;
 
 public class AnimalService : IAnimalService
 {
-    private const decimal PesoMaximoKg = 1500;
-    private const decimal PesoNacimientoMinimoKg = 10;
-    private const decimal PesoNacimientoMaximoKg = 80;
-    private const int AntiguedadMaximaAnios = 25;
     private const int MaximoFilasPorLote = 500;
 
     // La identificación (arete o caravana) se guarda en mayúsculas y solo
@@ -350,15 +347,16 @@ public class AnimalService : IAnimalService
                 return "Escribí cuál fue la causa de muerte.";
             }
 
-            if (request.DetalleCausa?.Trim().Length > 100)
+            if (TextoDescriptivo.Validar(request.DetalleCausa, 100, "El detalle de la causa") is { } errorDetalle)
             {
-                return "El detalle de la causa puede tener hasta 100 caracteres.";
+                return errorDetalle;
             }
         }
 
-        if (request.Observacion?.Trim().Length > 500)
+        // RC-07: la observación tiene que describir algo, no ser solo un número.
+        if (TextoDescriptivo.Validar(request.Observacion, 500) is { } errorObservacion)
         {
-            return "La observación puede tener hasta 500 caracteres.";
+            return errorObservacion;
         }
 
         return null;
@@ -400,20 +398,23 @@ public class AnimalService : IAnimalService
             return "La fecha de nacimiento no puede ser futura.";
         }
 
-        if (nacimiento < Hoy().AddYears(-AntiguedadMaximaAnios))
+        // RC-02: más de 20 años no es la edad de un bovino vivo.
+        if (nacimiento < Hoy().AddYears(-LimitesGanado.EdadMaximaAnios))
         {
-            return $"La fecha de nacimiento no puede tener más de {AntiguedadMaximaAnios} años.";
+            return $"La fecha de nacimiento no puede tener más de {LimitesGanado.EdadMaximaAnios} años.";
         }
 
+        // RC-01: rango de un ternero recién nacido.
         if (request.PesoNacimiento is { } pesoNacimiento &&
-            (pesoNacimiento < PesoNacimientoMinimoKg || pesoNacimiento > PesoNacimientoMaximoKg))
+            (pesoNacimiento < LimitesGanado.PesoNacimientoMinimoKg || pesoNacimiento > LimitesGanado.PesoNacimientoMaximoKg))
         {
-            return $"El peso al nacer debe estar entre {PesoNacimientoMinimoKg} y {PesoNacimientoMaximoKg} kg.";
+            return $"El peso al nacer (lo que pesó el día que nació) debe estar entre {LimitesGanado.PesoNacimientoMinimoKg} y {LimitesGanado.PesoNacimientoMaximoKg} kg. El peso actual se carga aparte.";
         }
 
-        if (request.Peso is { } peso && (peso <= 0 || peso > PesoMaximoKg))
+        // RC-03: el peso actual tiene que ser posible para la edad del animal.
+        if (request.Peso is { } peso && LimitesGanado.ValidarPeso(peso, nacimiento, Hoy(), "El peso actual") is { } errorPeso)
         {
-            return $"El peso actual debe ser mayor que 0 y de hasta {PesoMaximoKg} kg.";
+            return errorPeso;
         }
 
         if (request.Nombre?.Trim().Length > 100)
@@ -426,9 +427,10 @@ public class AnimalService : IAnimalService
             return "El color puede tener hasta 40 caracteres.";
         }
 
-        if (request.Observaciones?.Trim().Length > 500)
+        // RC-07: las observaciones tienen que describir algo, no ser solo un número.
+        if (TextoDescriptivo.Validar(request.Observaciones, 500, "Las observaciones") is { } errorObservaciones)
         {
-            return "Las observaciones pueden tener hasta 500 caracteres.";
+            return errorObservaciones;
         }
 
         return null;

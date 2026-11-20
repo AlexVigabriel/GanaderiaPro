@@ -304,6 +304,36 @@ class ApiClient {
     }
   }
 
+  // RC-10: resultado «Confirmada» o «Vacia».
+  Future<void> registrarDiagnosticoPrenez(
+    String animalId,
+    String prenezId, {
+    required DateTime fecha,
+    required String resultado,
+  }) async {
+    final response = await _http.post(
+      Uri.parse('$baseUrl/api/animales/$animalId/preneces/$prenezId/diagnostico'),
+      headers: _headersAutenticados,
+      body: jsonEncode({'fecha': DatosAnimal.fechaIso(fecha), 'resultado': resultado}),
+    );
+
+    if (response.statusCode != 200) {
+      throw ApiException(_extraerMensajeError(response.body) ?? 'No se pudo registrar el diagnóstico.');
+    }
+  }
+
+  Future<void> registrarAborto(String animalId, String prenezId, {required DateTime fecha}) async {
+    final response = await _http.post(
+      Uri.parse('$baseUrl/api/animales/$animalId/preneces/$prenezId/aborto'),
+      headers: _headersAutenticados,
+      body: jsonEncode({'fecha': DatosAnimal.fechaIso(fecha)}),
+    );
+
+    if (response.statusCode != 200) {
+      throw ApiException(_extraerMensajeError(response.body) ?? 'No se pudo registrar el aborto.');
+    }
+  }
+
   Future<void> eliminarPesaje(String animalId, String pesajeId) async {
     final response = await _http.delete(
       Uri.parse('$baseUrl/api/animales/$animalId/pesajes/$pesajeId'),
@@ -577,12 +607,63 @@ class ApiClient {
     throw ApiException(_extraerMensajeError(response.body) ?? 'No se pudieron cargar los tratamientos.');
   }
 
+  // RC-09: tratamientos de todo el rancho, en curso o terminados.
+  Future<List<Tratamiento>> listarTratamientosDelRancho({required bool terminados}) async {
+    final response = await _http.get(
+      Uri.parse('$baseUrl/api/tratamientos?terminados=$terminados'),
+      headers: _headersAutenticados,
+    );
+
+    if (response.statusCode == 200) {
+      return (jsonDecode(response.body) as List<dynamic>)
+          .map((json) => Tratamiento.fromJson(json as Map<String, dynamic>))
+          .toList();
+    }
+
+    throw ApiException(_extraerMensajeError(response.body) ?? 'No se pudieron cargar los tratamientos.');
+  }
+
+  // RC-09: devuelve el tratamiento actualizado.
+  Future<Tratamiento> registrarSeguimiento(
+    Tratamiento t, {
+    required DateTime fecha,
+    required String evolucion,
+    String? nota,
+  }) => _accionTratamiento(
+    t,
+    'seguimientos',
+    {'fecha': DatosAnimal.fechaIso(fecha), 'evolucion': evolucion, 'nota': nota},
+    'No se pudo registrar el seguimiento.',
+  );
+
+  Future<Tratamiento> finalizarTratamiento(Tratamiento t, {required DateTime fecha, required String resultado}) =>
+      _accionTratamiento(
+        t,
+        'finalizar',
+        {'fecha': DatosAnimal.fechaIso(fecha), 'resultado': resultado},
+        'No se pudo finalizar el tratamiento.',
+      );
+
+  Future<Tratamiento> _accionTratamiento(Tratamiento t, String accion, Map<String, dynamic> cuerpo, String error) async {
+    final response = await _http.post(
+      Uri.parse('$baseUrl/api/animales/${t.animalId}/tratamientos/${t.id}/$accion'),
+      headers: _headersAutenticados,
+      body: jsonEncode(cuerpo),
+    );
+
+    if (response.statusCode == 200) {
+      return Tratamiento.fromJson(jsonDecode(response.body) as Map<String, dynamic>);
+    }
+
+    throw ApiException(_extraerMensajeError(response.body) ?? error);
+  }
+
   Future<void> registrarTratamiento(String animalId, DatosTratamiento datos) async {
     final response = await _http.post(
       Uri.parse('$baseUrl/api/animales/$animalId/tratamientos'),
       headers: _headersAutenticados,
       body: jsonEncode({
-        'motivo': datos.motivo,
+        'diagnostico': datos.diagnostico,
         'medicamento': datos.medicamento,
         'dosis': datos.dosis,
         'fechaInicio': DatosAnimal.fechaIso(datos.fechaInicio),

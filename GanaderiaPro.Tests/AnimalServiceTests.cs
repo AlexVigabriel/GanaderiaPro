@@ -219,27 +219,42 @@ public class AnimalServiceTests
     }
 
     [Fact]
-    public async Task Registrar_ConFechaDeNacimientoDeMasDe25Anios_LanzaExcepcion()
+    public async Task Registrar_ConFechaDeNacimientoDeMasDe20Anios_LanzaExcepcion()
     {
+        // RC-02: la vida de un bovino llega a unos 20 años.
         var repoMock = new Mock<IAnimalRepository>();
         var service = CrearServicio(repoMock);
-        var hace26Anios = FechaRancho.Hoy().AddYears(-26);
-        var request = new RegistrarAnimalRequest("A013", SexoAnimal.Hembra, "Nelore", null, FechaNacimiento: hace26Anios);
+        var hace21Anios = FechaRancho.Hoy().AddYears(-21);
+        var request = new RegistrarAnimalRequest("A013", SexoAnimal.Hembra, "Nelore", null, FechaNacimiento: hace21Anios);
 
         var ex = await Assert.ThrowsAsync<ReglaDeNegocioException>(() => service.RegistrarAsync(request));
 
-        Assert.Contains("25 años", ex.Message);
+        Assert.Contains("20 años", ex.Message);
+    }
+
+    [Fact]
+    public async Task Registrar_ConDiecisieteAnios_LoRegistra()
+    {
+        // RC-02: entre 15 y 20 años se acepta (la app muestra un aviso).
+        var repoMock = new Mock<IAnimalRepository>();
+        var service = CrearServicio(repoMock);
+        var request = new RegistrarAnimalRequest("A016", SexoAnimal.Hembra, "Nelore", null, FechaNacimiento: FechaRancho.Hoy().AddYears(-17));
+
+        var resultado = await service.RegistrarAsync(request);
+
+        Assert.Equal("A016", resultado.Arete);
     }
 
     [Theory]
     [InlineData(-50)]
     [InlineData(0)]
-    [InlineData(9)]
-    [InlineData(81)]
+    [InlineData(14)]
+    [InlineData(61)]
+    [InlineData(80)]
     [InlineData(1600)]
     public async Task Registrar_ConPesoAlNacerFueraDeRango_LanzaExcepcion(decimal pesoNacimiento)
     {
-        // Un ternero bovino nace con entre 10 y 80 kg.
+        // RC-01: un ternero bovino nace con entre 15 y 60 kg.
         var repoMock = new Mock<IAnimalRepository>();
         var service = CrearServicio(repoMock);
         var request = new RegistrarAnimalRequest("A011", SexoAnimal.Macho, "Gyr", null, FechaNacimiento: HaceDosAnios, PesoNacimiento: pesoNacimiento);
@@ -250,8 +265,8 @@ public class AnimalServiceTests
     }
 
     [Theory]
-    [InlineData(10)]
-    [InlineData(80)]
+    [InlineData(15)]
+    [InlineData(60)]
     public async Task Registrar_ConPesoAlNacerEnElLimite_LoRegistra(decimal pesoNacimiento)
     {
         var repoMock = new Mock<IAnimalRepository>();
@@ -266,6 +281,7 @@ public class AnimalServiceTests
     [Theory]
     [InlineData(-1)]
     [InlineData(0)]
+    [InlineData(14)]
     [InlineData(1501)]
     public async Task Registrar_ConPesoActualFueraDeRango_LanzaExcepcion(decimal peso)
     {
@@ -276,6 +292,53 @@ public class AnimalServiceTests
         var ex = await Assert.ThrowsAsync<ReglaDeNegocioException>(() => service.RegistrarAsync(request));
 
         Assert.Contains("peso actual", ex.Message);
+    }
+
+    [Theory]
+    [InlineData(10, 80, true)]
+    [InlineData(10, 81, false)]
+    [InlineData(10, 300, false)]
+    [InlineData(180, 420, true)]
+    [InlineData(180, 421, false)]
+    public async Task Registrar_ConPesoActualSegunLaEdad_LoValida(int diasDeVida, decimal peso, bool valido)
+    {
+        // RC-03: el máximo es 60 kg más 2 kg por día de vida.
+        var repoMock = new Mock<IAnimalRepository>();
+        var service = CrearServicio(repoMock);
+        var request = new RegistrarAnimalRequest("A017", SexoAnimal.Macho, "Nelore", peso,
+            FechaNacimiento: FechaRancho.Hoy().AddDays(-diasDeVida));
+
+        if (valido)
+        {
+            Assert.Equal(peso, (await service.RegistrarAsync(request)).Peso);
+        }
+        else
+        {
+            var ex = await Assert.ThrowsAsync<ReglaDeNegocioException>(() => service.RegistrarAsync(request));
+            Assert.Contains("para un animal de", ex.Message);
+        }
+    }
+
+    [Theory]
+    [InlineData("40", false)]
+    [InlineData("Peso registrado: 40 kg", true)]
+    public async Task Registrar_ObservacionesTienenQueDescribirAlgo(string observaciones, bool valida)
+    {
+        // RC-07: también aplica a la carga múltiple y a la importación de Excel (mismo ValidarDatos).
+        var repoMock = new Mock<IAnimalRepository>();
+        var service = CrearServicio(repoMock);
+        var request = new RegistrarAnimalRequest("A018", SexoAnimal.Hembra, "Nelore", null,
+            FechaNacimiento: HaceDosAnios, Observaciones: observaciones);
+
+        if (valida)
+        {
+            Assert.Equal(observaciones, (await service.RegistrarAsync(request)).Observaciones);
+        }
+        else
+        {
+            var ex = await Assert.ThrowsAsync<ReglaDeNegocioException>(() => service.RegistrarAsync(request));
+            Assert.Equal("Las observaciones deben describir algo, no solo un número.", ex.Message);
+        }
     }
 
     [Fact]

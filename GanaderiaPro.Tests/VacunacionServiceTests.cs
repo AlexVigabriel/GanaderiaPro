@@ -132,6 +132,19 @@ public class VacunacionServiceTests
     }
 
     [Fact]
+    public async Task Registrar_ConObservacionSoloNumerica_LanzaExcepcion()
+    {
+        // RC-07: «40» solo no describe nada.
+        var animal = AnimalDelRancho("V-09");
+        var service = CrearServicio();
+
+        var ex = await Assert.ThrowsAsync<ReglaDeNegocioException>(
+            () => service.RegistrarAsync(Pedido([animal]) with { Observacion = "40" }));
+
+        Assert.Contains("describir algo", ex.Message);
+    }
+
+    [Fact]
     public async Task Registrar_SinDosis_LanzaExcepcion()
     {
         var animal = AnimalDelRancho("V-08");

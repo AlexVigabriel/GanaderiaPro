@@ -34,16 +34,40 @@ class _TarjetaReproduccionState extends State<TarjetaReproduccion> {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(mensaje)));
   }
 
+  // RC-10: si todavía no pasó el plazo, avisa desde cuándo y devuelve true.
+  bool _todaviaNo(DateTime desde, String mensaje) {
+    if (!desde.isAfter(fechaDeHoy())) return false;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text('$mensaje Se puede desde el ${formatearFecha(desde)}.')));
+    return true;
+  }
+
   Future<void> _registrarServicio(List<Prenez> preneces) async {
-    final ultimoParto = preneces.map((p) => p.fechaParto).whereType<DateTime>().fold<DateTime?>(
+    // RC-10: tras un parto se esperan 40 días; tras un aborto, 21 (un celo).
+    final ultima = preneces.where((p) => p.servicioPosibleDesde != null).fold<Prenez?>(
       null,
-      (max, f) => max == null || f.isAfter(max) ? f : max,
+      (max, p) => max == null || p.servicioPosibleDesde!.isAfter(max.servicioPosibleDesde!) ? p : max,
     );
+    final desde = ultima?.servicioPosibleDesde;
+    if (ultima != null &&
+        _todaviaNo(
+          desde!,
+          switch (ultima.estado) {
+            'Parto' => 'Después del parto del ${formatearFecha(ultima.fechaParto!)} el útero necesita '
+                '${Prenez.esperaTrasParto} días para recuperarse.',
+            'Aborto' => 'Después del aborto del ${formatearFecha(ultima.fechaAborto!)} hay que esperar un ciclo '
+                'de celo (${Prenez.esperaTrasAborto} días).',
+            _ => 'No puede ser anterior al diagnóstico «Vacía».',
+          },
+        )) {
+      return;
+    }
     final datos = await _pedirFecha(
       titulo: 'Registrar servicio',
       etiqueta: 'Fecha de servicio',
       boton: 'Registrar servicio',
-      primeraFecha: ultimoParto ?? widget.animal.fechaNacimiento,
+      primeraFecha: desde ?? widget.animal.fechaNacimiento,
       conObservacion: true,
       ayuda: 'El parto probable se calcula sumando 283 días al servicio.',
     );
@@ -55,15 +79,153 @@ class _TarjetaReproduccionState extends State<TarjetaReproduccion> {
   }
 
   Future<void> _registrarParto(Prenez prenez) async {
+    if (_todaviaNo(prenez.partoDesde, 'El parto se registra desde los 260 días del servicio; antes es un aborto.')) {
+      return;
+    }
     final datos = await _pedirFecha(
       titulo: 'Registrar parto',
       etiqueta: 'Fecha del parto',
       boton: 'Registrar parto',
-      primeraFecha: prenez.fechaServicio,
+      primeraFecha: prenez.partoDesde,
       ayuda: 'Al registrar el parto, la preñez se cierra.',
     );
     if (datos == null) return;
     await _guardar(() => _api.registrarParto(widget.animal.id, prenez.id, fecha: datos.$1), 'Parto registrado.');
+  }
+
+  // RC-10: «Vacía» cierra la preñez; «Confirmada» la deja abierta.
+  Future<void> _registrarDiagnostico(Prenez prenez) async {
+    if (_todaviaNo(
+      prenez.diagnosticoDesde,
+      'La preñez se detecta por ecografía o palpación desde los 30 días del servicio.',
+    )) {
+      return;
+    }
+    final datos = await _pedirDiagnostico(prenez);
+    if (datos == null) return;
+    await _guardar(
+      () => _api.registrarDiagnosticoPrenez(widget.animal.id, prenez.id, fecha: datos.$1, resultado: datos.$2),
+      datos.$2 == 'Vacia' ? 'Diagnóstico registrado: vacía. La preñez se cerró.' : 'Preñez confirmada.',
+    );
+  }
+
+  Future<void> _registrarAborto(Prenez prenez) async {
+    // RC-10: confirmada después del día 259, no queda ninguna fecha posible de aborto.
+    if (prenez.abortoDesde.isAfter(prenez.abortoHasta)) {
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(
+          content: Text(
+            'Ya no se puede registrar un aborto: el diagnóstico es del ${formatearFecha(prenez.fechaDiagnostico!)} '
+            'y el aborto solo se registra hasta los ${Prenez.diasMinimosParto - 1} días del servicio '
+            '(${formatearFecha(prenez.abortoHasta)}). Si perdió la cría, registralo como parto.',
+          ),
+        ));
+      return;
+    }
+    if (_todaviaNo(
+      prenez.abortoDesde,
+      'Antes de los 42 días del servicio es muerte embrionaria, no aborto: si no quedó preñada, registrá el diagnóstico «Vacía».',
+    )) {
+      return;
+    }
+    final datos = await _pedirFecha(
+      titulo: 'Registrar aborto',
+      etiqueta: 'Fecha del aborto',
+      boton: 'Registrar aborto',
+      primeraFecha: prenez.abortoDesde,
+      ultimaFecha: prenez.abortoHasta,
+      ayuda: 'El aborto es la pérdida entre los 42 y los 259 días del servicio. Cierra la preñez: deja de figurar como próxima a parir.',
+    );
+    if (datos == null) return;
+    await _guardar(
+      () => _api.registrarAborto(widget.animal.id, prenez.id, fecha: datos.$1),
+      'Aborto registrado. La preñez se cerró.',
+    );
+  }
+
+  Future<(DateTime, String)?> _pedirDiagnostico(Prenez prenez) {
+    DateTime? fecha = fechaDeHoy();
+    String? resultado;
+    String? errorFecha;
+    String? errorResultado;
+    return showDialog<(DateTime, String)>(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogo) {
+          final tema = Theme.of(context);
+          return AlertDialog(
+            title: const Text('Diagnóstico de preñez'),
+            content: SizedBox(
+              width: 380,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Resultado de la palpación o ecografía. «Vacía» cierra la preñez.',
+                    style: tema.textTheme.bodyMedium,
+                  ),
+                  const SizedBox(height: 16),
+                  Text('Resultado', style: tema.textTheme.labelLarge),
+                  const SizedBox(height: 6),
+                  SegmentedButton<String>(
+                    emptySelectionAllowed: true,
+                    showSelectedIcon: false,
+                    segments: const [
+                      ButtonSegment(value: 'Confirmada', label: Text('Confirmada')),
+                      ButtonSegment(value: 'Vacia', label: Text('Vacía')),
+                    ],
+                    selected: {?resultado},
+                    onSelectionChanged: (s) => setDialogo(() {
+                      resultado = s.firstOrNull;
+                      errorResultado = null;
+                    }),
+                  ),
+                  if (errorResultado != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 6),
+                      child: Text(
+                        errorResultado!,
+                        style: tema.textTheme.bodySmall?.copyWith(color: tema.colorScheme.error),
+                      ),
+                    ),
+                  const SizedBox(height: 16),
+                  Text('Fecha del diagnóstico', style: tema.textTheme.labelLarge),
+                  const SizedBox(height: 6),
+                  CampoFecha(
+                    valor: fecha,
+                    titulo: 'Fecha del diagnóstico',
+                    primeraFecha: prenez.diagnosticoDesde,
+                    errorText: errorFecha,
+                    onChanged: (f) => setDialogo(() {
+                      fecha = f;
+                      errorFecha = null;
+                    }),
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancelar')),
+              FilledButton(
+                onPressed: () {
+                  if (fecha == null || resultado == null) {
+                    setDialogo(() {
+                      if (fecha == null) errorFecha = 'Elegí la fecha';
+                      if (resultado == null) errorResultado = 'Elegí el resultado';
+                    });
+                    return;
+                  }
+                  Navigator.of(context).pop((fecha!, resultado!));
+                },
+                child: const Text('Registrar diagnóstico'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
   }
 
   Future<void> _guardar(Future<void> Function() accion, String mensaje) async {
@@ -86,10 +248,14 @@ class _TarjetaReproduccionState extends State<TarjetaReproduccion> {
     required String boton,
     required String ayuda,
     DateTime? primeraFecha,
+    // Por defecto, hoy. Si es anterior a hoy, la fecha sugerida es esa.
+    DateTime? ultimaFecha,
     bool conObservacion = false,
   }) {
-    DateTime? fecha = fechaDeHoy();
+    final hoy = fechaDeHoy();
+    DateTime? fecha = ultimaFecha != null && ultimaFecha.isBefore(hoy) ? ultimaFecha : hoy;
     String? error;
+    String? errorObservacion;
     final observacion = TextEditingController();
     return showDialog<(DateTime, String?)>(
       context: context,
@@ -110,6 +276,7 @@ class _TarjetaReproduccionState extends State<TarjetaReproduccion> {
                   valor: fecha,
                   titulo: etiqueta,
                   primeraFecha: primeraFecha,
+                  ultimaFecha: ultimaFecha != null && ultimaFecha.isBefore(hoy) ? ultimaFecha : null,
                   errorText: error,
                   onChanged: (f) => setDialogo(() {
                     fecha = f;
@@ -122,7 +289,7 @@ class _TarjetaReproduccionState extends State<TarjetaReproduccion> {
                     controller: observacion,
                     maxLines: 2,
                     maxLength: 500,
-                    decoration: const InputDecoration(labelText: 'Observación (opcional)'),
+                    decoration: InputDecoration(labelText: 'Observación (opcional)', errorText: errorObservacion),
                   ),
                 ],
               ],
@@ -134,6 +301,12 @@ class _TarjetaReproduccionState extends State<TarjetaReproduccion> {
               onPressed: () {
                 if (fecha == null) {
                   setDialogo(() => error = 'Elegí la fecha');
+                  return;
+                }
+                // RC-07: la observación tiene que describir algo.
+                final problema = validarObservacion(observacion.text);
+                if (problema != null) {
+                  setDialogo(() => errorObservacion = problema);
                   return;
                 }
                 final texto = observacion.text.trim();
@@ -179,10 +352,27 @@ class _TarjetaReproduccionState extends State<TarjetaReproduccion> {
                               icon: const Icon(Icons.favorite_border, size: 18),
                               label: const Text('Registrar servicio'),
                             )
-                          : FilledButton.icon(
-                              onPressed: () => _registrarParto(abierta),
-                              icon: const Icon(Icons.child_friendly_outlined, size: 18),
-                              label: const Text('Registrar parto'),
+                          : Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: [
+                                if (abierta.diagnostico == null)
+                                  OutlinedButton.icon(
+                                    onPressed: () => _registrarDiagnostico(abierta),
+                                    icon: const Icon(Icons.fact_check_outlined, size: 18),
+                                    label: const Text('Diagnóstico de preñez'),
+                                  ),
+                                OutlinedButton.icon(
+                                  onPressed: () => _registrarAborto(abierta),
+                                  icon: const Icon(Icons.heart_broken_outlined, size: 18),
+                                  label: const Text('Registrar aborto'),
+                                ),
+                                FilledButton.icon(
+                                  onPressed: () => _registrarParto(abierta),
+                                  icon: const Icon(Icons.child_friendly_outlined, size: 18),
+                                  label: const Text('Registrar parto'),
+                                ),
+                              ],
                             ),
                   ],
                 ),
@@ -246,6 +436,13 @@ class _EstadoPrenada extends StatelessWidget {
                   'servicio ${formatearFecha(prenez.fechaServicio)}',
                   style: tema.textTheme.bodyMedium,
                 ),
+                const SizedBox(height: 2),
+                Text(
+                  prenez.confirmada
+                      ? 'Preñez confirmada el ${formatearFecha(prenez.fechaDiagnostico!)}'
+                      : 'Sin diagnóstico de preñez',
+                  style: tema.textTheme.bodySmall?.copyWith(color: tema.colorScheme.onSurfaceVariant),
+                ),
                 if (prenez.observacion != null) ...[
                   const SizedBox(height: 2),
                   Text(prenez.observacion!, style: tema.textTheme.bodySmall),
@@ -259,7 +456,7 @@ class _EstadoPrenada extends StatelessWidget {
   }
 }
 
-// Preñez anterior, ya cerrada con su parto.
+// Preñez anterior, ya cerrada con su parto, un aborto o el diagnóstico «Vacía» (RC-10).
 class _FilaPrenez extends StatelessWidget {
   const _FilaPrenez({required this.prenez});
 
@@ -268,16 +465,23 @@ class _FilaPrenez extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tema = Theme.of(context);
+    final (icono, cierre) = switch (prenez.estado) {
+      'Aborto' => (Icons.heart_broken_outlined, 'Aborto'),
+      'Vacia' => (Icons.fact_check_outlined, 'Vacía'),
+      _ => (Icons.child_friendly_outlined, 'Parto'),
+    };
+    final fechaCierre = prenez.fechaCierre;
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 10),
       decoration: BoxDecoration(border: Border(bottom: BorderSide(color: tema.colorScheme.outlineVariant))),
       child: Row(
         children: [
-          Icon(Icons.child_friendly_outlined, size: 20, color: tema.colorScheme.onSurfaceVariant),
+          Icon(icono, size: 20, color: tema.colorScheme.onSurfaceVariant),
           const SizedBox(width: 12),
           Expanded(
             child: Text(
-              'Parto ${formatearFecha(prenez.fechaParto!)} · servicio ${formatearFecha(prenez.fechaServicio)}',
+              '$cierre${fechaCierre == null ? '' : ' ${formatearFecha(fechaCierre)}'} · '
+              'servicio ${formatearFecha(prenez.fechaServicio)}',
               style: tema.textTheme.bodyMedium,
             ),
           ),

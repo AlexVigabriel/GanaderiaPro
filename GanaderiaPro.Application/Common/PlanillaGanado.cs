@@ -32,12 +32,12 @@ public static class PlanillaGanado
         ("Arete", true, "Único en el rancho. Letras, números y guiones (hasta 50)."),
         ("Sexo", true, "M (macho) o H (hembra)."),
         ("Raza", true, "Texto. Ej.: Nelore, Brahman, Criollo."),
-        ("Fecha de nacimiento", true, "dd/mm/aaaa. No puede ser futura."),
+        ("Fecha de nacimiento", true, "dd/mm/aaaa. No puede ser futura ni de hace más de 20 años."),
         ("Nombre", false, "Texto."),
         ("Castrado", false, "Sí o No (solo machos). Vacío = No."),
         ("Color", false, "Texto."),
-        ("Peso (kg)", false, "Número mayor que 0 y hasta 1500."),
-        ("Peso al nacer (kg)", false, "Número entre 10 y 80."),
-        ("Observaciones", false, "Texto."),
+        ("Peso (kg)", false, "Número entre 15 y 1500, posible para la edad (hasta 60 kg + 2 kg por día de vida)."),
+        ("Peso al nacer (kg)", false, "Número entre 15 y 60."),
+        ("Observaciones", false, "Texto que describa algo (no solo un número). Ej.: Peso registrado: 40 kg."),
     ];
 }

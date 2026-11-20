@@ -44,6 +44,15 @@ void main() {
       expect(datos.validar('Vendido', null), isTrue);
       expect(datos.aDatos('Vendido').causa, isNull);
     });
+
+    test('al reactivar no manda la fecha ni la nota de la baja anterior', () {
+      final datos = DatosBajaFormulario(fecha: DateTime(2026, 8, 3), causa: 'Accidente', observacion: 'Prueba de baja');
+      final enviado = datos.aDatos('Activo');
+      expect(enviado.estado, 'Activo');
+      expect(enviado.fecha, isNull);
+      expect(enviado.observacion, isNull);
+      expect(enviado.causa, isNull);
+    });
   });
 
   test('Muestra el detalle escrito cuando la causa es "Otra"', () {

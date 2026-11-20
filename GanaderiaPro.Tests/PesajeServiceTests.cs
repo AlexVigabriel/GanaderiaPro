@@ -100,6 +100,7 @@ public class PesajeServiceTests
     [Theory]
     [InlineData(0)]
     [InlineData(-5)]
+    [InlineData(14)]
     [InlineData(1500.01)]
     public async Task Registrar_ConPesoFueraDeRango_LanzaExcepcion(decimal peso)
     {
@@ -111,6 +112,20 @@ public class PesajeServiceTests
 
         Assert.Contains("1500", ex.Message);
         _pesajeRepoMock.Verify(r => r.Agregar(It.IsAny<Pesaje>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Registrar_PesoImposibleParaLaEdad_LanzaExcepcion()
+    {
+        // RC-03: un ternero de 10 días pesa como máximo 80 kg (60 kg + 2 kg por día).
+        var animal = AnimalDelRancho();
+        animal.FechaNacimiento = Hoy.AddDays(-10);
+        var service = CrearServicio();
+
+        var ex = await Assert.ThrowsAsync<ReglaDeNegocioException>(
+            () => service.RegistrarAsync(animal.Id, new RegistrarPesajeRequest(300, Hoy)));
+
+        Assert.Contains("entre 15 y 80 kg para un animal de 10 días", ex.Message);
     }
 
     [Fact]

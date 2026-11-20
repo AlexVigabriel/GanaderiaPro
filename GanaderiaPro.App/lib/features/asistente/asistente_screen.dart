@@ -7,6 +7,7 @@ import '../shell/app_shell.dart';
 
 // HU-36.1 y HU-38: asistente de consultas. Responde un catálogo de preguntas
 // sobre los datos del rancho; si falta un dato, dice quién debe cargarlo.
+// RC-04: arriba las preguntas frecuentes (genéricas); abajo, la consulta propia.
 class AsistenteScreen extends StatefulWidget {
   const AsistenteScreen({super.key});
 
@@ -116,7 +117,16 @@ class _AsistenteScreenState extends State<AsistenteScreen> {
                       ),
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
+            // RC-04: la consulta propia va aparte de las preguntas frecuentes.
+            Text('Tu consulta', style: tema.textTheme.titleSmall),
+            const SizedBox(height: 2),
+            Text(
+              'Para un animal o un corral concreto, escribí su arete o su nombre: '
+              '«¿Cuánto pesa el arete …?», «¿En qué corral está el …?», «¿Cuántas hembras hay en el corral …?»',
+              style: tema.textTheme.bodySmall?.copyWith(color: tema.colorScheme.onSurfaceVariant),
+            ),
+            const SizedBox(height: 8),
             Row(
               children: [
                 Expanded(
@@ -124,7 +134,7 @@ class _AsistenteScreenState extends State<AsistenteScreen> {
                     controller: _pregunta,
                     textInputAction: TextInputAction.send,
                     onSubmitted: (_) => _enviar(),
-                    decoration: const InputDecoration(hintText: 'Ej. ¿Cuántas hembras hay en el corral Norte?'),
+                    decoration: const InputDecoration(hintText: 'Escribí tu pregunta'),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -159,10 +169,10 @@ class _Bienvenida extends StatelessWidget {
         children: [
           Icon(Icons.forum_outlined, size: 36, color: tema.colorScheme.primary),
           const SizedBox(height: 12),
-          Text('¿Qué querés saber?', style: tema.textTheme.titleMedium),
+          Text('Preguntas frecuentes', style: tema.textTheme.titleMedium),
           const SizedBox(height: 4),
           Text(
-            'Estas son las preguntas que entiendo. Tocá una o escribí la tuya.',
+            'Consultas generales sobre todo el rancho. Tocá una para preguntarla, o escribí la tuya abajo.',
             style: tema.textTheme.bodyMedium?.copyWith(color: tema.colorScheme.onSurfaceVariant),
           ),
           const SizedBox(height: 16),

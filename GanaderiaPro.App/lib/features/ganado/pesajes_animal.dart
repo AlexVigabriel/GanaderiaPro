@@ -355,10 +355,11 @@ bool esCambioBrusco(double anterior, double nuevo) => anterior > 0 && (nuevo - a
 
 bool _mismoDia(DateTime a, DateTime b) => a.year == b.year && a.month == b.month && a.day == b.day;
 
-// Mismas reglas que el servidor: obligatorio, mayor que 0 y hasta 1500 kg.
-String? validarPesoPesaje(String? valor) {
+// Mismas reglas que el servidor: obligatorio y posible para la edad del
+// animal en la fecha del pesaje (RC-03).
+String? validarPesoPesaje(String? valor, {DateTime? nacimiento, DateTime? fecha}) {
   if (valor == null || valor.trim().isEmpty) return 'El peso es obligatorio';
-  return validarPeso(valor);
+  return validarPeso(valor, nacimiento: nacimiento, fecha: fecha);
 }
 
 class _RegistroPesaje extends StatefulWidget {
@@ -397,9 +398,9 @@ class _RegistroPesajeState extends State<_RegistroPesaje> {
   Future<void> _guardar() async {
     setState(() {
       _errores = {
-        'peso': ?validarPesoPesaje(_peso.text),
+        'peso': ?validarPesoPesaje(_peso.text, nacimiento: widget.animal.fechaNacimiento, fecha: _fecha),
         'fecha': ?validarFechaBaja(_fecha, widget.animal.fechaNacimiento, obligatoria: 'La fecha es obligatoria'),
-        'observacion': ?validarLargo(_observacion.text, 500),
+        'observacion': ?validarObservacion(_observacion.text),
       };
       final cambioLaFecha = !_editando || !_mismoDia(widget.pesaje!.fecha, _fecha!);
       if (!_errores.containsKey('fecha') && cambioLaFecha && widget.historial.any((p) => _mismoDia(p.fecha, _fecha!))) {

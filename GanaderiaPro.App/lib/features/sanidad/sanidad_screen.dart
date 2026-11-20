@@ -63,8 +63,13 @@ class _SanidadScreenState extends State<SanidadScreen> {
   }
 
   // HU-57: desde Sanidad se elige el animal.
+  // Cambia al registrar un tratamiento, para que la tarjeta lo vuelva a pedir.
+  int _versionTratamientos = 0;
+
   Future<void> _registrarTratamiento() async {
-    if (await abrirRegistroTratamiento(context) && mounted) _avisar('Tratamiento registrado.');
+    if (!await abrirRegistroTratamiento(context) || !mounted) return;
+    _avisar('Tratamiento registrado.');
+    setState(() => _versionTratamientos++);
   }
 
   Future<void> _editar(Vacunacion v) async {
@@ -114,6 +119,9 @@ class _SanidadScreenState extends State<SanidadScreen> {
             _indicadores(),
             const SizedBox(height: 24),
             _tarjetaPendientes(tema),
+            const SizedBox(height: 24),
+            // RC-09: tratamientos del rancho, en curso o terminados.
+            TarjetaTratamientosRancho(key: ValueKey(_versionTratamientos), puedeEditar: _puedeEditar),
             const SizedBox(height: 24),
             Card(
               margin: EdgeInsets.zero,

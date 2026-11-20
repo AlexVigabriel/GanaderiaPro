@@ -51,13 +51,16 @@ class DatosBajaFormulario {
       ),
       if (fallecido && causa == null) 'causa': 'Elegí la causa de muerte',
       if (fallecido && causa == 'Otra' && detalle.text.trim().isEmpty) 'detalle': 'Escribí cuál fue la causa',
-      'detalle': ?validarLargo(detalle.text, 100),
-      'observacion': ?validarLargo(observacion.text, 500),
+      'detalle': ?validarObservacion(detalle.text, 100),
+      'observacion': ?validarObservacion(observacion.text),
     };
     return errores.isEmpty;
   }
 
   DatosEstado aDatos(String estado) {
+    // Al reactivar no se mandan la fecha ni la nota de la baja anterior: el
+    // servidor registra la reactivación con la fecha de hoy (HU-22).
+    if (estado == 'Activo') return const DatosEstado(estado: 'Activo');
     final fallecido = estado == 'Fallecido';
     final nota = observacion.text.trim();
     return DatosEstado(
